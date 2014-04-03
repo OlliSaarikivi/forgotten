@@ -7,9 +7,15 @@
 
 #include "targetver.h"
 
-#include <stdio.h>
-#include <tchar.h>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <memory>
+#include <vector>
 
-
+#include <windows.h>
+#include <gl/gl.h>
+#include <gl/glu.h>
+#include <sdl/sdl.h>
 
 // TODO: reference additional headers your program requires here

@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Transforms">
+      <UniqueIdentifier>{44099034-4846-4e8b-a3d6-7753e503cd8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Transforms">
+      <UniqueIdentifier>{41e25a91-48fc-4767-bd96-533f4ec92a0b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -24,6 +30,15 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Forgotten.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Aspects.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AnyTargetSelector.h">
+      <Filter>Header Files\Transforms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -31,6 +46,9 @@
     </ClCompile>
     <ClCompile Include="Forgotten.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AnyTargetSelector.cpp">
+      <Filter>Source Files\Transforms</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
