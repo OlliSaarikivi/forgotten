@@ -1,13 +1,12 @@
 #pragma once
 
 #include "stdafx.h"
-#include "Aspects.h"
+#include "Types.h"
 
 struct AnyTargetSelector {
-	AnyTargetSelector();
-	~AnyTargetSelector();
-
-	std::unique_ptr<std::vector<Eid>> targeters;
-	std::unique_ptr<std
+	void update();
+	std::vector<Eid> &targeters;
+	std::vector<Eid> &candidates;
+	std::vector<Targeting> &targetings;
 };
 

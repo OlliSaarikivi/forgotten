@@ -1,8 +1,11 @@
 #include "stdafx.h"
-#include "PriorityTargetSelector.h"
+#include "AnyTargetSelector.h"
 
-
-AnyTargetSelector::AnyTargetSelector() {}
-
-
-AnyTargetSelector::~AnyTargetSelector() {}
+void AnyTargetSelector::update() {
+	if (!candidates.empty()) {
+		Eid someTarget = candidates.front();
+		for (const auto &targeter : targeters) {
+			targetings.emplace_back(targeter, someTarget);
+		}
+	}
+}
