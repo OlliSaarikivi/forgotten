@@ -33,10 +33,25 @@
     <ClInclude Include="Forgotten.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AnyTargetSelector.h">
+    <ClInclude Include="SelectAnyTarget.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
-    <ClInclude Include="Types.h">
+    <ClInclude Include="MoveTowardsTarget.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BufferedChannel.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="TransientChannel.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="ForgottenEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tokens.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -47,8 +62,8 @@
     <ClCompile Include="Forgotten.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AnyTargetSelector.cpp">
-      <Filter>Source Files\Processes</Filter>
+    <ClCompile Include="ForgottenEngine.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
