@@ -9,11 +9,11 @@
 
 struct ProcessHost
 {
-    void addProcess(shared_ptr<Process>);
+    void addProcess(unique_ptr<Process>);
     void sortProcesses();
     void tick();
 private:
-	set<shared_ptr<Process>> processes;
+    flat_set<unique_ptr<Process>> processes;
 	vector<const Process*> execution_order;
 };
 

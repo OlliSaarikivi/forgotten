@@ -9,21 +9,15 @@ struct TransientChannel : Channel
     {
         buffer.clear();
     }
-    void registerProducer(weak_ptr<const Process> process) override
+    void registerProducer(const Process *process) override
     {
-        producers.emplace_back(std::move(process));
+        producers.emplace_back(process);
     }
-    void forEachImmediateDependency(function<void(const Process&)> f) override
+    void forEachImmediateDependency(function<void(const Process&)> f) const override
     {
-        for (const auto& weak_producer : producers) {
-            shared_ptr<const Process> producer = weak_producer.lock();
-            if (producer) {
-                f(*producer);
-            }
+        for (const auto& producer : producers) {
+            f(*producer);
         }
-        producers.erase(
-            std::remove_if(producers.cbegin(), producers.cend(), [](const weak_ptr<const Process> &producer) { return producer.expired(); }),
-            producers.cend());
     }
     const TBuffer &readFrom() const
     {
@@ -35,5 +29,5 @@ struct TransientChannel : Channel
     }
 private:
     TBuffer buffer;
-    vector<weak_ptr<const Process>> producers;
+    vector<const Process*> producers;
 };

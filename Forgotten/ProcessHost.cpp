@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "ProcessHost.h"
 
-void ProcessHost::addProcess(shared_ptr<Process> process)
+void ProcessHost::addProcess(unique_ptr<Process> process)
 {
     processes.emplace(std::move(process));
     execution_order.clear();

@@ -11,9 +11,10 @@ struct PositionAspect {
 };
 
 struct Targeting {
-	Targeting(Eid source, Eid target) : source(source), target(target) {}
-	Eid source;
-	Eid target;
+    Targeting(Eid source, vec2 source_pos, vec2 target_pos) : source(source), source_pos(source_pos), target_pos(target_pos) {}
+    Eid source;
+    vec2 source_pos;
+    vec2 target_pos;
 };
 
 template<typename T>

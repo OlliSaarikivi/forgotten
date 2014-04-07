@@ -41,8 +41,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)lib</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include;$(Boost_Includes)</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)lib;$(Boost_Libraries)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -89,7 +89,6 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
   <ItemGroup>
     <ClInclude Include="BufferedChannel.h" />
     <ClInclude Include="Channel.h" />
-    <ClInclude Include="ChannelHost.h" />
     <ClInclude Include="ProcessHost.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="TransientChannel.h" />
@@ -104,7 +103,6 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Channel.cpp" />
-    <ClCompile Include="ChannelHost.cpp" />
     <ClCompile Include="Forgotten.cpp" />
     <ClCompile Include="ProcessHost.cpp" />
     <ClCompile Include="stdafx.cpp">

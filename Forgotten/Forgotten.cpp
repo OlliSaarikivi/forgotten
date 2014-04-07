@@ -39,14 +39,13 @@ typedef TransientChannel<vector<Targeting>> TargetingsChannel_t;
 
 void createProcesses()
 {
-
 	/* Channels */
 	PositionsChannel_t monsters;
 	PositionsChannel_t players;
 	TargetingsChannel_t monster_targetings;
 	/* Processes */
 	SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
-	MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters, monsters);
+	MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
 }
 
 void close() {

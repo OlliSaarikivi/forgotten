@@ -60,9 +60,6 @@
     <ClInclude Include="Usings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ChannelHost.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -75,9 +72,6 @@
       <Filter>Source Files\Processes</Filter>
     </ClCompile>
     <ClCompile Include="ProcessHost.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ChannelHost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

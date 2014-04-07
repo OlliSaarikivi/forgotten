@@ -11,16 +11,16 @@ struct SelectAnyTarget : Process
 	candidates_chan(candidates),
 	targetings_chan(targetings)
 	{
-		targetings_chan.registerProducer(weak_ptr(this));
+		targetings_chan.registerProducer(this);
 	}
 	void tick() const override
 	{
 		auto candidates = candidates_chan.readFrom();
 		if (!candidates.empty()) {
-			Eid someTarget = candidates.front().eid;
+			auto someTarget = candidates.front().position;
 			auto targetings = targetings_chan.writeTo();
 			for (const auto &targeter : targeters_chan.readFrom()) {
-				targetings.emplace_back(targeter.eid, someTarget);
+				targetings.emplace_back(targeter.eid, targeter.position, someTarget);
 			}
 		}
 	}
