@@ -5,9 +5,9 @@
 typedef long int Eid;
 
 struct PositionAspect {
-	PositionAspect(Eid eid, glm::vec2 position) : eid(eid), position(position) {}
+	PositionAspect(Eid eid, vec2 position) : eid(eid), position(position) {}
 	Eid eid;
-	glm::vec2 position;
+	vec2 position;
 };
 
 struct Targeting {

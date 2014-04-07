@@ -46,8 +46,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)lib</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include;$(Boost_Includes)</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)lib;$(Boost_Libraries)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -87,11 +87,11 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="BufferedChannel.h" />
-    <ClInclude Include="ForgottenEngine.h" />
+    <ClInclude Include="Channel.h" />
+    <ClInclude Include="ChannelHost.h" />
+    <ClInclude Include="ProcessHost.h" />
+    <ClInclude Include="Process.h" />
     <ClInclude Include="TransientChannel.h" />
     <ClInclude Include="MoveTowardsTarget.h" />
     <ClInclude Include="Tokens.h" />
@@ -99,11 +99,14 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="SelectAnyTarget.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Channel.cpp" />
+    <ClCompile Include="ChannelHost.cpp" />
     <ClCompile Include="Forgotten.cpp" />
-    <ClCompile Include="ForgottenEngine.cpp" />
+    <ClCompile Include="ProcessHost.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

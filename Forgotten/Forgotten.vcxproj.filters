@@ -21,9 +21,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -48,10 +45,22 @@
     <ClInclude Include="TransientChannel.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
-    <ClInclude Include="ForgottenEngine.h">
+    <ClInclude Include="Tokens.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Tokens.h">
+    <ClInclude Include="Channel.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="Process.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessHost.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Usings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChannelHost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,7 +71,13 @@
     <ClCompile Include="Forgotten.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ForgottenEngine.cpp">
+    <ClCompile Include="Channel.cpp">
+      <Filter>Source Files\Processes</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessHost.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ChannelHost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

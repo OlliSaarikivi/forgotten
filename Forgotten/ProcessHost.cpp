@@ -1,0 +1,37 @@
+#include "stdafx.h"
+#include "ProcessHost.h"
+
+void ProcessHost::addProcess(shared_ptr<Process> process)
+{
+    processes.emplace(std::move(process));
+    execution_order.clear();
+}
+
+void ProcessHost::sortProcesses()
+{
+    execution_order.clear();
+    set<const Process*> visited;
+    function<void(const Process &process)> visit = [&](const Process &process) {
+        if (visited.find(&process) != visited.end()) {
+            return;
+        }
+        visited.emplace(&process);
+        process.forEachInput([&](const Channel &input) {
+            input.forEachImmediateDependency([&](const Process &producer) {
+                visit(producer);
+            });
+        });
+        execution_order.emplace_back(&process);
+    };
+    for (const auto &process : processes) {
+        visit(*process);
+    }
+}
+
+void ProcessHost::tick()
+{
+    assert(execution_order.size() == processes.size());
+    for (const auto &process : execution_order) {
+        process->tick();
+    }
+}

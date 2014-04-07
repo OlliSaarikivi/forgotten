@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Forgotten.h"
+#include "ProcessHost.h"
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
@@ -7,6 +8,8 @@ const int SCREEN_HEIGHT = 600;
 SDL_Window* window;
 SDL_Surface* screenSurface;
 SDL_Surface* blobSurface;
+
+ProcessHost host;
 
 void init() {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -29,6 +32,21 @@ void loadAssets() {
 	if (!blobSurface) {
 		fatal_error("Could not load an asset.");
 	}
+}
+
+typedef BufferedChannel<vector<PositionAspect>, 2> PositionsChannel_t;
+typedef TransientChannel<vector<Targeting>> TargetingsChannel_t;
+
+void createProcesses()
+{
+
+	/* Channels */
+	PositionsChannel_t monsters;
+	PositionsChannel_t players;
+	TargetingsChannel_t monster_targetings;
+	/* Processes */
+	SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
+	MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters, monsters);
 }
 
 void close() {
@@ -57,7 +75,7 @@ int main(int argc, char* args[]) {
 	return 0;
 }
 
-void fatal_error(std::string message, std::string title) {
+void fatal_error(string message, string title) {
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), window);
 	close();
 	exit(-1);
