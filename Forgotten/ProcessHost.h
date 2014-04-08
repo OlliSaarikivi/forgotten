@@ -11,7 +11,7 @@ struct ProcessHost
 {
     void addProcess(unique_ptr<Process>);
     void sortProcesses();
-    void tick();
+    void tick(float step);
 private:
     flat_set<unique_ptr<Process>> processes;
 	vector<const Process*> execution_order;

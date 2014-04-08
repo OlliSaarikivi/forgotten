@@ -25,6 +25,7 @@
 #include <gl/glu.h>
 #include <sdl/sdl.h>
 #include <glm/glm.hpp>
+#include <Box2D/Box2D.h>
 
 #include "Usings.h"
 

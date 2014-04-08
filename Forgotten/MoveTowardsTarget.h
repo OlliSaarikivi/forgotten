@@ -13,7 +13,7 @@ struct MoveTowardsTarget : Process
     {
         newPositions_chan.registerProducer(this);
     }
-    void tick() const override
+    void tick(float step) const override
     {
         auto output = newPositions_chan.writeTo();
         for (const auto &targeting : targetings_chan.readFrom()) {

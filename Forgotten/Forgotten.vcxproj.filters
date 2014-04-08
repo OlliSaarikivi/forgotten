@@ -60,6 +60,12 @@
     <ClInclude Include="Usings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Box2DPhysics.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="PersistentChannel.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

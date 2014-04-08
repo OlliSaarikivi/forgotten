@@ -13,7 +13,7 @@ struct SelectAnyTarget : Process
 	{
 		targetings_chan.registerProducer(this);
 	}
-	void tick() const override
+    void tick(float step) const override
 	{
 		auto candidates = candidates_chan.readFrom();
 		if (!candidates.empty()) {

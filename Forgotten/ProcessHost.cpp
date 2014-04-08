@@ -28,10 +28,10 @@ void ProcessHost::sortProcesses()
     }
 }
 
-void ProcessHost::tick()
+void ProcessHost::tick(float step)
 {
     assert(execution_order.size() == processes.size());
     for (const auto &process : execution_order) {
-        process->tick();
+        process->tick(step);
     }
 }

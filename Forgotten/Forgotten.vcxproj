@@ -87,8 +87,10 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Box2DPhysics.h" />
     <ClInclude Include="BufferedChannel.h" />
     <ClInclude Include="Channel.h" />
+    <ClInclude Include="PersistentChannel.h" />
     <ClInclude Include="ProcessHost.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="TransientChannel.h" />
