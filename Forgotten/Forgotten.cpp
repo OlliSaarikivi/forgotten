@@ -34,18 +34,18 @@ void loadAssets() {
 	}
 }
 
-typedef BufferedChannel<vector<PositionAspect>, 2> PositionsChannel_t;
-typedef TransientChannel<vector<Targeting>> TargetingsChannel_t;
-
 void createProcesses()
 {
 	/* Channels */
-	PositionsChannel_t monsters;
-	PositionsChannel_t players;
-	TargetingsChannel_t monster_targetings;
+	//PositionsChannel_t monsters;
 	/* Processes */
-	SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
-	MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
+	//SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
+	//MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
+
+    auto r1 = Row<Eid, PositionColumn>();
+    auto r2 = Row<Eid, BodyColumn>();
+    auto r3 = Row<Eid, PositionColumn, BodyColumn>();
+    r3.setAll(r2);
 }
 
 void close() {

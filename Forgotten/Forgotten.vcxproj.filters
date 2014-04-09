@@ -66,6 +66,9 @@
     <ClInclude Include="PersistentChannel.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="MergeJoin.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

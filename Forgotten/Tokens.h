@@ -17,17 +17,60 @@ struct EidComparator
     }
 };
 
-struct PositionAspect {
-	PositionAspect(Eid eid, vec2 position) : eid(eid), position(position) {}
-	Eid eid;
-	vec2 position;
+template<typename TRow, typename TOther, typename... TColumns>
+struct SetAllHelper;
+
+template<typename TRow, typename TOther>
+struct SetAllHelper<TRow, TOther>
+{
+    static void tSet(TRow *row, TOther other) {}
 };
 
-struct Targeting {
-    Targeting(Eid source, vec2 source_pos, vec2 target_pos) : source(source), source_pos(source_pos), target_pos(target_pos) {}
-    Eid source;
-    vec2 source_pos;
-    vec2 target_pos;
+template<typename TRow, typename TOther, typename TColumn, typename... TColumns>
+struct SetAllHelper<TRow, TOther, TColumn, TColumns...>
+{
+    static void tSet(TRow *row, TOther other)
+    {
+        row->set(static_cast<TColumn>(other));
+        return SetAllHelper<TRow, TOther, TColumns...>::tSet(row, other);
+    }
+};
+
+template<typename TKey, typename... TColumns>
+struct Row : TColumns...
+{
+    TKey key;
+
+    template<typename TColumn>
+    void set(TColumn c)
+    {
+        TColumn *me = this;
+        me->set(c);
+    }
+
+    template<typename... TOtherColumns>
+    void setAll(Row<TKey, TOtherColumns...> other)
+    {
+        SetAllHelper<Row, Row<TKey, TOtherColumns...>, TOtherColumns...>::tSet(this, other);
+    }
+};
+
+struct PositionColumn
+{
+    vec2 position;
+    void set(PositionColumn c)
+    {
+        position = c.position;
+    }
+};
+
+struct BodyColumn
+{
+    b2Body *body;
+    void set(BodyColumn c)
+    {
+        body = c.body;
+    }
 };
 
 struct CenterForce
@@ -39,7 +82,7 @@ struct CenterForce
 
 struct Contact
 {
-    Contact(Eid eid, Eid other) : eid(eid), other(other) {}
-    Eid eid;
-    Eid other;
+    Contact(b2Fixture *fixtureA, b2Fixture *fixtureB) : fixtureA(fixtureA), fixtureB(fixtureB) {}
+    b2Fixture *fixtureA;
+    b2Fixture *fixtureB;
 };

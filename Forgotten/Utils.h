@@ -18,12 +18,12 @@ FwdIt binarySearch(FwdIt begin, FwdIt end, T const &val, P pred) {
 	return result;
 }
 
-b2Vec2 toB2(const vec2 &v)
+inline b2Vec2 toB2(const vec2 &v)
 {
     return b2Vec2(v.x, v.y);
 }
 
-vec2 toGLM(const b2Vec2 &v)
+inline vec2 toGLM(const b2Vec2 &v)
 {
     return vec2(v.x, v.y);
 }
