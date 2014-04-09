@@ -2,7 +2,7 @@
 
 #include "Process.h"
 #include "BufferedChannel.h"
-#include "TransientChannel.h"
+#include "Channel.h"
 #include "SelectAnyTarget.h"
 #include "MoveTowardsTarget.h"
 #include "Tokens.h"

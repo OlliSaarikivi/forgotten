@@ -2,6 +2,8 @@
 #include "Forgotten.h"
 #include "ProcessHost.h"
 
+#include "MergeJoin.h"
+
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 
@@ -34,18 +36,33 @@ void loadAssets() {
 	}
 }
 
+using PositionsChannel = TransientChannel<Aspect<PositionColumn>>;
+
+using BodiesChannel = TransientChannel<Aspect<BodyColumn>>;
+
+using DynamicsChannel = TransientChannel<Aspect<PositionColumn, BodyColumn>>;
+
 void createProcesses()
 {
-	/* Channels */
-	//PositionsChannel_t monsters;
-	/* Processes */
-	//SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
-	//MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
+    /* Channels */
+    //PositionsChannel_t monsters;
+    /* Processes */
+    //SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
+    //MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
 
-    auto r1 = Row<Eid, PositionColumn>();
-    auto r2 = Row<Eid, BodyColumn>();
-    auto r3 = Row<Eid, PositionColumn, BodyColumn>();
+    auto r1 = Aspect<PositionColumn, BodyColumn>({ 3 }, { vec2() }, { nullptr });
+    auto blah = r1 < r1;
+    auto r2 = Aspect<BodyColumn>({ 4 }, { nullptr });
+    auto r3 = Aspect<PositionColumn, BodyColumn>(r1);
+    auto r4 = Row<Key<>, ContactColumn>({ std::make_pair<b2Fixture*, b2Fixture*>(nullptr, nullptr) });
     r3.setAll(r2);
+    r3.setAll(Aspect<BodyColumn>({ 5 }, { nullptr }));
+
+    PositionsChannel positions;
+    BodiesChannel bodies;
+    DynamicsChannel joined;
+    auto merge_join = MergeJoin<PositionsChannel, BodiesChannel, DynamicsChannel>(positions, bodies, joined);
+
 }
 
 void close() {

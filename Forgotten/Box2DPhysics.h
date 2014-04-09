@@ -6,16 +6,17 @@
 
 template<
     typename TCenterForcesChannel,
+    typename TBodiesChannel,
     typename TPositionsChannel,
     typename TContactsChannel>
 struct Box2DPhysics : Process, b2ContactListener
 {
-    Box2DPhysics(const TCenterForcesChannel &center_forces, TPositionsChannel &positions, TContactsChannel &contacts
+    Box2DPhysics(const TCenterForcesChannel &center_forces, const TBodiesChannel &bodies, TPositionsChannel &positions, TContactsChannel &contacts
     unique_ptr<b2World> world, int velocity_iterations, int position_iterations) :
-    center_forces_chan(center_forces),
-    dynamics_chan(dynamics),
-    positions_chan(positions),
-    contacts_chan(contacts),
+    center_forces(center_forces),
+    bodies(bodies),
+    positions(positions),
+    contacts(contacts),
     world(world),
     velocity_iterations(velocity_iterations),
     position_iterations(position_iterations)
@@ -26,37 +27,39 @@ struct Box2DPhysics : Process, b2ContactListener
     }
     void forEachInput(function<void(const Channel&)> f) const override
     {
-        f(center_forces_chan);
+        f(center_forces);
+        f(bodies);
     }
     void tick(float step) const override
     {
-        const auto &center_forces = center_forces_chan.readFrom();
         for (const auto &center_force : center_forces) {
             b2Body *b = center_force.body;
             b->ApplyForceToCenter(toB2(center_force.force), true);
         }
         world->Step(step, velocity_iterations, position_iterations);
         const auto &positions = positions_chan.modifyInPlace();
-        for (const auto &position : positions) {
-
+        for (const auto &body : bodies) {
+            b2Body *b = body.body;
+            positions.put(Aspect<PositionColumn>({ toGLM(b->GetPosition() }));
         }
     }
     void BeginContact(b2Contact *contact) override
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
-        contacts_chan.modifyInPlace().emplace(fixtureA, fixtureB);
+        contacts.put(OneKeyRow<ContactColumn>({ std::make_pair(fixtureA, fixtureB) });
     }
     void EndContact(b2Contact *contact) override
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
-        contacts_chan.modifyInPlace().erase(Contact(fixtureA, fixtureB));
+        contacts.erase(OneKeyRow<ContactColumn>({ std::make_pair(fixtureA, fixtureB) });
     }
 private:
-    const TCenterForcesChannel &center_forces_chan;
-    TPositionsChannel &positions_chan;
-    TContactsChannel &contacts_chan;
+    const TCenterForcesChannel &center_forces;
+    const TBodiesChannel &bodies;
+    TPositionsChannel &positions;
+    TContactsChannel &contacts;
     unique_ptr<b2World> world;
     int velocity_iterations, position_iterations;
 };

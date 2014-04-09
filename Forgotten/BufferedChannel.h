@@ -2,31 +2,42 @@
 
 #include "Channel.h"
 
-template<typename TBuffer, size_t SIZE>
-struct BufferedChannel : Channel
+template<size_t SIZE, typename TChannel>
+struct Buffer : Channel
 {
-    BufferedChannel()
+    Buffer()
     {
         write_to = buffers.begin();
-        tick();
+        read_from = *write_to;
+        ++write_to;
     }
-    void tick() override
+    virtual void tick() override
     {
-        read_from = write_to;
+        read_from = *write_to;
         ++write_to;
         write_to = write_to == buffers.end() ? buffers.begin() : write_to;
         write_to->clear();
     }
-    const TBuffer &readFrom() const
+    typename TChannel::const_iterator begin() const
     {
-        return *read_from;
+        return read_from.begin();
     }
-    TBuffer &writeTo()
+    typename TChannel::const_iterator end() const
     {
-        return *write_to;
+        return read_from.end();
+    }
+    template<typename TRow2>
+    pair<typename TChannel::ContainerType::iterator, bool> emplace(TRow2&& row)
+    {
+        write_to->emplace(std::forward<TRow2>(row));
+    }
+    template<typename TRow2>
+    void put(TRow2&& row)
+    {
+        write_to->put(std::forward<TRow2>(row));
     }
 private:
-    array<TBuffer, SIZE> buffers;
-    typename array<TBuffer, SIZE>::const_iterator read_from;
-    typename array<TBuffer, SIZE>::iterator write_to;
+    array<TChannel, SIZE> channels;
+    const TChannel &read_from;
+    typename array<TChannel, SIZE>::iterator write_to;
 };
