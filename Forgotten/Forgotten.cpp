@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "Forgotten.h"
 #include "ProcessHost.h"
-
+#include "Buffer.h"
 #include "MergeJoin.h"
+#include "Box2DStep.h"
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
@@ -36,11 +37,13 @@ void loadAssets() {
 	}
 }
 
-using PositionsChannel = TransientChannel<Aspect<PositionColumn>>;
+using ForcesChannel = TransientChannel<Record<BodyColumn, ForceColumn>, Vector>;
 
-using BodiesChannel = TransientChannel<Aspect<BodyColumn>>;
+using BodiesChannel = PersistentChannel<Aspect<BodyColumn>, Set>;
 
-using DynamicsChannel = TransientChannel<Aspect<PositionColumn, BodyColumn>>;
+using PositionsChannel = Buffer<2, TransientChannel<Aspect<PositionColumn>, Set>>;
+
+using ContactsChannel = PersistentChannel<Record<ContactColumn>, Vector>;
 
 void createProcesses()
 {
@@ -51,18 +54,21 @@ void createProcesses()
     //MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
 
     auto r1 = Aspect<PositionColumn, BodyColumn>({ 3 }, { vec2() }, { nullptr });
-    auto blah = r1 < r1;
     auto r2 = Aspect<BodyColumn>({ 4 }, { nullptr });
+    auto blah = r1 < r2;
     auto r3 = Aspect<PositionColumn, BodyColumn>(r1);
     auto r4 = Row<Key<>, ContactColumn>({ std::make_pair<b2Fixture*, b2Fixture*>(nullptr, nullptr) });
     r3.setAll(r2);
     r3.setAll(Aspect<BodyColumn>({ 5 }, { nullptr }));
 
+    ForcesChannel forces;
     PositionsChannel positions;
     BodiesChannel bodies;
-    DynamicsChannel joined;
-    auto merge_join = MergeJoin<PositionsChannel, BodiesChannel, DynamicsChannel>(positions, bodies, joined);
-
+    ContactsChannel contacts;
+    b2World* world;
+    auto b2step = Box2DStep<ForcesChannel, BodiesChannel, PositionsChannel, ContactsChannel>(
+        forces, bodies, positions, contacts, world, 5, 3
+        );
 }
 
 void close() {

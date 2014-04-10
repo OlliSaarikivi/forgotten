@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Process.h"
-#include "BufferedChannel.h"
+#include "Buffer.h"
 #include "Channel.h"
 #include "SelectAnyTarget.h"
 #include "MoveTowardsTarget.h"

@@ -5,9 +5,9 @@
 template<size_t SIZE, typename TChannel>
 struct Buffer : Channel
 {
-    Buffer()
+    Buffer() : write_to(channels.begin()), read_from(*write_to)
     {
-        write_to = buffers.begin();
+        write_to = channels.begin();
         read_from = *write_to;
         ++write_to;
     }
@@ -15,14 +15,14 @@ struct Buffer : Channel
     {
         read_from = *write_to;
         ++write_to;
-        write_to = write_to == buffers.end() ? buffers.begin() : write_to;
+        write_to = write_to == channels.end() ? channels.begin() : write_to;
         write_to->clear();
     }
-    typename TChannel::const_iterator begin() const
+    typename TChannel::ContainerType::const_iterator begin() const
     {
         return read_from.begin();
     }
-    typename TChannel::const_iterator end() const
+    typename TChannel::ContainerType::const_iterator end() const
     {
         return read_from.end();
     }
@@ -36,8 +36,13 @@ struct Buffer : Channel
     {
         write_to->put(std::forward<TRow2>(row));
     }
+    template<typename TRow2>
+    typename TChannel::ContainerType::size_type erase(TRow2&& row)
+    {
+        write_to->erase(std::forward<TRow2>(row));
+    }
 private:
     array<TChannel, SIZE> channels;
-    const TChannel &read_from;
+    TChannel &read_from;
     typename array<TChannel, SIZE>::iterator write_to;
 };

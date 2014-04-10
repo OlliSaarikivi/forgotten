@@ -46,6 +46,8 @@ struct Key<>
 {
     template<typename TLeft, typename TRight>
     static bool tLessThan(const TLeft& left, const TRight& right) { return false; }
+    template<typename TLeft, typename TRight>
+    static bool tEqual(const TLeft& left, const TRight& right) { return true; }
 };
 
 template<typename TColumn, typename... TColumns>
@@ -58,11 +60,20 @@ struct Key<TColumn, TColumns...>
         const TColumn &right_key = right;
         return (left_key < right_key) || (!(right_key < left_key) && Key<TColumns...>::tLessThan(left, right));
     }
+    template<typename TLeft, typename TRight>
+    static bool tEqual(const TLeft& left, const TRight& right)
+    {
+        const TColumn &left_key = left;
+        const TColumn &right_key = right;
+        return (left_key == right_key) && Key<TColumns...>::tEqual(left, right);
+    }
 };
 
 template<typename TKey = Key<>, typename... TColumns>
 struct Row : TColumns...
 {
+    typedef TKey KeyType;
+
     Row(TColumns&&... columns) : TColumns(columns)... {}
 
     template<typename... TOtherColumns>
@@ -93,7 +104,15 @@ struct Row : TColumns...
     template<typename TRight>
     bool operator<(const TRight &right) const
     {
+        static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
         TKey::tLessThan(*this, right);
+    }
+
+    template<typename TRight>
+    bool operator==(const TRight &right) const
+    {
+        static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
+        TKey::tEqual(*this, right);
     }
 };
 
@@ -101,19 +120,20 @@ struct Row : TColumns...
     FIELD_TYPE FIELD; \
     void set(NAME c) { FIELD = c.##FIELD; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
+    template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
 };
 
 BUILD_COLUMN(EidColumn, Eid, eid)
 BUILD_COLUMN(PositionColumn, vec2, position)
 BUILD_COLUMN(BodyColumn, b2Body*, body)
 BUILD_COLUMN(ForceColumn, vec2, force)
-BUILD_COLUMN(ContactColumn, (pair<b2Fixture*,b2Fixture*>), contact)
+BUILD_COLUMN(ContactColumn, (pair<b2Fixture*, b2Fixture*>), contact)
+
+template<typename... TDataColumns>
+using Record = Row<Key<TDataColumns...>, TDataColumns...>;
 
 template<typename TKeyColumn, typename... TDataColumns>
-using OneKeyRow = Row<Key<TKeyColumn>, TKeyColumn, TDataColumns...>;
+using Mapping = Row<Key<TKeyColumn>, TKeyColumn, TDataColumns...>;
 
 template<typename... TDataColumns>
-using TotalKeyRow = Row<Key<TDataColumns...>, TDataColumns...>;
-
-template<typename... TDataColumns>
-using Aspect = Row<Key<EidColumn>, EidColumn, TDataColumns...>;
+using Aspect = Mapping<EidColumn, TDataColumns...>;

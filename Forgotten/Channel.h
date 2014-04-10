@@ -10,7 +10,7 @@ struct Channel
 };
 
 template<typename TRow, template<typename> class TContainer>
-struct PersistentChannelBase : Channel
+struct PersistentChannel : Channel
 {
     typedef TRow RowType;
     typedef TContainer<TRow> ContainerType;
@@ -45,46 +45,115 @@ struct PersistentChannelBase : Channel
     {
         buffer.clear();
     }
-protected:
+    template<typename TRow2>
+    pair<typename TContainer::iterator, bool> emplace(TRow2&& row)
+    {
+        return EmplaceHelper<TRow, TContainer<TRow>, IsMultiset<TRow,TContainer<TRow>>::value>
+            ::doEmplace(buffer, std::forward<TRow2>(row));
+    }
+    template<typename TRow2>
+    void put(TRow2&& row)
+    {
+        PutHelper<TRow, TContainer<TRow>, IsMultiset<TRow, TContainer<TRow>>::value>
+            ::doPut(buffer, std::forward<TRow2>(row));
+    }
+    template<typename TRow2>
+    typename TContainer<TRow>::size_type erase(TRow2&& row)
+    {
+        return EraseHelper<TRow, TContainer<TRow>>
+            ::doErase(buffer, std::forward<TRow2>(row));
+    }
+private:
     TContainer<TRow> buffer;
     vector<const Process*> producers;
 };
 
-template<typename TRow, template<typename> class TContainer>
-struct PersistentChannel : PersistentChannelBase<TRow, TContainer>
+template<typename TRow, typename TContainer, bool IsMultiset>
+struct EmplaceHelper
 {
     template<typename TRow2>
-    pair<typename TContainer::iterator, bool> emplace(TRow2&& row)
+    static pair<typename TContainer::iterator, bool> doEmplace(TContainer& buffer, TRow2&& row)
     {
         return buffer.emplace(std::forward<TRow2>(row));
     }
-    template<typename TRow2>
-    void put(TRow2&& row)
-    {
-        auto result = buffer.emplace(row);
-        if (!result.second) {
-            *(result.first) = std::forward<TRow2>(row);
-        }
-    }
 };
-
-template<typename TRow>
-struct PersistentChannel<TRow, Vector> : PersistentChannelBase<TRow, Vector>
+template<typename TRow, typename TContainer>
+struct EmplaceHelper<typename TRow, typename TContainer, true>
 {
     template<typename TRow2>
-    pair<typename Vector<TRow>::iterator, bool> emplace(TRow2&& row)
+    static pair<typename TContainer::iterator, bool> doEmplace(TContainer& buffer, TRow2&& row)
+    {
+        return std::make_pair(buffer.emplace(std::forward<TRow2>(row)), true);
+    }
+};
+template<typename TRow, bool IsMultiset>
+struct EmplaceHelper<TRow, Vector<TRow>, IsMultiset>
+{
+    template<typename TRow2>
+    static pair<typename Vector<TRow>::iterator, bool> doEmplace(Vector<TRow>& buffer, TRow2&& row)
     {
         buffer.emplace_back(std::forward<TRow2>(row));
         return std::make_pair(buffer.rbegin().base(), true);
     }
+};
+
+template<typename TRow, typename TContainer, bool IsMultiset>
+struct PutHelper
+{
     template<typename TRow2>
-    void put(TRow2&& row)
+    static void doPut(TContainer& buffer, TRow2&& row)
     {
-        buffer.emplace_back(row);
+        auto result = buffer.emplace(row);
+        if (!result.second) {
+            /* This is safe because result.first is guaranteed to be equal (in the ordering)
+            * to the row to insert. */
+            const_cast<TRow&>(*(result.first)) = std::forward<TRow2>(row);
+        }
+    }
+};
+template<typename TRow, typename TContainer>
+struct PutHelper<typename TRow, typename TContainer, true>
+{
+    template<typename TRow2>
+    static void doPut(TContainer& buffer, TRow2&& row)
+    {
+        return std::make_pair(buffer.emplace(std::forward<TRow2>(row)), true);
+    }
+};
+template<typename TRow, bool IsMultiset>
+struct PutHelper<TRow, Vector<TRow>, IsMultiset>
+{
+    template<typename TRow2>
+    static void doPut(Vector<TRow>& buffer, TRow2&& row)
+    {
+        buffer.emplace_back(std::forward<TRow2>(row));
     }
 };
 
-template<typename TRow, template<typename> class TContainer = Vector>
+template<typename TRow, typename TContainer>
+struct EraseHelper
+{
+    template<typename TRow2>
+    static typename TContainer::size_type doErase(TContainer& buffer, TRow2&& row)
+    {
+        return buffer.erase(std::forward<TRow2>(row));
+    }
+};
+template<typename TRow>
+struct EraseHelper<TRow, Vector<TRow>>
+{
+    template<typename TRow2>
+    static typename Vector<TRow>::size_type doErase(Vector<TRow>& buffer, TRow2&& row)
+    {
+        auto original_size = buffer.size();
+        buffer.erase(std::remove_if(buffer.begin(), buffer.end(), [&](const TRow& other) {
+            return row == other;
+        }), buffer.end());
+        return original_size - buffer.size();
+    }
+};
+
+template<typename TRow, template<typename> class TContainer>
 struct TransientChannel : PersistentChannel<TRow, TContainer>
 {
     virtual void tick() override
