@@ -90,6 +90,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="Box2DStep.h" />
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Channel.h" />
+    <ClInclude Include="GameLoop.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="ProcessHost.h" />
     <ClInclude Include="Process.h" />
@@ -105,6 +106,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
   <ItemGroup>
     <ClCompile Include="Channel.cpp" />
     <ClCompile Include="Forgotten.cpp" />
+    <ClCompile Include="GameLoop.cpp" />
     <ClCompile Include="ProcessHost.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

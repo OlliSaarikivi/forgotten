@@ -25,6 +25,14 @@ struct PersistentChannel : Channel
             f(*producer);
         }
     }
+    const PersistentChannel& read() const
+    {
+        return *this;
+    }
+    PersistentChannel& write() const
+    {
+        return *this;
+    }
     typename TContainer<TRow>::const_iterator begin() const
     {
         return buffer.cbegin();

@@ -18,13 +18,13 @@ struct Buffer : Channel
         write_to = write_to == channels.end() ? channels.begin() : write_to;
         write_to->clear();
     }
-    typename TChannel::ContainerType::const_iterator begin() const
+    const TChannel& read() const
     {
-        return read_from.begin();
+        return read_from.read();
     }
-    typename TChannel::ContainerType::const_iterator end() const
+    TChannel& write() const
     {
-        return read_from.end();
+        return write_to->write();
     }
     template<typename TRow2>
     pair<typename TChannel::ContainerType::iterator, bool> emplace(TRow2&& row)

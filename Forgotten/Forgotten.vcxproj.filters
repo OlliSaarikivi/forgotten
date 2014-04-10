@@ -63,6 +63,9 @@
     <ClInclude Include="Buffer.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="GameLoop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -75,6 +78,9 @@
       <Filter>Source Files\Processes</Filter>
     </ClCompile>
     <ClCompile Include="ProcessHost.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GameLoop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

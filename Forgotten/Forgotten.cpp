@@ -4,6 +4,7 @@
 #include "Buffer.h"
 #include "MergeJoin.h"
 #include "Box2DStep.h"
+#include "GameLoop.h"
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
@@ -38,36 +39,20 @@ void loadAssets() {
 }
 
 using ForcesChannel = TransientChannel<Record<BodyColumn, ForceColumn>, Vector>;
-
 using BodiesChannel = PersistentChannel<Aspect<BodyColumn>, Set>;
-
 using PositionsChannel = Buffer<2, TransientChannel<Aspect<PositionColumn>, Set>>;
-
 using ContactsChannel = PersistentChannel<Record<ContactColumn>, Vector>;
 
-void createProcesses()
+unique_ptr<GameLoop> createGame()
 {
-    /* Channels */
-    //PositionsChannel_t monsters;
-    /* Processes */
-    //SelectAnyTarget<PositionsChannel_t, PositionsChannel_t, TargetingsChannel_t> monster_targeting(monsters, players, monster_targetings);
-    //MoveTowardsTarget<TargetingsChannel_t, PositionsChannel_t> monster_movement(monster_targetings, monsters);
-
-    auto r1 = Aspect<PositionColumn, BodyColumn>({ 3 }, { vec2() }, { nullptr });
-    auto r2 = Aspect<BodyColumn>({ 4 }, { nullptr });
-    auto blah = r1 < r2;
-    auto r3 = Aspect<PositionColumn, BodyColumn>(r1);
-    auto r4 = Row<Key<>, ContactColumn>({ std::make_pair<b2Fixture*, b2Fixture*>(nullptr, nullptr) });
-    r3.setAll(r2);
-    r3.setAll(Aspect<BodyColumn>({ 5 }, { nullptr }));
-
-    ForcesChannel forces;
-    PositionsChannel positions;
-    BodiesChannel bodies;
-    ContactsChannel contacts;
+    auto game_loop = std::make_unique<GameLoop>(boost::chrono::milliseconds(10), 10);
+    auto forces = std::make_unique<ForcesChannel>();
+    auto positions = std::make_unique<PositionsChannel>();
+    auto bodies = std::make_unique<BodiesChannel>();
+    auto contacts = std::make_unique<ContactsChannel>();
     b2World* world;
     auto b2step = Box2DStep<ForcesChannel, BodiesChannel, PositionsChannel, ContactsChannel>(
-        forces, bodies, positions, contacts, world, 5, 3
+        *forces, *bodies, *positions, *contacts, world, 5, 3
         );
 }
 

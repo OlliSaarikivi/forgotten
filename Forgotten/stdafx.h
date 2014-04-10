@@ -19,6 +19,7 @@
 #include <set>
 
 #include <boost/container/flat_set.hpp>
+#include <boost/chrono/chrono.hpp>
 
 #include <windows.h>
 #include <gl/gl.h>

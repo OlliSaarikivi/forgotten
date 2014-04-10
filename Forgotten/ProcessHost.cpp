@@ -7,6 +7,11 @@ void ProcessHost::addProcess(unique_ptr<Process> process)
     execution_order.clear();
 }
 
+void ProcessHost::addChannel(unique_ptr<Channel> channel)
+{
+    channels.emplace(std::move(channel));
+}
+
 void ProcessHost::sortProcesses()
 {
     execution_order.clear();
@@ -31,6 +36,9 @@ void ProcessHost::sortProcesses()
 void ProcessHost::tick(float step)
 {
     assert(execution_order.size() == processes.size());
+    for (const auto &channel : channels) {
+        channel->tick();
+    }
     for (const auto &process : execution_order) {
         process->tick(step);
     }
