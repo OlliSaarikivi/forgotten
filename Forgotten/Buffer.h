@@ -5,22 +5,22 @@
 template<size_t SIZE, typename TChannel>
 struct Buffer : Channel
 {
-    Buffer() : write_to(channels.begin()), read_from(*write_to)
+    Buffer() : channels{}, write_to(channels.begin()), read_from(channels.begin())
     {
-        write_to = channels.begin();
-        read_from = *write_to;
         ++write_to;
+        write_to = write_to == channels.end() ? channels.begin() : write_to;
     }
     virtual void tick() override
     {
-        read_from = *write_to;
+        ++read_from;
+        read_from = read_from == channels.end() ? channels.begin() : read_from;
         ++write_to;
         write_to = write_to == channels.end() ? channels.begin() : write_to;
         write_to->clear();
     }
     const TChannel& read() const
     {
-        return read_from.read();
+        return read_from->read();
     }
     TChannel& write() const
     {
@@ -43,6 +43,6 @@ struct Buffer : Channel
     }
 private:
     array<TChannel, SIZE> channels;
-    TChannel &read_from;
+    typename array<TChannel, SIZE>::const_iterator read_from;
     typename array<TChannel, SIZE>::iterator write_to;
 };

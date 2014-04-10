@@ -30,12 +30,6 @@
     <ClInclude Include="Forgotten.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SelectAnyTarget.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="MoveTowardsTarget.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
     <ClInclude Include="Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -63,8 +57,17 @@
     <ClInclude Include="Buffer.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
-    <ClInclude Include="GameLoop.h">
+    <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ForgottenGame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Debug.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="SDLRender.h">
+      <Filter>Header Files\Processes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -80,7 +83,7 @@
     <ClCompile Include="ProcessHost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GameLoop.cpp">
+    <ClCompile Include="Game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

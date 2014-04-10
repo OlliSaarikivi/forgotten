@@ -32,29 +32,30 @@ struct Box2DStep : Process, b2ContactListener
     }
     void tick(float step) const override
     {
-        for (const auto &center_force : center_forces) {
+        for (const auto &center_force : center_forces.read()) {
             b2Body *b = center_force.body;
             b->ApplyForceToCenter(toB2(center_force.force), true);
         }
 
         world->Step(step, velocity_iterations, position_iterations);
 
-        for (const auto &body : bodies) {
+        auto& positions_write_to = positions.write();
+        for (const auto &body : bodies.read()) {
             b2Body *b = body.body;
-            positions.put(Aspect<PositionColumn>({ body.eid }, { toGLM(b->GetPosition()) }));
+            positions_write_to.put(Aspect<PositionColumn>({ body.eid }, { toGLM(b->GetPosition()) }));
         }
     }
     void BeginContact(b2Contact *contact) override
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
-        contacts.put(Record<ContactColumn>({ std::make_pair(fixtureA, fixtureB) }));
+        contacts.write().put(Record<ContactColumn>({ std::make_pair(fixtureA, fixtureB) }));
     }
     void EndContact(b2Contact *contact) override
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
-        contacts.erase(Record<ContactColumn>({ std::make_pair(fixtureA, fixtureB) }));
+        contacts.write().erase(Record<ContactColumn>({ std::make_pair(fixtureA, fixtureB) }));
     }
 private:
     const TCenterForcesChannel &center_forces;

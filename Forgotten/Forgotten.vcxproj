@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include;$(Boost_Includes)</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)lib;$(Boost_Libraries)</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)libdebug;$(Boost_Libraries)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -59,7 +59,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib</AdditionalDependencies>
     </Link>
@@ -79,25 +79,30 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"
+xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Box2DStep.h" />
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Channel.h" />
-    <ClInclude Include="GameLoop.h" />
+    <ClInclude Include="Debug.h" />
+    <ClInclude Include="ForgottenGame.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="ProcessHost.h" />
     <ClInclude Include="Process.h" />
-    <ClInclude Include="MoveTowardsTarget.h" />
+    <ClInclude Include="SDLRender.h" />
     <ClInclude Include="Tokens.h" />
     <ClInclude Include="Forgotten.h" />
-    <ClInclude Include="SelectAnyTarget.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Usings.h" />
@@ -106,7 +111,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
   <ItemGroup>
     <ClCompile Include="Channel.cpp" />
     <ClCompile Include="Forgotten.cpp" />
-    <ClCompile Include="GameLoop.cpp" />
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="ProcessHost.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

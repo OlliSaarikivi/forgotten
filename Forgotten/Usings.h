@@ -24,6 +24,9 @@ template<typename T>
 using Set = set<T>;
 
 template<typename T>
+using FlatSet = flat_set<T>;
+
+template<typename T>
 using Multiset = multiset<T>;
 
 template<typename T>

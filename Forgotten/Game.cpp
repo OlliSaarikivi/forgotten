@@ -1,14 +1,17 @@
 #include "stdafx.h"
-#include "GameLoop.h"
+#include "Game.h"
 
-GameLoop::GameLoop(Clock::duration simulation_step_size, int max_simulation_output_tick_ratio) :
+Game::Game(Clock::duration simulation_step_size, int max_simulation_output_tick_ratio) :
 simulation_step_size(simulation_step_size),
 max_simulation_output_tick_ratio(max_simulation_output_tick_ratio)
 {
 }
 
-void GameLoop::run()
+void Game::run()
 {
+    simulation.sortProcesses();
+    output.sortProcesses();
+
     Clock::time_point simulation_time = Clock::now();
     Clock::time_point previous_output = simulation_time;
     Clock::time_point now;

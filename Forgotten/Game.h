@@ -3,11 +3,11 @@
 #include "ProcessHost.h"
 #include "Channel.h"
 
-struct GameLoop
+struct Game
 {
     typedef boost::chrono::high_resolution_clock Clock;
 
-    GameLoop(Clock::duration simulation_step_size, int max_simulation_output_tick_ratio);
+    Game(Clock::duration simulation_step_size, int max_simulation_output_tick_ratio);
     void run();
     ProcessHost simulation;
     ProcessHost output;

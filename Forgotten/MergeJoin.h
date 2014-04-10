@@ -15,10 +15,13 @@ struct MergeJoin : Process
     }
     void tick(float step) const override
     {
-        auto left_row = left.begin();
-        auto right_row = right.begin();
-        auto left_end = left.end();
-        auto right_end = right.end();
+        auto left_row = left.read().begin();
+        auto right_row = right.read().begin();
+        auto left_end = left.read().end();
+        auto right_end = right.read().end();
+
+        auto& write_to = joined.write();
+
         while (left_row != left_end && right_row != right_end) {
             if (*left_row < *right_row) {
                 ++left_row;
@@ -29,7 +32,8 @@ struct MergeJoin : Process
                 TJoinedChannel::RowType joined_row(*left_row);
                 do {
                     joined_row.setAll(*right_subscan);
-                    joined.put(joined_row);
+                    write_to.put(joined_row);
+                    ++right_subscan;
                 } while (right_subscan != right_end && !(*left_row < *right_subscan));
                 ++left_row;
             }
