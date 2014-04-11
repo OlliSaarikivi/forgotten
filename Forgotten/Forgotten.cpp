@@ -81,7 +81,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& renderables = game->output.makeChannel<RenderablesChannel>();
 
     game->simulation.makeProcess<Box2DStep<ForcesChannel, BodiesChannel, PositionsChannel, ContactsChannel>>(
-        forces, bodies, positions, contacts, &(game->world), 5, 3);
+        forces, bodies, positions, contacts, &(game->world), 8, 3);
 
     game->output.makeProcess<MergeJoin<PositionsChannel, TextureAspectChannel, TexturePositionChannel>>(
         positions, textureAspects, texturePositions);

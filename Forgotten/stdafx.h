@@ -20,6 +20,7 @@
 
 #include <boost/container/flat_set.hpp>
 #include <boost/chrono/chrono.hpp>
+#include <boost/thread/thread.hpp>
 
 #include <windows.h>
 #include <gl/gl.h>

@@ -13,7 +13,7 @@ struct MergeJoin : Process
     {
         joined.registerProducer(this);
     }
-    void tick(float step) const override
+    void tick() const override
     {
         auto left_row = left.read().begin();
         auto right_row = right.read().begin();

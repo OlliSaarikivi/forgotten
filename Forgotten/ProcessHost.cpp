@@ -40,6 +40,6 @@ void ProcessHost::tick(float step)
         channel->tick();
     }
     for (const auto &process : execution_order) {
-        process->tick(step);
+        process->doTick(step);
     }
 }

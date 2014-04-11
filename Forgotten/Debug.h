@@ -10,7 +10,7 @@ struct Debug : Process
     positions(positions)
     {
     }
-    void tick(float step) const override
+    void tick() const override
     {
         std::cerr << "Positions:\n";
         for (const auto& position : positions.read()) {

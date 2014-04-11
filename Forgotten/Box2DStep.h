@@ -9,7 +9,7 @@ template<
     typename TBodiesChannel,
     typename TPositionsChannel,
     typename TContactsChannel>
-struct Box2DStep : Process, b2ContactListener
+struct Box2DStep : TimedProcess, b2ContactListener
 {
     Box2DStep(const TCenterForcesChannel &center_forces, const TBodiesChannel &bodies, TPositionsChannel &positions, TContactsChannel &contacts,
     b2World* world, int velocity_iterations, int position_iterations) :
