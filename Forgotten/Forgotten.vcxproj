@@ -91,12 +91,17 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Actions.h" />
     <ClInclude Include="Box2DStep.h" />
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Channel.h" />
     <ClInclude Include="Debug.h" />
+    <ClInclude Include="ForgottenData.h" />
     <ClInclude Include="ForgottenGame.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="Traits.h" />
+    <ClInclude Include="Controls.h" />
+    <ClInclude Include="SDLEvents.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="ProcessHost.h" />
     <ClInclude Include="Process.h" />

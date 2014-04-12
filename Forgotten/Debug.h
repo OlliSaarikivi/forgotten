@@ -3,12 +3,16 @@
 #include "Tokens.h"
 #include "Process.h"
 
-template<typename TPositionsChannel>
+template<typename TPositions>
 struct Debug : Process
 {
-    Debug(const TPositionsChannel &positions) :
+    Debug(const TPositions &positions) :
     positions(positions)
     {
+    }
+    void forEachInput(function<void(const Channel&)> f) const override
+    {
+        f(positions);
     }
     void tick() const override
     {
@@ -20,11 +24,7 @@ struct Debug : Process
         }
         std::cerr << "\n";
     }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(positions);
-    }
 private:
-    const TPositionsChannel &positions;
+    const TPositions &positions;
 };
 

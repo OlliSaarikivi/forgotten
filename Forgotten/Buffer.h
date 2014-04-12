@@ -5,6 +5,9 @@
 template<size_t SIZE, typename TChannel>
 struct Buffer : Channel
 {
+    typedef typename TChannel::RowType RowType;
+    typedef typename TChannel::ContainerType ContainerType;
+
     Buffer() : channels{}, write_to(channels.begin()), read_from(channels.begin())
     {
         ++write_to;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Traits.h"
+
 struct Process;
 
 struct Channel
@@ -60,7 +62,7 @@ struct PersistentChannel : Channel
         buffer.clear();
     }
     template<typename TRow2>
-    pair<typename TContainer::iterator, bool> emplace(TRow2&& row)
+    pair<typename TContainer<TRow>::iterator, bool> emplace(TRow2&& row)
     {
         return EmplaceHelper<TRow, TContainer<TRow>, IsMultiset<TRow,TContainer<TRow>>::value>
             ::tEmplace(buffer, std::forward<TRow2>(row));

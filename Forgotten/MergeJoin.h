@@ -3,18 +3,24 @@
 #include "Tokens.h"
 #include "Process.h"
 
-template<typename TLeftChannel, typename TRightChannel, typename TJoinedChannel>
+template<typename TLeft, typename TRight, typename TJoined>
 struct MergeJoin : Process
 {
-    MergeJoin(const TLeftChannel &left, const TRightChannel &right, TJoinedChannel &joined) :
+    MergeJoin(const TLeft &left, const TRight &right, TJoined &joined) :
     left(left),
     right(right),
     joined(joined)
     {
         joined.registerProducer(this);
     }
+    void forEachInput(function<void(const Channel&)> f) const override
+    {
+        f(left);
+        f(right);
+    }
     void tick() const override
     {
+        assert(std::is_sorted(left.begin(), left.end()) && std::is_sorted(right.begin(), right.end()));
         auto left_row = left.read().begin();
         auto right_row = right.read().begin();
         auto left_end = left.read().end();
@@ -29,7 +35,7 @@ struct MergeJoin : Process
                 ++right_row;
             } else {
                 auto right_subscan = right_row;
-                TJoinedChannel::RowType joined_row(*left_row);
+                TJoined::RowType joined_row(*left_row);
                 do {
                     joined_row.setAll(*right_subscan);
                     write_to.put(joined_row);
@@ -39,14 +45,9 @@ struct MergeJoin : Process
             }
         }
     }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(left);
-        f(right);
-    }
 private:
-    const TLeftChannel &left;
-    const TRightChannel &right;
-    TJoinedChannel &joined;
+    const TLeft &left;
+    const TRight &right;
+    TJoined &joined;
 };
 

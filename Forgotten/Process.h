@@ -9,7 +9,6 @@ struct Process
 
     virtual void doTick(float step) const
     {
-        assert(step < 0);
         tick();
     }
     virtual void tick() const = 0;

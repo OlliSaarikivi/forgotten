@@ -17,6 +17,8 @@
 #include <functional>
 #include <assert.h>
 #include <set>
+#include <iomanip>
+#include <limits>
 
 #include <boost/container/flat_set.hpp>
 #include <boost/chrono/chrono.hpp>

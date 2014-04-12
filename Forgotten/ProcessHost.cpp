@@ -16,8 +16,14 @@ void ProcessHost::sortProcesses()
 {
     execution_order.clear();
     set<const Process*> visited;
+    set<const Process*> in_this_host;
+    for (const auto &process : processes) {
+        in_this_host.emplace(process.get());
+    }
     function<void(const Process &process)> visit = [&](const Process &process) {
-        if (visited.find(&process) != visited.end()) {
+        if (visited.find(&process) != visited.end() ||
+            in_this_host.find(&process) == in_this_host.end())
+        {
             return;
         }
         visited.emplace(&process);
