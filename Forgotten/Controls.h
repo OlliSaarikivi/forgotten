@@ -29,23 +29,28 @@ struct Controls : Process
     void tick() const override
     {
         vec2 move_sum(0, 0);
+        bool move = false;
         for (const auto& key_down : keys_down.read()) {
             switch (key_down.sdl_scancode) {
-            case SDL_SCANCODE_W:
+            case SDL_SCANCODE_E:
                 move_sum += vec2(0, -1);
-                break;
-            case SDL_SCANCODE_S:
-                move_sum += vec2(0, 1);
-                break;
-            case SDL_SCANCODE_A:
-                move_sum += vec2(-1, 0);
+                move = true;
                 break;
             case SDL_SCANCODE_D:
+                move_sum += vec2(0, 1);
+                move = true;
+                break;
+            case SDL_SCANCODE_S:
+                move_sum += vec2(-1, 0);
+                move = true;
+                break;
+            case SDL_SCANCODE_F:
                 move_sum += vec2(1, 0);
+                move = true;
                 break;
             }
         }
-        if (std::abs(move_sum.x) > 0.1f || std::abs(move_sum.y) > 0.1f) {
+        if (move) {
             auto move_normalized = glm::normalize(move_sum);
             float heading = glm::atan(move_normalized.y, move_normalized.x);
             for (const auto& controllable : controllables.read()) {

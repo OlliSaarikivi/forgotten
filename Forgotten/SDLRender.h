@@ -18,11 +18,11 @@ struct SDLRender : Process
     {
         SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 148, 237, 100));
         for (const auto& renderable : renderables.read()) {
-            SDL_Rect target = { (int)(renderable.position.x * 10), (int)(renderable.position.y * 10), 0, 0 };
+            SDL_Rect target = { (int)(renderable.position.x * 16) + 400 - renderable.sdl_texture->w / 2,
+                (int)(renderable.position.y * 16) + 300 - renderable.sdl_texture->h / 2, 0, 0 };
             SDL_BlitSurface(renderable.sdl_texture, NULL, screenSurface, &target);
         }
         SDL_UpdateWindowSurface(window);
-        //boost::this_thread::sleep_for(boost::chrono::milliseconds(20));
     }
 private:
     const TRenderables &renderables;

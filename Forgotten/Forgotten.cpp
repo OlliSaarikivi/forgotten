@@ -19,7 +19,7 @@ const int SCREEN_HEIGHT = 600;
 
 SDL_Window* window;
 SDL_Surface* screenSurface;
-SDL_Surface* blobSurface;
+SDL_Surface* defaultSprite;
 
 ProcessHost host;
 
@@ -42,8 +42,8 @@ void init()
 
 void loadAssets()
 {
-    blobSurface = SDL_LoadBMP("sprite_default.bmp");
-    if (!blobSurface) {
+    defaultSprite = SDL_LoadBMP("sprite_default.bmp");
+    if (!defaultSprite) {
         fatal_error("Could not load an asset.");
     }
 }
@@ -54,12 +54,14 @@ using Aspect = Mapping<EidCol, TDataColumns...>;
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& forces = game->simulation.makeChannel<TransientChannel<Record<Body, Force>, Vector>>();
+    auto& textureAspects = game->simulation.makeChannel<PersistentChannel<Aspect<TidCol>, Set>>();
     auto& bodies = game->simulation.makeChannel<PersistentChannel<Aspect<Body>, Set>>();
+    auto& deadlies = game->simulation.makeChannel<PersistentChannel<Aspect<>, Set>>();
+
     auto& positions = game->simulation.makeChannel<TransientChannel<Aspect<Position>, Set>>();
+    auto& forces = game->simulation.makeChannel<TransientChannel<Record<Body, Force>, Vector>>();
     auto& contacts = game->simulation.makeChannel<PersistentChannel<Record<Contact>, Vector>>();
 
-    auto& textureAspects = game->simulation.makeChannel<PersistentChannel<Aspect<TidCol>, Set>>();
     auto& textures = game->simulation.makeChannel<PersistentChannel<Mapping<TidCol, SDLTexture>, Set>>();
 
     auto& keysDown = game->simulation.makeChannel<PersistentChannel<Record<SDLScancode>, Set>>();
@@ -80,22 +82,51 @@ unique_ptr<ForgottenGame> createGame()
     auto& renderables = game->output.makeTransientMergeJoin<Record<SDLTexture, Position>>(texturePositions, textures);
     game->output.makeProcess<SDLRender>(renderables);
 
-    //game->output.makeProcess<Debug<PositionsChan>>(positions);
+    // Add a texture
+    textures.write().put(Mapping<TidCol, SDLTexture>({ 0 }, { defaultSprite }));
 
     Eid player = 1;
+
+    // Add walls
+    b2BodyDef wallBodyDef;
+    wallBodyDef.position.Set(0, 0);
+    b2Body* wallBody = game->world.CreateBody(&wallBodyDef);
+    b2PolygonShape wallBox;
+    wallBox.SetAsBox(50, 10, b2Vec2(0, (300.0f / 16) + 10), 0);
+    wallBody->CreateFixture(&wallBox, 0);
+    wallBox.SetAsBox(50, 10, b2Vec2(0, (-300.0f / 16) - 10), 0);
+    wallBody->CreateFixture(&wallBox, 0);
+    wallBox.SetAsBox(10, 50, b2Vec2((400.0f / 16) + 10, 0), 0);
+    wallBody->CreateFixture(&wallBox, 0);
+    wallBox.SetAsBox(10, 50, b2Vec2(-(400.0f / 16) - 10, 0), 0);
+    wallBody->CreateFixture(&wallBox, 0);
 
     // Add one body
     b2BodyDef bodyDef;
     bodyDef.type = b2_dynamicBody;
-    bodyDef.position.Set(0.0f, 4.0f);
+    bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body = game->world.CreateBody(&bodyDef);
     bodies.write().put(Aspect<Body>({ player }, { body }));
+    b2PolygonShape playerShape;
+    playerShape.SetAsBox(1, 1);
+    b2FixtureDef playerFixtureDef;
+    playerFixtureDef.shape = &playerShape;
+    playerFixtureDef.density = 0.01f;
+    playerFixtureDef.friction = 1.0f;
+    body->CreateFixture(&playerFixtureDef);
+
+    b2FrictionJointDef playerFriction;
+    playerFriction.bodyA = body;
+    playerFriction.bodyB = wallBody;
+    playerFriction.collideConnected = true;
+    playerFriction.localAnchorA = b2Vec2(0, 0);
+    playerFriction.localAnchorB = b2Vec2(0, 0);
+    playerFriction.maxForce = 50;
+    playerFriction.maxTorque = 5;
+    game->world.CreateJoint(&playerFriction);
 
     // Set it controllable
     controllables.write().put(Aspect<>({ player }));
-
-    // Add a texture
-    textures.write().put(Mapping<TidCol, SDLTexture>({ 0 }, { blobSurface }));
 
     // Apply texture to the body
     textureAspects.write().put(Aspect<TidCol>({ player }, { 0 }));
@@ -105,9 +136,9 @@ unique_ptr<ForgottenGame> createGame()
 
 void close()
 {
-    if (blobSurface) {
-        SDL_FreeSurface(blobSurface);
-        blobSurface = nullptr;
+    if (defaultSprite) {
+        SDL_FreeSurface(defaultSprite);
+        defaultSprite = nullptr;
     }
     if (window) {
         SDL_DestroyWindow(window);

@@ -36,7 +36,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
             b2Body *b = center_force.body;
             b->ApplyForceToCenter(toB2(center_force.force), true);
         }
-        //boost::this_thread::sleep_for(boost::chrono::milliseconds(10 + rand()%20));
+
         world->Step(step, velocity_iterations, position_iterations);
 
         auto& positions_write_to = positions.write();

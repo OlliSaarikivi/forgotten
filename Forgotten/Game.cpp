@@ -97,8 +97,8 @@ void Game::run()
 
     preRun();
 
-    FilteredMovingAveragePredictor<10> simulation_predictor;
-    FilteredMovingAveragePredictor<10> output_predictor;
+    FilteredMovingAveragePredictor<7> simulation_predictor;
+    FilteredMovingAveragePredictor<7> output_predictor;
 
     Clock::time_point now = Clock::now();
     Clock::time_point simulation_time = now;
@@ -115,8 +115,6 @@ void Game::run()
             now = Clock::now();
         }
 
-        std::cerr << "Graphics!\n";
-
         auto begin_update = now;
         output.tick(timeless_step);
         now = Clock::now();
@@ -125,10 +123,19 @@ void Game::run()
 
         int simulation_substeps = 0;
         Clock::duration ideal_step, clamped_step;
-        do {
+        while (simulation_substeps < max_simulation_substeps && now - simulation_time > min_sim_step) {
+
             auto simulation_prediction = simulation_predictor.predict();
-            auto target_simulation_time = now + simulation_prediction;
-            ideal_step = target_simulation_time - simulation_time;
+            auto delta_to_now = (now - simulation_time);
+
+            if (simulation_prediction < max_sim_step) {
+                auto substeps_needed = delta_to_now / (max_sim_step - simulation_prediction) + 1;
+                ideal_step = substeps_needed > max_simulation_substeps ? max_sim_step :
+                    (delta_to_now + simulation_prediction * substeps_needed) / substeps_needed;
+            } else {
+                ideal_step = max_sim_step;
+            }
+
             clamped_step = std::max(min_sim_step, std::min(max_sim_step, ideal_step));
 
             //std::cerr << std::fixed << std::setprecision(5);
@@ -142,19 +149,17 @@ void Game::run()
             simulation_time += clamped_step;
             auto simulation_actual = now - begin_simulation;
             simulation_predictor.update(simulation_actual);
-
-            //std::cerr << " Error: " << std::setw(9) << ((((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(now - begin_simulation).count()) / 1e6f) - (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_prediction).count()) / 1e6f));
-            //std::cerr << "\n";
-
             ++simulation_substeps;
 
-            /* We continue stepping while we are doing maximal steps and the maximum has not been reached.
-             * If the maximum is ever reached the game will run slow. */
-        } while (simulation_substeps < max_simulation_substeps && simulation_time < now && now - simulation_time > min_sim_step);
+            //std::cerr << " Error: " << std::setw(9) << ((((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_actual - simulation_prediction).count()) / 1e6f) - (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_prediction).count()) / 1e6f));
+            //std::cerr << "\n";
 
-        std::cerr << std::fixed << std::setprecision(5);
-        std::cerr << " Drift: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_time - now).count()) / 1e6f);
-        std::cerr << "\n";
+        }
+
+        //std::cerr << std::fixed << std::setprecision(5);
+        //std::cerr << " Clamped: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count()) / 1e6f);
+        //std::cerr << " Drift: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_time - now).count()) / 1e6f);
+        //std::cerr << "\n";
 
         if (simulation_time < now && now - simulation_time > max_sim_step) {
             simulation_time = now - max_sim_step;
