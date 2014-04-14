@@ -54,9 +54,6 @@
     <ClInclude Include="Box2DStep.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
-    <ClInclude Include="Buffer.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
     <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>

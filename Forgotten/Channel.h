@@ -21,6 +21,7 @@ template<typename TRow, template<typename> class TContainer>
 struct PersistentChannel : Channel
 {
     typedef TRow RowType;
+    typedef typename TContainer<TRow>::const_iterator const_iterator;
     typedef TContainer<TRow> ContainerType;
 
     virtual void registerProducer(const Process *process) override
@@ -32,14 +33,6 @@ struct PersistentChannel : Channel
         for (const auto& producer : producers) {
             f(*producer);
         }
-    }
-    const PersistentChannel& read() const
-    {
-        return *this;
-    }
-    PersistentChannel& write() const
-    {
-        return const_cast<PersistentChannel&>(*this);
     }
     typename TContainer<TRow>::const_iterator begin() const
     {
@@ -172,16 +165,9 @@ struct EraseHelper<TRow, Vector<TRow>>
 template<typename TRow, template<typename> class TContainer>
 struct TransientChannel : PersistentChannel<TRow, TContainer>
 {
+    typedef typename TContainer<TRow>::const_iterator const_iterator;
     virtual void tick() override
     {
         clear();
-    }
-    const TransientChannel& read() const
-    {
-        return *this;
-    }
-    TransientChannel& write() const
-    {
-        return const_cast<TransientChannel&>(*this);
     }
 };

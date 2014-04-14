@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Forgotten.h"
 #include "ProcessHost.h"
-#include "Buffer.h"
 #include "ForgottenGame.h"
 #include "MergeJoin.h"
 #include "Box2DStep.h"
@@ -75,7 +74,7 @@ unique_ptr<ForgottenGame> createGame()
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = game->simulation.makeTransientMergeJoin<Aspect<Body, MoveAction>>(bodies, move_actions);
+    auto& body_moves = game->simulation.makeUniqueMergeEquiJoin<Aspect<Body, MoveAction>>(bodies, move_actions);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
     auto& texturePositions = game->output.makeTransientMergeJoin<Mapping<TidCol, Position>>(positions, textureAspects);
@@ -83,7 +82,7 @@ unique_ptr<ForgottenGame> createGame()
     game->output.makeProcess<SDLRender>(renderables);
 
     // Add a texture
-    textures.write().put(Mapping<TidCol, SDLTexture>({ 0 }, { defaultSprite }));
+    textures.put(Mapping<TidCol, SDLTexture>({ 0 }, { defaultSprite }));
 
     Eid player = 1;
 
@@ -106,7 +105,7 @@ unique_ptr<ForgottenGame> createGame()
     bodyDef.type = b2_dynamicBody;
     bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body = game->world.CreateBody(&bodyDef);
-    bodies.write().put(Aspect<Body>({ player }, { body }));
+    bodies.put(Aspect<Body>({ player }, { body }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;
@@ -126,10 +125,10 @@ unique_ptr<ForgottenGame> createGame()
     game->world.CreateJoint(&playerFriction);
 
     // Set it controllable
-    controllables.write().put(Aspect<>({ player }));
+    controllables.put(Aspect<>({ player }));
 
     // Apply texture to the body
-    textureAspects.write().put(Aspect<TidCol>({ player }, { 0 }));
+    textureAspects.put(Aspect<TidCol>({ player }, { 0 }));
 
     return game;
 }

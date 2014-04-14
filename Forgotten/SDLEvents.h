@@ -28,15 +28,15 @@ struct SDLEvents : Process
             case SDL_KEYDOWN:
             {
                                 TKeysDown::RowType key_row({ event.key.keysym.scancode });
-                                key_presses.write().emplace(key_row);
-                                keys_down.write().emplace(key_row);
+                                key_presses.emplace(key_row);
+                                keys_down.emplace(key_row);
                                 break;
             }
             case SDL_KEYUP:
             {
                               TKeysDown::RowType key_row({ event.key.keysym.scancode });
-                              key_releases.write().emplace(key_row);
-                              keys_down.write().erase(key_row);
+                              key_releases.emplace(key_row);
+                              keys_down.erase(key_row);
                               break;
             }
             case SDL_QUIT:

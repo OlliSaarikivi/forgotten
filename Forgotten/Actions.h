@@ -18,10 +18,10 @@ struct MoveActionApplier : Process
     }
     void tick() const override
     {
-        for (const auto& body_move : body_moves.read()) {
+        for (const auto& body_move : body_moves) {
             auto force = body_move.move_action;
             force *= 100;
-            forces.write().put(TForces::RowType({ body_move.body }, { force }));
+            forces.put(TForces::RowType({ body_move.body }, { force }));
         }
     }
 private:
