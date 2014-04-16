@@ -53,36 +53,34 @@ using Aspect = Mapping<EidCol, TDataColumns...>;
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& textureAspects = game->simulation.makeChannel<PersistentChannel<Aspect<TidCol>, Set>>();
+    auto& textures = game->simulation.makeChannel<PersistentChannel<Aspect<SDLTexture>, Set>>();
     auto& bodies = game->simulation.makeChannel<PersistentChannel<Aspect<Body>, Set>>();
     auto& deadlies = game->simulation.makeChannel<PersistentChannel<Aspect<>, Set>>();
+    //auto& max_speeds = game->simulation
+    auto a = Row<Key<>, EidCol, Body>({ 3 }, { nullptr });
+    auto b = a.keyCast<Key<EidCol>>();
 
     auto& positions = game->simulation.makeChannel<TransientChannel<Aspect<Position>, Set>>();
+    auto& velocities = game->simulation.makeChannel<TransientChannel<Aspect<Velocity>, Set>>();
     auto& forces = game->simulation.makeChannel<TransientChannel<Record<Body, Force>, Vector>>();
     auto& contacts = game->simulation.makeChannel<PersistentChannel<Record<Contact>, Vector>>();
-
-    auto& textures = game->simulation.makeChannel<PersistentChannel<Mapping<TidCol, SDLTexture>, Set>>();
 
     auto& keysDown = game->simulation.makeChannel<PersistentChannel<Record<SDLScancode>, Set>>();
     auto& keyPresses = game->simulation.makeChannel<TransientChannel<Record<SDLScancode>, Set>>();
     auto& keyReleases = game->simulation.makeChannel<TransientChannel<Record<SDLScancode>, Set>>();
-    auto& controllables = game->simulation.makeChannel<PersistentChannel<Aspect<>, Set>>();
+    auto& controllables = game->simulation.makeChannel<PersistentChannel<Aspect<>, FlatSet>>();
     auto& move_actions = game->simulation.makeChannel<TransientChannel<Aspect<MoveAction>, Set>>();
     auto& heading_actions = game->simulation.makeChannel<TransientChannel<Aspect<HeadingAction>, Set>>();
 
-    game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, contacts, &game->world, 8, 3);
+    game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
     auto& body_moves = game->simulation.makeUniqueMergeEquiJoin<Aspect<Body, MoveAction>>(bodies, move_actions);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
-    auto& texturePositions = game->output.makeTransientMergeJoin<Mapping<TidCol, Position>>(positions, textureAspects);
-    auto& renderables = game->output.makeTransientMergeJoin<Record<SDLTexture, Position>>(texturePositions, textures);
+    auto& renderables = game->output.makeUniqueMergeEquiJoin<Record<SDLTexture, Position>>(textures, positions);
     game->output.makeProcess<SDLRender>(renderables);
-
-    // Add a texture
-    textures.put(Mapping<TidCol, SDLTexture>({ 0 }, { defaultSprite }));
 
     Eid player = 1;
 
@@ -128,7 +126,7 @@ unique_ptr<ForgottenGame> createGame()
     controllables.put(Aspect<>({ player }));
 
     // Apply texture to the body
-    textureAspects.put(Aspect<TidCol>({ player }, { 0 }));
+    textures.put(Aspect<SDLTexture>({ player }, { defaultSprite }));
 
     return game;
 }

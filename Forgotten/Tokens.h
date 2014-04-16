@@ -46,6 +46,14 @@ struct Row : TColumns...
         static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
         return TKey::tEqual(*this, right);
     }
+
+    template<typename TNewKey>
+    const Row<TNewKey, TColumns...>& keyCast()
+    {
+        static_assert(sizeof(Row<TKey, TColumns...>) == sizeof(Row<TNewKey, TColumns...>),
+            "trying to key cast between Rows of different size?! possible template specialization of Row in play");
+        return static_cast<const Row<TNewKey, TColumns...>&>(*this);
+    }
 };
 
 template<typename TRow, bool do_set>

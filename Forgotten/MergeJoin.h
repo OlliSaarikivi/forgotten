@@ -50,15 +50,46 @@ private:
     TJoined &joined;
 };
 
+template<typename... TChans>
+struct ChannelHelper;
+template<typename TChan>
+struct ChannelHelper<TChan>
+{
+    ChannelHelper(const TChan& chan) : chan(chan)
+    {
+    }
+    void invokeEachImmediateDependency(function<void(const Process&)> f) const
+    {
+        chan.forEachImmediateDependency(f);
+    }
+    const TChan& chan;
+};
+template<typename TChan, typename... TChans>
+struct ChannelHelper<TChan, TChans...>
+{
+    ChannelHelper(const TChan& chan, const TChans&... chans) : chan(chan), chans(chans...)
+    {
+    }
+    void invokeEachImmediateDependency(function<void(const Process&)> f) const
+    {
+        chan.forEachImmediateDependency(f);
+        chans.invokeEachImmediateDependency(f);
+    }
+    const TChan& chan;
+    ChannelHelper<TChans...> chans;
+};
+
 template<typename TRow, typename... TChans>
 struct UMEJoinIterator;
 template<typename TRow, typename TChan>
 struct UMEJoinIterator<TRow, TChan>
 {
-    UMEJoinIterator(const TChan& my) : my(my.begin()), my_end(my.end())
+    UMEJoinIterator(const ChannelHelper<TChan>& helper) : my(helper.chan.begin()), my_end(helper.chan.end())
     {
     }
-    UMEJoinIterator(const UMEJoinIterator<TRow, TChan>& other) = default;
+    UMEJoinIterator(const UMEJoinIterator<TRow, TChan>& other) : my(other.my), my_end(other.my_end)
+    {
+    };
 
     void goToEnd()
     {
@@ -92,11 +123,13 @@ struct UMEJoinIterator<TRow, TChan>
 template<typename TRow, typename TChan, typename... TChans>
 struct UMEJoinIterator<TRow, TChan, TChans...>
 {
-    UMEJoinIterator(const TChan& my, const TChans&... rest) : my(my.begin()), my_end(my.end()), rest(rest...)
+    UMEJoinIterator(const ChannelHelper<TChan, TChans...>& helper) : my(helper.chan.begin()), my_end(helper.chan.end()), rest(helper.chans)
     {
         incrementUntilEqual();
     }
-    UMEJoinIterator(const UMEJoinIterator<TRow, TChan, TChans...>& other) = default;
+    UMEJoinIterator(const UMEJoinIterator<TRow, TChan, TChans...>& other) : rest(other.rest), my(other.my), my_end(other.my_end)
+    {
+    };
 
     void goToEnd()
     {
@@ -145,35 +178,6 @@ struct UMEJoinIterator<TRow, TChan, TChans...>
     typename TChan::const_iterator my_end;
 };
 
-template<typename... TChans>
-struct DependencyHelper;
-template<typename TChan>
-struct DependencyHelper<TChan>
-{
-    DependencyHelper(const TChan& chan) : chan(chan)
-    {
-    }
-    void invokeEachImmediateDependency(function<void(const Process&)> f) const
-    {
-        chan.forEachImmediateDependency(f);
-    }
-    const TChan& chan;
-};
-template<typename TChan, typename... TChans>
-struct DependencyHelper<TChan, TChans...>
-{
-    DependencyHelper(const TChan& chan, const TChans&... chans) : chan(chan), chans(chans)
-    {
-    }
-    void invokeEachImmediateDependency(function<void(const Process&)> f) const
-    {
-        chan.forEachImmediateDependency(f);
-        chans.invokeEachImmediateDependency(f);
-    }
-    const TChan& chan;
-    DependencyHelper<TChans...> chans;
-};
-
 template<typename TRow, typename... TChans>
 struct UniqueMergeEquiJoinChannel : Channel
 {
@@ -181,26 +185,24 @@ struct UniqueMergeEquiJoinChannel : Channel
     typedef UMEJoinIterator<TRow, TChans...> const_iterator;
 
     UniqueMergeEquiJoinChannel(const TChans&... chans) :
-        chans(chans...),
-        dependency_helper(chans...)
+        channel_helper(chans...)
     {
     }
     virtual void forEachImmediateDependency(function<void(const Process&)> f) const override
     {
-        dependency_helper.invokeEachImmediateDependency(f);
+        channel_helper.invokeEachImmediateDependency(f);
     }
     const_iterator begin() const
     {
-        return chans;
+        return const_iterator(channel_helper);
     }
     const_iterator end() const
     {
-        const_iterator end_iterator(chans);
+        const_iterator end_iterator(channel_helper);
         end_iterator.goToEnd();
         return end_iterator;
     }
 private:
-    const_iterator chans;
-    DependencyHelper<TChans...> dependency_helper;
+    ChannelHelper<TChans...> channel_helper;
 };
 
