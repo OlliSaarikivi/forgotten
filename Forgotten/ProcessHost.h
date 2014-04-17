@@ -68,10 +68,10 @@ struct ProcessHost
         return ret;
     }
 
-    template<typename TJoinRow, template<typename> class TJoinContainer = Vector, typename TLeft, typename TRight>
-    Stream<TJoinRow, TJoinContainer>& makeMergeJoinStream(const TLeft& left, const TRight& right)
+    template<typename TJoinRow, typename TJoinRowKey, template<typename,typename> class TJoinContainer = Vector, typename TLeft, typename TRight>
+    Stream<TJoinRow, TJoinRowKey, TJoinContainer>& makeMergeJoinStream(const TLeft& left, const TRight& right)
     {
-        auto& joined = makeChannel<Stream<TJoinRow, TJoinContainer>>();
+        auto& joined = makeChannel<Stream<TJoinRow, TJoinRowKey, TJoinContainer>>();
         makeProcess<MergeJoin>(left, right, joined);
         return joined;
     }

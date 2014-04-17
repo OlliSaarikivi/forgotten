@@ -3,62 +3,27 @@
 #include "stdafx.h"
 #include "Utils.h"
 
-template<typename TKey = Key<>, typename... TColumns>
+template<typename... TColumns>
 struct Row : TColumns...
 {
-    typedef TKey KeyType;
-
     Row(TColumns&&... columns) : TColumns(columns)... {}
 
-    template<typename TOtherKey, typename... TOtherColumns>
-    Row(const Row<TOtherKey, TOtherColumns...>& other)
+    template<typename... TOtherColumns>
+    Row(const Row<TOtherColumns...>& other)
     {
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
     }
 
     template<typename TColumn>
-    void set(TColumn&& c)
+    void set(const TColumn& c)
     {
-        SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tSet(*this, std::forward<TColumn>(c));
+        SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tSet(*this, c);
     }
 
-    template<typename TKey, typename... TOtherColumns>
-    void setAll(const Row<TKey, TOtherColumns...>& other)
+    template<typename... TOtherColumns>
+    void setAll(const Row<TOtherColumns...>& other)
     {
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
-    }
-
-    template<typename TKey, typename... TOtherColumns>
-    void setAll(Row<TKey, TOtherColumns...>&& other)
-    {
-        SetAllHelper<TOtherColumns...>::tSetAll(*this, std::move(other));
-    }
-
-    template<typename TRight>
-    bool operator<(const TRight &right) const
-    {
-        static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
-        return TKey::tLessThan(*this, right);
-    }
-
-    template<typename TRight>
-    bool operator==(const TRight &right) const
-    {
-        static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
-        return TKey::tEqual(*this, right);
-    }
-
-    size_t hash() const
-    {
-        return TKey::hash(*this);
-    }
-
-    template<typename TNewKey>
-    const Row<TNewKey, TColumns...>& keyCast()
-    {
-        static_assert(sizeof(Row<TKey, TColumns...>) == sizeof(Row<TNewKey, TColumns...>),
-            "trying to key cast between Rows of different size?! possible template specialization of Row in play");
-        return static_cast<const Row<TNewKey, TColumns...>&>(*this);
     }
 };
 
@@ -103,9 +68,9 @@ template<>
 struct Key<>
 {
     template<typename TLeft, typename TRight>
-    static bool tLessThan(const TLeft& left, const TRight& right) { return false; }
+    static bool less(const TLeft& left, const TRight& right) { return false; }
     template<typename TLeft, typename TRight>
-    static bool tEqual(const TLeft& left, const TRight& right) { return true; }
+    static bool equal(const TLeft& left, const TRight& right) { return true; }
     template<typename TRow>
     static size_t hash(const TRow& row) { return 0; }
 };
@@ -113,18 +78,18 @@ template<typename TColumn, typename... TColumns>
 struct Key<TColumn, TColumns...>
 {
     template<typename TLeft, typename TRight>
-    static bool tLessThan(const TLeft& left, const TRight& right)
+    static bool less(const TLeft& left, const TRight& right)
     {
         const TColumn &left_key = left;
         const TColumn &right_key = right;
-        return (left_key < right_key) || (!(right_key < left_key) && Key<TColumns...>::tLessThan(left, right));
+        return (left_key < right_key) || (!(right_key < left_key) && Key<TColumns...>::less(left, right));
     }
     template<typename TLeft, typename TRight>
-    static bool tEqual(const TLeft& left, const TRight& right)
+    static bool equal(const TLeft& left, const TRight& right)
     {
         const TColumn &left_key = left;
         const TColumn &right_key = right;
-        return (left_key == right_key) && Key<TColumns...>::tEqual(left, right);
+        return (left_key == right_key) && Key<TColumns...>::equal(left, right);
     }
     template<typename TRow>
     static size_t hash(const TRow& row)
@@ -136,12 +101,33 @@ struct Key<TColumn, TColumns...>
     }
 };
 
-template<typename TRow>
-struct RowHash
+template<typename TKey>
+struct KeyHash
 {
+    template<typename TRow>
     size_t operator()(const TRow& row) const
     {
-        return row.hash();
+        return TKey::hash(row);
+    }
+};
+
+template<typename TKey>
+struct KeyLess
+{
+    template<typename TLeft, typename TRight>
+    bool operator()(const TLeft& left, const TRight& right) const
+    {
+        return TKey::less(left, right);
+    }
+};
+
+template<typename TKey>
+struct KeyEqual
+{
+    template<typename TLeft, typename TRight>
+    bool operator()(const TLeft& left, const TRight& right) const
+    {
+        return TKey::equal(left, right);
     }
 };
 
@@ -161,26 +147,20 @@ struct RowHash
         size_t operator()(const TYPE& column) { assert(false); return 0; } \
     }; } \
 
-template<typename... TDataColumns>
-using Record = Row<Key<TDataColumns...>, TDataColumns...>;
-
-template<typename TKeyColumn, typename... TDataColumns>
-using Mapping = Row<Key<TKeyColumn>, TKeyColumn, TDataColumns...>;
-
-template<typename T>
+template<typename T, typename K>
 using Vector = vector<T>;
 
-template<typename T>
-using Set = set<T>;
+template<typename T, typename K>
+using Set = set<T, KeyLess<K>>;
 
-template<typename T>
-using FlatSet = flat_set<T>;
+template<typename T, typename K>
+using FlatSet = flat_set<T, KeyLess<K>>;
 
-template<typename T>
-using Multiset = multiset<T>;
+template<typename T, typename K>
+using Multiset = multiset<T, KeyLess<K>>;
 
-template<typename T>
-using FlatMultiset = flat_multiset<T>;
+template<typename T, typename K>
+using FlatMultiset = flat_multiset<T, KeyLess<K>>;
 
-template<typename T>
-using UnorderedSet = std::unordered_set<T, RowHash<T>>;
+template<typename T, typename K>
+using UnorderedSet = std::unordered_set<T, KeyHash<K>>;

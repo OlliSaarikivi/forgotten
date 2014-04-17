@@ -50,35 +50,35 @@ void loadAssets()
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& textures = game->simulation.makeChannel<Table<Mapping<Eid, SDLTexture>, Set>>();
-    auto& bodies = game->simulation.makeChannel<Table<Mapping<Eid, Body>, Set>>();
-    auto& deadlies = game->simulation.makeChannel<Table<Record<Eid>, Set>>();
-    auto& races = game->simulation.makeChannel<Table<Mapping<Eid, Race>, Set>>();
+    auto& textures = game->simulation.makeChannel<Table<Row<Eid, SDLTexture>, Key<Eid>, Set>>();
+    auto& bodies = game->simulation.makeChannel<Table<Row<Eid, Body>, Key<Eid>, Set>>();
+    auto& deadlies = game->simulation.makeChannel<Table<Row<Eid>, Key<Eid>, Set>>();
+    auto& races = game->simulation.makeChannel<Table<Row<Eid, Race>, Key<Eid>, Set>>();
     auto& race_max_speeds =
-        game->simulation.makeChannel<Table<Mapping<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, UnorderedSet>>();
+        game->simulation.makeChannel<Table<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, Key<Race>, UnorderedSet>>();
     auto& max_speeds =
-        game->simulation.makeChannel<Table<Mapping<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, UnorderedSet>>();
+        game->simulation.makeChannel<Table<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, Key<Eid>, UnorderedSet>>();
 
-    auto& positions = game->simulation.makeChannel<Stream<Mapping<Eid, Position>, Set>>();
-    auto& velocities = game->simulation.makeChannel<Stream<Mapping<Eid, Velocity>, Set>>();
-    auto& forces = game->simulation.makeChannel<Stream<Record<Body, Force>, Vector>>();
-    auto& contacts = game->simulation.makeChannel<Table<Record<Contact>, Vector>>();
+    auto& positions = game->simulation.makeChannel<Stream<Row<Eid, Position>, Key<Eid>, Set>>();
+    auto& velocities = game->simulation.makeChannel<Stream<Row<Eid, Velocity>, Key<Eid>, Set>>();
+    auto& forces = game->simulation.makeChannel<Stream<Row<Body, Force>, Key<>, Vector>>();
+    auto& contacts = game->simulation.makeChannel<Table<Row<Contact>, Key<>, Vector>>();
 
-    auto& keysDown = game->simulation.makeChannel<Table<Record<SDLScancode>, Set>>();
-    auto& keyPresses = game->simulation.makeChannel<Stream<Record<SDLScancode>, Set>>();
-    auto& keyReleases = game->simulation.makeChannel<Stream<Record<SDLScancode>, Set>>();
-    auto& controllables = game->simulation.makeChannel<Table<Record<Eid>, FlatSet>>();
-    auto& move_actions = game->simulation.makeChannel<Stream<Mapping<Eid, MoveAction>, Set>>();
-    auto& heading_actions = game->simulation.makeChannel<Stream<Mapping<Eid, HeadingAction>, Set>>();
+    auto& keysDown = game->simulation.makeChannel<Table<Row<SDLScancode>, Key<SDLScancode>, Set>>();
+    auto& keyPresses = game->simulation.makeChannel<Stream<Row<SDLScancode>, Key<>, Vector>>();
+    auto& keyReleases = game->simulation.makeChannel<Stream<Row<SDLScancode>, Key<>, Vector>>();
+    auto& controllables = game->simulation.makeChannel<Table<Row<Eid>, Key<Eid>, FlatSet>>();
+    auto& move_actions = game->simulation.makeChannel<Stream<Row<Eid, MoveAction>, Key<Eid>, Set>>();
+    auto& heading_actions = game->simulation.makeChannel<Stream<Row<Eid, HeadingAction>, Key<Eid>, Set>>();
 
     game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = game->simulation.makeUniqueMergeEquiJoin<Mapping<Eid, Body, MoveAction>>(bodies, move_actions);
+    auto& body_moves = game->simulation.makeUniqueMergeEquiJoin<Row<Eid, Body, MoveAction>>(bodies, move_actions);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
-    auto& renderables = game->output.makeUniqueMergeEquiJoin<Record<SDLTexture, Position>>(textures, positions);
+    auto& renderables = game->output.makeUniqueMergeEquiJoin<Row<SDLTexture, Position>>(textures, positions);
     game->output.makeProcess<SDLRender>(renderables);
 
     Eid::Type player = 1;
@@ -102,7 +102,7 @@ unique_ptr<ForgottenGame> createGame()
     bodyDef.type = b2_dynamicBody;
     bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body = game->world.CreateBody(&bodyDef);
-    bodies.put(Mapping<Eid, Body>({ player }, { body }));
+    bodies.put(Row<Eid, Body>({ player }, { body }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;
@@ -122,10 +122,10 @@ unique_ptr<ForgottenGame> createGame()
     game->world.CreateJoint(&playerFriction);
 
     // Set it controllable
-    controllables.put(Record<Eid>({ player }));
+    controllables.put(Row<Eid>({ player }));
 
     // Apply texture to the body
-    textures.put(Mapping<Eid, SDLTexture>({ player }, { defaultSprite }));
+    textures.put(Row<Eid, SDLTexture>({ player }, { defaultSprite }));
 
     return game;
 }
