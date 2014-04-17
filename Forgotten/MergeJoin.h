@@ -21,6 +21,9 @@ struct MergeJoin : Process
     }
     void tick() const override
     {
+        using KeyType = typename TLeft::KeyType;
+        static_assert(std::is_same<KeyType, typename TLeft::KeyType>::value, "must have same key to join");
+
         assert(std::is_sorted(left.begin(), left.end()) && std::is_sorted(right.begin(), right.end()));
         auto left_row = left.begin();
         auto right_row = right.begin();
@@ -28,9 +31,9 @@ struct MergeJoin : Process
         auto right_end = right.end();
 
         while (left_row != left_end && right_row != right_end) {
-            if (*left_row < *right_row) {
+            if (KeyType::less(*left_row, *right_row)) {
                 ++left_row;
-            } else if (*right_row < *left_row) {
+            } else if (KeyType::less(*right_row, *left_row)) {
                 ++right_row;
             } else {
                 auto right_subscan = right_row;
@@ -39,7 +42,7 @@ struct MergeJoin : Process
                     joined_row.setAll(*right_subscan);
                     joined.put(joined_row);
                     ++right_subscan;
-                } while (right_subscan != right_end && !(*left_row < *right_subscan));
+                } while (right_subscan != right_end && !(KeyType::less(*left_row, *right_subscan)));
                 ++left_row;
             }
         }
@@ -84,6 +87,8 @@ struct UMEJoinIterator;
 template<typename TRow, typename TChan>
 struct UMEJoinIterator<TRow, TChan>
 {
+    using KeyType = typename TChan::KeyType;
+
     UMEJoinIterator(const ChannelHelper<TChan>& helper) : my(helper.chan.begin()), my_end(helper.chan.end())
     {
     }
@@ -123,6 +128,9 @@ struct UMEJoinIterator<TRow, TChan>
 template<typename TRow, typename TChan, typename... TChans>
 struct UMEJoinIterator<TRow, TChan, TChans...>
 {
+    using KeyType = typename TChan::KeyType;
+    static_assert(std::is_same<KeyType, typename UMEJoinIterator<TRow, TChans...>::KeyType>::value, "must have the same keys to join");
+
     UMEJoinIterator(const ChannelHelper<TChan, TChans...>& helper) : my(helper.chan.begin()), my_end(helper.chan.end()), rest(helper.chans)
     {
         incrementUntilEqual();
@@ -139,9 +147,9 @@ struct UMEJoinIterator<TRow, TChan, TChans...>
     void incrementUntilEqual()
     {
         while (my != my_end && rest.my != rest.my_end) {
-            if (*my < *(rest.my)) {
+            if (KeyType::less(*my, *(rest.my))) {
                 ++my;
-            } else if (*(rest.my) < *my) {
+            } else if (KeyType::less(*(rest.my), *my)) {
                 ++rest;
             } else {
                 return;

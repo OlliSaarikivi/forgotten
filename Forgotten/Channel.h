@@ -20,9 +20,10 @@ struct Channel
 template<typename TRow, typename TKey, template<typename, typename> class TContainer>
 struct Table : Channel
 {
-    typedef TRow RowType;
-    typedef typename TContainer<TRow, TKey>::const_iterator const_iterator;
-    typedef TContainer<TRow, TKey> ContainerType;
+    using RowType = TRow;
+    using KeyType = TKey;
+    using const_iterator = typename TContainer<TRow, TKey>::const_iterator;
+    using ContainerType = TContainer<TRow, TKey>;
 
     virtual void registerProducer(const Process *process) override
     {
@@ -165,7 +166,11 @@ struct EraseHelper<TRow, TKey, Vector<TRow, TKey>>
 template<typename TRow, typename TKey, template<typename,typename> class TContainer>
 struct Stream : Table<TRow, TKey, TContainer>
 {
-    typedef typename TContainer<TRow, TKey>::const_iterator const_iterator;
+    using RowType = TRow;
+    using KeyType = TKey;
+    using const_iterator = typename TContainer<TRow, TKey>::const_iterator;
+    using ContainerType = TContainer<TRow, TKey>;
+
     virtual void tick() override
     {
         clear();

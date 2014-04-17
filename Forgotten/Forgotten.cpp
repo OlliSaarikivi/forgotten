@@ -10,6 +10,7 @@
 #include "ForgottenData.h"
 #include "Controls.h"
 #include "Actions.h"
+#include "MultiIndexChannel.h"
 
 #include <tchar.h>
 
@@ -80,6 +81,11 @@ unique_ptr<ForgottenGame> createGame()
 
     auto& renderables = game->output.makeUniqueMergeEquiJoin<Row<SDLTexture, Position>>(textures, positions);
     game->output.makeProcess<SDLRender>(renderables);
+
+
+    auto a = std::make_unique<IndexedTable<Row<Eid>, NonUnique<Key<Eid>>>>();
+
+
 
     Eid::Type player = 1;
 
@@ -160,19 +166,20 @@ void bstop(string name)
 }
 
 #include <boost/multi_index_container.hpp>
-#include <boost/multi_index/random_access_index.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
 
 using namespace boost::multi_index;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    int N = 10000;
-    const int M = 500;
+    int N = 10000000;
+    const int M = 5;
 
     auto sv = std::make_unique<std::vector<std::array<int,M>>>();
-    auto bv = std::make_unique<multi_index_container<std::array<int, M>, indexed_by<random_access<>>>>();
+    auto bv = std::make_unique<multi_index_container<std::array<int, M>, indexed_by<sequenced<>>>>();
 
     std::array<int, M> x;
+    int a = 0;
 
     bstart();
     for (int i = 0; i < N; ++i) {
@@ -189,12 +196,14 @@ int _tmain(int argc, _TCHAR* argv[])
     bstart();
     for (const auto& e : *sv) {
         x = e;
+        a += x[0];
     }
     bstop("vector iteration");
 
     bstart();
     for (const auto& e : *sv) {
         x = e;
+        a += x[0];
     }
     bstop("multi-index iteration");
 

@@ -37,9 +37,9 @@ template<typename TRow>
 struct SetHelper<TRow, true>
 {
     template<typename TColumn>
-    static void tSet(TRow& row, TColumn&& c)
+    static void tSet(TRow& row, const TColumn& c)
     {
-        static_cast<TColumn&>(row).set(std::forward<TColumn>(c));
+        static_cast<TColumn&>(row).set(c);
     }
 };
 
@@ -64,19 +64,45 @@ struct SetAllHelper<TColumn, TColumns...>
 
 template<typename... TColumns>
 struct Key;
-template<>
-struct Key<>
+template<typename TColumn>
+struct Key<TColumn>
 {
+    using result_type = Row<TColumn>;
+    template<typename... TOtherColumns>
+    result_type operator()(const Row<TOtherColumns...>& row) const
+    {
+        return result_type(row);
+    }
     template<typename TLeft, typename TRight>
-    static bool less(const TLeft& left, const TRight& right) { return false; }
+    static bool less(const TLeft& left, const TRight& right)
+    {
+        const TColumn &left_key = left;
+        const TColumn &right_key = right;
+        return (left_key < right_key) || (!(right_key < left_key));
+    }
     template<typename TLeft, typename TRight>
-    static bool equal(const TLeft& left, const TRight& right) { return true; }
+    static bool equal(const TLeft& left, const TRight& right)
+    {
+        const TColumn &left_key = left;
+        const TColumn &right_key = right;
+        return (left_key == right_key);
+    }
     template<typename TRow>
-    static size_t hash(const TRow& row) { return 0; }
+    static size_t hash(const TRow& row)
+    {
+        const TColumn &key = row;
+        return key.hash();
+    }
 };
 template<typename TColumn, typename... TColumns>
 struct Key<TColumn, TColumns...>
 {
+    using result_type = Row<TColumn, TColumns...>;
+    template<typename... TOtherColumns>
+    result_type operator()(const Row<TOtherColumns...>& row) const
+    {
+        return result_type(row);
+    }
     template<typename TLeft, typename TRight>
     static bool less(const TLeft& left, const TRight& right)
     {
@@ -142,10 +168,10 @@ struct KeyEqual
 
 #define NO_HASH(TYPE) namespace std { \
     template<> \
-    struct hash<TYPE> \
-    { \
-        size_t operator()(const TYPE& column) { assert(false); return 0; } \
-    }; } \
+struct hash<TYPE> \
+{ \
+    size_t operator()(const TYPE& column) { assert(false); return 0; } \
+}; } \
 
 template<typename T, typename K>
 using Vector = vector<T>;
