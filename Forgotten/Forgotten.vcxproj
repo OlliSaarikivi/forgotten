@@ -113,7 +113,6 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Channel.cpp" />
     <ClCompile Include="Forgotten.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="ProcessHost.cpp" />

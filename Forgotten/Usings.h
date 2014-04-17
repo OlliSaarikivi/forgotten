@@ -31,3 +31,6 @@ using Multiset = multiset<T>;
 
 template<typename T>
 using FlatMultiset = flat_multiset<T>;
+
+template<typename T>
+using UnorderedSet = std::unordered_set<T>;

@@ -121,6 +121,7 @@ struct Key<TColumn, TColumns...>
 };
 
 #define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME {\
+    typedef FIELD_TYPE Type; \
     FIELD_TYPE FIELD; \
     void set(NAME c) { FIELD = c.##FIELD; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \

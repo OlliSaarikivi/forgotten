@@ -49,8 +49,8 @@ struct Controls : Process
             auto move_normalized = glm::normalize(move_sum);
             float heading = glm::atan(move_normalized.y, move_normalized.x);
             for (const auto& controllable : controllables) {
-                move_actions.put(TMoveActions::RowType((EidCol)controllable, { move_normalized }));
-                heading_actions.put(THeadingActions::RowType((EidCol)controllable, { heading }));
+                move_actions.put(TMoveActions::RowType((Eid)controllable, { move_normalized }));
+                heading_actions.put(THeadingActions::RowType((Eid)controllable, { heading }));
             }
         }
     }

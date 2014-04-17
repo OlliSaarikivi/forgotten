@@ -2,11 +2,12 @@
 
 #include "Tokens.h"
 
-typedef long int Eid;
+BUILD_COLUMN(Eid, long, eid)
+BUILD_COLUMN(Race, int, race)
 
-BUILD_COLUMN(EidCol, Eid, eid)
 BUILD_COLUMN(Force, vec2, force)
-BUILD_COLUMN(Contact, (pair<b2Fixture*, b2Fixture*>), contact)
+typedef pair<b2Fixture*, b2Fixture*> FixturePair;
+BUILD_COLUMN(Contact, FixturePair, contact)
 BUILD_COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
 
 // Aspect columns

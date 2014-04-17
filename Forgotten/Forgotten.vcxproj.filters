@@ -89,9 +89,6 @@
     <ClCompile Include="Forgotten.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Channel.cpp">
-      <Filter>Source Files\Processes</Filter>
-    </ClCompile>
     <ClCompile Include="ProcessHost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

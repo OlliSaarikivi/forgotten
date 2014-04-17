@@ -19,6 +19,7 @@
 #include <set>
 #include <iomanip>
 #include <limits>
+#include <unordered_set>
 
 #include <boost/container/flat_set.hpp>
 #include <boost/chrono/chrono.hpp>
@@ -31,4 +32,5 @@
 #include <glm/glm.hpp>
 #include <Box2D/Box2D.h>
 
+#include "Utils.h"
 #include "Usings.h"
