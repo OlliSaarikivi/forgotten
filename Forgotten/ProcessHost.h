@@ -69,17 +69,17 @@ struct ProcessHost
     }
 
     template<typename TJoinRow, template<typename> class TJoinContainer = Vector, typename TLeft, typename TRight>
-    TransientChannel<TJoinRow, TJoinContainer>& makeTransientMergeJoin(const TLeft& left, const TRight& right)
+    Stream<TJoinRow, TJoinContainer>& makeMergeJoinStream(const TLeft& left, const TRight& right)
     {
-        auto& joined = makeChannel<TransientChannel<TJoinRow, TJoinContainer>>();
+        auto& joined = makeChannel<Stream<TJoinRow, TJoinContainer>>();
         makeProcess<MergeJoin>(left, right, joined);
         return joined;
     }
 
     template<typename TJoinRow, typename... TChans>
-    UniqueMergeEquiJoinChannel<TJoinRow, TChans...>& makeUniqueMergeEquiJoin(const TChans&... chans)
+    UniqueMergeEquiJoinStream<TJoinRow, TChans...>& makeUniqueMergeEquiJoin(const TChans&... chans)
     {
-        return makeChannel<UniqueMergeEquiJoinChannel<TJoinRow, TChans...>>(chans...);
+        return makeChannel<UniqueMergeEquiJoinStream<TJoinRow, TChans...>>(chans...);
     }
 private:
     flat_set<unique_ptr<Process>> processes;

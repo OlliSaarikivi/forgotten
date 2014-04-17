@@ -7,7 +7,9 @@ BUILD_COLUMN(Race, int, race)
 
 BUILD_COLUMN(Force, vec2, force)
 typedef pair<b2Fixture*, b2Fixture*> FixturePair;
+NO_HASH(FixturePair);
 BUILD_COLUMN(Contact, FixturePair, contact)
+NO_HASH(SDL_Scancode);
 BUILD_COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
 
 // Aspect columns
@@ -22,3 +24,4 @@ BUILD_COLUMN(MaxSpeedBackward, float, max_speed_backwards)
 // Action columns
 BUILD_COLUMN(MoveAction, vec2, move_action);
 BUILD_COLUMN(HeadingAction, float, heading_action);
+

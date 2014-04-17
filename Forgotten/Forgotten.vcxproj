@@ -98,6 +98,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="ForgottenData.h" />
     <ClInclude Include="ForgottenGame.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="MultiIndexChannel.h" />
     <ClInclude Include="Traits.h" />
     <ClInclude Include="Controls.h" />
     <ClInclude Include="SDLEvents.h" />

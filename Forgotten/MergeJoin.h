@@ -179,12 +179,12 @@ struct UMEJoinIterator<TRow, TChan, TChans...>
 };
 
 template<typename TRow, typename... TChans>
-struct UniqueMergeEquiJoinChannel : Channel
+struct UniqueMergeEquiJoinStream : Channel
 {
     typedef TRow RowType;
     typedef UMEJoinIterator<TRow, TChans...> const_iterator;
 
-    UniqueMergeEquiJoinChannel(const TChans&... chans) :
+    UniqueMergeEquiJoinStream(const TChans&... chans) :
         channel_helper(chans...)
     {
     }

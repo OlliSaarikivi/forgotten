@@ -18,7 +18,7 @@ struct Channel
 };
 
 template<typename TRow, template<typename> class TContainer>
-struct PersistentChannel : Channel
+struct Table : Channel
 {
     typedef TRow RowType;
     typedef typename TContainer<TRow>::const_iterator const_iterator;
@@ -163,7 +163,7 @@ struct EraseHelper<TRow, Vector<TRow>>
 };
 
 template<typename TRow, template<typename> class TContainer>
-struct TransientChannel : PersistentChannel<TRow, TContainer>
+struct Stream : Table<TRow, TContainer>
 {
     typedef typename TContainer<TRow>::const_iterator const_iterator;
     virtual void tick() override

@@ -50,23 +50,26 @@ void loadAssets()
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& textures = game->simulation.makeChannel<PersistentChannel<Mapping<Eid, SDLTexture>, Set>>();
-    auto& bodies = game->simulation.makeChannel<PersistentChannel<Mapping<Eid, Body>, Set>>();
-    auto& deadlies = game->simulation.makeChannel<PersistentChannel<Record<Eid>, Set>>();
+    auto& textures = game->simulation.makeChannel<Table<Mapping<Eid, SDLTexture>, Set>>();
+    auto& bodies = game->simulation.makeChannel<Table<Mapping<Eid, Body>, Set>>();
+    auto& deadlies = game->simulation.makeChannel<Table<Record<Eid>, Set>>();
+    auto& races = game->simulation.makeChannel<Table<Mapping<Eid, Race>, Set>>();
     auto& race_max_speeds =
-        game->simulation.makeChannel<PersistentChannel<Mapping<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, UnorderedSet>>();
+        game->simulation.makeChannel<Table<Mapping<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, UnorderedSet>>();
+    auto& max_speeds =
+        game->simulation.makeChannel<Table<Mapping<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, UnorderedSet>>();
 
-    auto& positions = game->simulation.makeChannel<TransientChannel<Mapping<Eid, Position>, Set>>();
-    auto& velocities = game->simulation.makeChannel<TransientChannel<Mapping<Eid, Velocity>, Set>>();
-    auto& forces = game->simulation.makeChannel<TransientChannel<Record<Body, Force>, Vector>>();
-    auto& contacts = game->simulation.makeChannel<PersistentChannel<Record<Contact>, Vector>>();
+    auto& positions = game->simulation.makeChannel<Stream<Mapping<Eid, Position>, Set>>();
+    auto& velocities = game->simulation.makeChannel<Stream<Mapping<Eid, Velocity>, Set>>();
+    auto& forces = game->simulation.makeChannel<Stream<Record<Body, Force>, Vector>>();
+    auto& contacts = game->simulation.makeChannel<Table<Record<Contact>, Vector>>();
 
-    auto& keysDown = game->simulation.makeChannel<PersistentChannel<Record<SDLScancode>, Set>>();
-    auto& keyPresses = game->simulation.makeChannel<TransientChannel<Record<SDLScancode>, Set>>();
-    auto& keyReleases = game->simulation.makeChannel<TransientChannel<Record<SDLScancode>, Set>>();
-    auto& controllables = game->simulation.makeChannel<PersistentChannel<Record<Eid>, FlatSet>>();
-    auto& move_actions = game->simulation.makeChannel<TransientChannel<Mapping<Eid, MoveAction>, Set>>();
-    auto& heading_actions = game->simulation.makeChannel<TransientChannel<Mapping<Eid, HeadingAction>, Set>>();
+    auto& keysDown = game->simulation.makeChannel<Table<Record<SDLScancode>, Set>>();
+    auto& keyPresses = game->simulation.makeChannel<Stream<Record<SDLScancode>, Set>>();
+    auto& keyReleases = game->simulation.makeChannel<Stream<Record<SDLScancode>, Set>>();
+    auto& controllables = game->simulation.makeChannel<Table<Record<Eid>, FlatSet>>();
+    auto& move_actions = game->simulation.makeChannel<Stream<Mapping<Eid, MoveAction>, Set>>();
+    auto& heading_actions = game->simulation.makeChannel<Stream<Mapping<Eid, HeadingAction>, Set>>();
 
     game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
@@ -140,8 +143,61 @@ void close()
     SDL_Quit();
 }
 
+using Clock = boost::chrono::high_resolution_clock;
+Clock::time_point start;
+
+void bstart()
+{
+    start = Clock::now();
+}
+
+void bstop(string name)
+{
+    auto difference = Clock::now() - start;
+    std::cerr << std::fixed << std::setprecision(5);
+    std::cerr << name << ": " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(difference).count()) / 1e6f);
+    std::cerr << "\n";
+}
+
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/random_access_index.hpp>
+
+using namespace boost::multi_index;
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+    int N = 10000;
+    const int M = 500;
+
+    auto sv = std::make_unique<std::vector<std::array<int,M>>>();
+    auto bv = std::make_unique<multi_index_container<std::array<int, M>, indexed_by<random_access<>>>>();
+
+    std::array<int, M> x;
+
+    bstart();
+    for (int i = 0; i < N; ++i) {
+        sv->emplace_back(std::array<int, M>());
+    }
+    bstop("vector insertions");
+
+    bstart();
+    for (int i = 0; i < N; ++i) {
+        bv->emplace_back(std::array<int, M>());
+    }
+    bstop("multi-index insertions");
+
+    bstart();
+    for (const auto& e : *sv) {
+        x = e;
+    }
+    bstop("vector iteration");
+
+    bstart();
+    for (const auto& e : *sv) {
+        x = e;
+    }
+    bstop("multi-index iteration");
+
     init();
     loadAssets();
 

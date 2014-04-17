@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
+#include "Utils.h"
 
 template<typename TKey = Key<>, typename... TColumns>
 struct Row : TColumns...
@@ -45,6 +46,11 @@ struct Row : TColumns...
     {
         static_assert(std::is_same<KeyType, typename TRight::KeyType>::value, "must have same key to compare");
         return TKey::tEqual(*this, right);
+    }
+
+    size_t hash() const
+    {
+        return TKey::hash(*this);
     }
 
     template<typename TNewKey>
@@ -100,6 +106,8 @@ struct Key<>
     static bool tLessThan(const TLeft& left, const TRight& right) { return false; }
     template<typename TLeft, typename TRight>
     static bool tEqual(const TLeft& left, const TRight& right) { return true; }
+    template<typename TRow>
+    static size_t hash(const TRow& row) { return 0; }
 };
 template<typename TColumn, typename... TColumns>
 struct Key<TColumn, TColumns...>
@@ -118,18 +126,61 @@ struct Key<TColumn, TColumns...>
         const TColumn &right_key = right;
         return (left_key == right_key) && Key<TColumns...>::tEqual(left, right);
     }
+    template<typename TRow>
+    static size_t hash(const TRow& row)
+    {
+        const TColumn &key = row;
+        size_t hash = Key<TColumns...>::hash(row);
+        hash_combine(hash, key.hash());
+        return hash;
+    }
 };
 
-#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME {\
+template<typename TRow>
+struct RowHash
+{
+    size_t operator()(const TRow& row) const
+    {
+        return row.hash();
+    }
+};
+
+#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME { \
     typedef FIELD_TYPE Type; \
     FIELD_TYPE FIELD; \
     void set(NAME c) { FIELD = c.##FIELD; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
     template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
+    size_t hash() { return std::hash<FIELD_TYPE>()(FIELD); } \
 };
+
+#define NO_HASH(TYPE) namespace std { \
+    template<> \
+    struct hash<TYPE> \
+    { \
+        size_t operator()(const TYPE& column) { assert(false); return 0; } \
+    }; } \
 
 template<typename... TDataColumns>
 using Record = Row<Key<TDataColumns...>, TDataColumns...>;
 
 template<typename TKeyColumn, typename... TDataColumns>
 using Mapping = Row<Key<TKeyColumn>, TKeyColumn, TDataColumns...>;
+
+template<typename T>
+using Vector = vector<T>;
+
+template<typename T>
+using Set = set<T>;
+
+template<typename T>
+using FlatSet = flat_set<T>;
+
+template<typename T>
+using Multiset = multiset<T>;
+
+template<typename T>
+using FlatMultiset = flat_multiset<T>;
+
+template<typename T>
+using UnorderedSet = std::unordered_set<T, RowHash<T>>;

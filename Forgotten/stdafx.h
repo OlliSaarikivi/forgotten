@@ -32,5 +32,4 @@
 #include <glm/glm.hpp>
 #include <Box2D/Box2D.h>
 
-#include "Utils.h"
 #include "Usings.h"

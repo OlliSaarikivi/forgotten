@@ -81,6 +81,9 @@
     <ClInclude Include="Actions.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="MultiIndexChannel.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
