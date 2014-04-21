@@ -9,6 +9,8 @@ using std::array;
 using std::function;
 using std::set;
 using std::multiset;
+using std::unordered_set;
+using std::unordered_multiset;
 using std::pair;
 using std::tuple;
 

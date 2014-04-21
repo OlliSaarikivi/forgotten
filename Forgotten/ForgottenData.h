@@ -1,15 +1,28 @@
 #pragma once
 
-#include "Tokens.h"
+#include "Row.h"
+#include "Utils.h"
 
 BUILD_COLUMN(Eid, long, eid)
 BUILD_COLUMN(Race, int, race)
 
 BUILD_COLUMN(Force, vec2, force)
 typedef pair<b2Fixture*, b2Fixture*> FixturePair;
-NO_HASH(FixturePair);
+namespace std
+{
+    template<typename TFirst, typename TSecond>
+    struct hash<pair<TFirst, TSecond>>
+    {
+        size_t operator()(const pair<TFirst, TSecond>& pair)
+        {
+            size_t seed = std::hash<TFirst>()(pair.first);
+            hash_combine(seed, std::hash<TSecond>()(pair.second));
+            return seed;
+        }
+    };
+};
 BUILD_COLUMN(Contact, FixturePair, contact)
-NO_HASH(SDL_Scancode);
+NO_HASH(SDL_Scancode)
 BUILD_COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
 
 // Aspect columns

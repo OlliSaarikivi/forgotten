@@ -12,6 +12,11 @@ void ProcessHost::addChannel(unique_ptr<Channel> channel)
     channels.emplace(std::move(channel));
 }
 
+void ProcessHost::addChannelTicker(unique_ptr<ChannelTicker> ticker)
+{
+    channelTickers.emplace(std::move(ticker));
+}
+
 void ProcessHost::sortProcesses()
 {
     execution_order.clear();
@@ -42,8 +47,8 @@ void ProcessHost::sortProcesses()
 void ProcessHost::tick(float step)
 {
     assert(execution_order.size() == processes.size());
-    for (const auto &channel : channels) {
-        channel->tick();
+    for (const auto &ticker : channelTickers) {
+        ticker->tick();
     }
     for (const auto &process : execution_order) {
         process->doTick(step);

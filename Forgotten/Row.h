@@ -3,6 +3,23 @@
 #include "stdafx.h"
 #include "Utils.h"
 
+#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME { \
+    typedef FIELD_TYPE Type; \
+    FIELD_TYPE FIELD; \
+    void set(NAME c) { FIELD = c.##FIELD; } \
+    template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
+    template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
+    size_t hash() { return std::hash<FIELD_TYPE>()(FIELD); } \
+};
+
+#define NO_HASH(TYPE) namespace std { \
+    template<> \
+    struct hash<TYPE> \
+    { \
+    size_t operator()(const TYPE& column) { assert(false); return 0; } \
+    }; \
+};
+
 template<typename... TColumns>
 struct Row : TColumns...
 {
@@ -24,6 +41,11 @@ struct Row : TColumns...
     void setAll(const Row<TOtherColumns...>& other)
     {
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
+    }
+
+    bool operator==(const Row<TColumns...>& other)
+    {
+        return Key<TColumns...>::equal(*this, other);
     }
 };
 
@@ -71,6 +93,11 @@ struct Key<TColumn>
     template<typename... TOtherColumns>
     result_type operator()(const Row<TOtherColumns...>& row) const
     {
+        return project(row);
+    }
+    template<typename... TOtherColumns>
+    static Row<TColumn> project(const Row<TOtherColumns...>& row)
+    {
         return result_type(row);
     }
     template<typename TLeft, typename TRight>
@@ -78,7 +105,7 @@ struct Key<TColumn>
     {
         const TColumn &left_key = left;
         const TColumn &right_key = right;
-        return (left_key < right_key) || (!(right_key < left_key));
+        return (left_key < right_key);
     }
     template<typename TLeft, typename TRight>
     static bool equal(const TLeft& left, const TRight& right)
@@ -100,6 +127,11 @@ struct Key<TColumn, TColumns...>
     using result_type = Row<TColumn, TColumns...>;
     template<typename... TOtherColumns>
     result_type operator()(const Row<TOtherColumns...>& row) const
+    {
+        return project(row);
+    }
+    template<typename... TOtherColumns>
+    static Row<TColumn, TColumns...> project(const Row<TOtherColumns...>& row)
     {
         return result_type(row);
     }
@@ -157,36 +189,3 @@ struct KeyEqual
     }
 };
 
-#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME { \
-    typedef FIELD_TYPE Type; \
-    FIELD_TYPE FIELD; \
-    void set(NAME c) { FIELD = c.##FIELD; } \
-    template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
-    template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
-    size_t hash() { return std::hash<FIELD_TYPE>()(FIELD); } \
-};
-
-#define NO_HASH(TYPE) namespace std { \
-    template<> \
-struct hash<TYPE> \
-{ \
-    size_t operator()(const TYPE& column) { assert(false); return 0; } \
-}; } \
-
-template<typename T, typename K>
-using Vector = vector<T>;
-
-template<typename T, typename K>
-using Set = set<T, KeyLess<K>>;
-
-template<typename T, typename K>
-using FlatSet = flat_set<T, KeyLess<K>>;
-
-template<typename T, typename K>
-using Multiset = multiset<T, KeyLess<K>>;
-
-template<typename T, typename K>
-using FlatMultiset = flat_multiset<T, KeyLess<K>>;
-
-template<typename T, typename K>
-using UnorderedSet = std::unordered_set<T, KeyHash<K>>;

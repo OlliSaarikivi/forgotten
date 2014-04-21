@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Forgotten.h"
-#include "Tokens.h"
+#include "Row.h"
 #include "Process.h"
 #include "ForgottenData.h"
 
@@ -28,14 +28,14 @@ struct SDLEvents : Process
             case SDL_KEYDOWN:
             {
                                 TKeysDown::RowType key_row({ event.key.keysym.scancode });
-                                key_presses.emplace(key_row);
-                                keys_down.emplace(key_row);
+                                key_presses.put(key_row);
+                                keys_down.put(key_row);
                                 break;
             }
             case SDL_KEYUP:
             {
                               TKeysDown::RowType key_row({ event.key.keysym.scancode });
-                              key_releases.emplace(key_row);
+                              key_releases.put(key_row);
                               keys_down.erase(key_row);
                               break;
             }

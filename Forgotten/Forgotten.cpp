@@ -2,7 +2,7 @@
 #include "Forgotten.h"
 #include "ProcessHost.h"
 #include "ForgottenGame.h"
-#include "MergeJoin.h"
+#include "Join.h"
 #include "Box2DStep.h"
 #include "Debug.h"
 #include "SDLRender.h"
@@ -10,7 +10,7 @@
 #include "ForgottenData.h"
 #include "Controls.h"
 #include "Actions.h"
-#include "MultiIndexChannel.h"
+#include "Channel.h"
 
 #include <tchar.h>
 
@@ -51,41 +51,39 @@ void loadAssets()
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& textures = game->simulation.makeChannel<Table<Row<Eid, SDLTexture>, Key<Eid>, Set>>();
-    auto& bodies = game->simulation.makeChannel<Table<Row<Eid, Body>, Key<Eid>, Set>>();
-    auto& deadlies = game->simulation.makeChannel<Table<Row<Eid>, Key<Eid>, Set>>();
-    auto& races = game->simulation.makeChannel<Table<Row<Eid, Race>, Key<Eid>, Set>>();
+    auto& textures = game->simulation.makeTable<Row<Eid, SDLTexture>, OrderedUnique<Key<Eid>>>();
+    auto& bodies = game->simulation.makeTable<Row<Eid, Body>, OrderedUnique<Key<Eid>>>();
+    auto& deadlies = game->simulation.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+
+    auto& races = game->simulation.makeTable<Row<Eid, Race>, OrderedUnique<Key<Eid>>>();
     auto& race_max_speeds =
-        game->simulation.makeChannel<Table<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, Key<Race>, UnorderedSet>>();
+        game->simulation.makeTable<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
     auto& max_speeds =
-        game->simulation.makeChannel<Table<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, Key<Eid>, UnorderedSet>>();
+        game->simulation.makeTable<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
 
-    auto& positions = game->simulation.makeChannel<Stream<Row<Eid, Position>, Key<Eid>, Set>>();
-    auto& velocities = game->simulation.makeChannel<Stream<Row<Eid, Velocity>, Key<Eid>, Set>>();
-    auto& forces = game->simulation.makeChannel<Stream<Row<Body, Force>, Key<>, Vector>>();
-    auto& contacts = game->simulation.makeChannel<Table<Row<Contact>, Key<>, Vector>>();
+    auto& positions = game->simulation.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
+    auto& velocities = game->simulation.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
+    auto& forces = game->simulation.makeStream<Row<Body, Force>>();
+    auto& contacts = game->simulation.makeTable<Row<Contact>>();
 
-    auto& keysDown = game->simulation.makeChannel<Table<Row<SDLScancode>, Key<SDLScancode>, Set>>();
-    auto& keyPresses = game->simulation.makeChannel<Stream<Row<SDLScancode>, Key<>, Vector>>();
-    auto& keyReleases = game->simulation.makeChannel<Stream<Row<SDLScancode>, Key<>, Vector>>();
-    auto& controllables = game->simulation.makeChannel<Table<Row<Eid>, Key<Eid>, FlatSet>>();
-    auto& move_actions = game->simulation.makeChannel<Stream<Row<Eid, MoveAction>, Key<Eid>, Set>>();
-    auto& heading_actions = game->simulation.makeChannel<Stream<Row<Eid, HeadingAction>, Key<Eid>, Set>>();
+    auto& keysDown = game->simulation.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
+    auto& keyPresses = game->simulation.makeStream<Row<SDLScancode>>();
+    auto& keyReleases = game->simulation.makeStream<Row<SDLScancode>>();
+    auto& controllables = game->simulation.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    auto& move_actions = game->simulation.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
+    auto& heading_actions = game->simulation.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
 
     game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = game->simulation.makeUniqueMergeEquiJoin<Row<Eid, Body, MoveAction>>(bodies, move_actions);
+    auto& body_moves = game->simulation.makeJoin<Row<Eid, Body, MoveAction>>(bodies, move_actions);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
-    auto& renderables = game->output.makeUniqueMergeEquiJoin<Row<SDLTexture, Position>>(textures, positions);
+    auto& renderables = game->output.makeJoin<Row<SDLTexture, Position>>(textures, positions);
     game->output.makeProcess<SDLRender>(renderables);
 
-
-    auto a = std::make_unique<IndexedTable<Row<Eid>, NonUnique<Key<Eid>>>>();
-
-
+    auto& blah = game->simulation.makeTable<Row<Eid, Race>, HashedNonUnique<Key<Race>>, OrderedUnique<Key<Eid>>>();
 
     Eid::Type player = 1;
 
@@ -108,7 +106,7 @@ unique_ptr<ForgottenGame> createGame()
     bodyDef.type = b2_dynamicBody;
     bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body = game->world.CreateBody(&bodyDef);
-    bodies.put(Row<Eid, Body>({ player }, { body }));
+    bodies.put(Row<Eid, Body>(Eid{ player }, Body{ body }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;
@@ -149,64 +147,8 @@ void close()
     SDL_Quit();
 }
 
-using Clock = boost::chrono::high_resolution_clock;
-Clock::time_point start;
-
-void bstart()
-{
-    start = Clock::now();
-}
-
-void bstop(string name)
-{
-    auto difference = Clock::now() - start;
-    std::cerr << std::fixed << std::setprecision(5);
-    std::cerr << name << ": " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(difference).count()) / 1e6f);
-    std::cerr << "\n";
-}
-
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-
-using namespace boost::multi_index;
-
 int _tmain(int argc, _TCHAR* argv[])
 {
-    int N = 10000000;
-    const int M = 5;
-
-    auto sv = std::make_unique<std::vector<std::array<int,M>>>();
-    auto bv = std::make_unique<multi_index_container<std::array<int, M>, indexed_by<sequenced<>>>>();
-
-    std::array<int, M> x;
-    int a = 0;
-
-    bstart();
-    for (int i = 0; i < N; ++i) {
-        sv->emplace_back(std::array<int, M>());
-    }
-    bstop("vector insertions");
-
-    bstart();
-    for (int i = 0; i < N; ++i) {
-        bv->emplace_back(std::array<int, M>());
-    }
-    bstop("multi-index insertions");
-
-    bstart();
-    for (const auto& e : *sv) {
-        x = e;
-        a += x[0];
-    }
-    bstop("vector iteration");
-
-    bstart();
-    for (const auto& e : *sv) {
-        x = e;
-        a += x[0];
-    }
-    bstop("multi-index iteration");
-
     init();
     loadAssets();
 

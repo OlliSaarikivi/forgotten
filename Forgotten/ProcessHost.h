@@ -2,7 +2,7 @@
 
 #include "Process.h"
 #include "Channel.h"
-#include "MergeJoin.h"
+#include "Join.h"
 
 struct ProcessHost
 {
@@ -58,32 +58,39 @@ struct ProcessHost
     }
 
     void addChannel(unique_ptr<Channel>);
-    template<typename TChannel, typename... TArgs>
-    TChannel& makeChannel(TArgs&&... args)
+    void addChannelTicker(unique_ptr<ChannelTicker>);
+
+    template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
+    Table<TRow, TIndex, TIndices...>& makeTable(TArgs&&... args)
     {
-        static_assert(std::is_base_of<Channel, TChannel>::value, "the type must be a subclass of Channel");
-        auto channel = std::make_unique<TChannel>(std::forward<TArgs>(args)...);
-        TChannel& ret = *channel;
-        addChannel(std::move(channel));
+        auto table = std::make_unique<Table<TRow, TIndex, TIndices...>>(std::forward<TArgs>(args)...);
+        auto& ret = *table;
+        addChannel(std::move(table));
         return ret;
     }
 
-    template<typename TJoinRow, typename TJoinRowKey, template<typename,typename> class TJoinContainer = Vector, typename TLeft, typename TRight>
-    Stream<TJoinRow, TJoinRowKey, TJoinContainer>& makeMergeJoinStream(const TLeft& left, const TRight& right)
+    template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
+    Table<TRow, TIndex, TIndices...>& makeStream(TArgs&&... args)
     {
-        auto& joined = makeChannel<Stream<TJoinRow, TJoinRowKey, TJoinContainer>>();
-        makeProcess<MergeJoin>(left, right, joined);
-        return joined;
+        auto& ret = makeTable<TRow, TIndex, TIndices...>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<ClearChannelTicker>(ret);
+        addChannelTicker(std::move(ticker));
+        return ret;
     }
 
-    template<typename TJoinRow, typename... TChans>
-    UniqueMergeEquiJoinStream<TJoinRow, TChans...>& makeUniqueMergeEquiJoin(const TChans&... chans)
+    template<typename TRow, typename... TChans>
+    JoinStream<TRow, TChans...>& makeJoin(TChans&... chans)
     {
-        return makeChannel<UniqueMergeEquiJoinStream<TJoinRow, TChans...>>(chans...);
+
+        auto join = std::make_unique<JoinStream<TRow, TChans...>>(chans...);
+        auto& ret = *join;
+        addChannel(std::move(join));
+        return ret;
     }
 private:
     flat_set<unique_ptr<Process>> processes;
     flat_set<unique_ptr<Channel>> channels;
+    flat_set<unique_ptr<ChannelTicker>> channelTickers;
     vector<const Process*> execution_order;
 };
 

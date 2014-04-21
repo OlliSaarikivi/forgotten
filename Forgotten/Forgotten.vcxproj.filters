@@ -19,6 +19,9 @@
     <Filter Include="Source Files\Processes">
       <UniqueIdentifier>{44099034-4846-4e8b-a3d6-7753e503cd8e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Channels">
+      <UniqueIdentifier>{cd0de677-0cd0-45de-999b-5a168f3a3119}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -33,12 +36,6 @@
     <ClInclude Include="Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Tokens.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Channel.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
     <ClInclude Include="Process.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
@@ -47,9 +44,6 @@
     </ClInclude>
     <ClInclude Include="Usings.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MergeJoin.h">
-      <Filter>Header Files\Processes</Filter>
     </ClInclude>
     <ClInclude Include="Box2DStep.h">
       <Filter>Header Files\Processes</Filter>
@@ -72,17 +66,29 @@
     <ClInclude Include="ForgottenData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Traits.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Controls.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
     <ClInclude Include="Actions.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
-    <ClInclude Include="MultiIndexChannel.h">
-      <Filter>Header Files\Processes</Filter>
+    <ClInclude Include="Row.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Channel.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="Join.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="Table.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiIndexTable.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="DefaultValueStream.h">
+      <Filter>Header Files\Channels</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
