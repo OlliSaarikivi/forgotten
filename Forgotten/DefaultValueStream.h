@@ -29,20 +29,21 @@ private:
     bool atEnd;
 };
 
-template<typename TRow, typename TKey>
-struct DefaultValueStream
+template<typename TKey, typename... TDefaultColumns>
+struct DefaultValueStream : Channel
 {
-    using RowType = TRow;
+    using RowType = typename TKey::template AsRowWithData<TDefaultColumns>;
     using IndexType = HashedUnique<TKey>;
-    using const_iterator = SingleValueIterator<TRow>;
+    using const_iterator = SingleValueIterator<RowType>;
+    DefaultValueStream(const TDefaultColumns&... args) : defaults(args...) {}
+    virtual void clear() override {}
     template<typename TRow2>
-    DefaultValueStream(TRow2&& template_row) : template_row(std::move(template_row)) {}
-    pair<const_iterator, const_iterator> equalRange(const TRow& row)
+    pair<const_iterator, const_iterator> equalRange(const TRow2& row)
     {
-        TRow temp = template_row;
+        auto temp = RowType(template_row);
         temp.setAll(TKey::project(row));
         return std::make_pair(const_iterator(temp), const_iterator());
     }
 private:
-    TRow template_row;
+    Row<TDefaultColumns...> defaults;
 };

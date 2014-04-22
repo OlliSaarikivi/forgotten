@@ -90,6 +90,9 @@
     <ClInclude Include="DefaultValueStream.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
+    <ClInclude Include="Amend.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

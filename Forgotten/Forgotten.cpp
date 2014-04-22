@@ -11,6 +11,7 @@
 #include "Controls.h"
 #include "Actions.h"
 #include "Channel.h"
+#include "DefaultValueStream.h"
 
 #include <tchar.h>
 
@@ -60,6 +61,8 @@ unique_ptr<ForgottenGame> createGame()
         game->simulation.makeTable<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
     auto& max_speeds =
         game->simulation.makeTable<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
+    auto& default_max_speed = game->simulation.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+        (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
 
     auto& positions = game->simulation.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
     auto& velocities = game->simulation.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
@@ -77,13 +80,15 @@ unique_ptr<ForgottenGame> createGame()
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = game->simulation.makeJoin<Row<Eid, Body, MoveAction>>(bodies, move_actions);
+    auto& body_moves = game->simulation.makeJoin<Row<Eid, Body, MoveAction, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+        (bodies, move_actions, races, );
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
     auto& renderables = game->output.makeJoin<Row<SDLTexture, Position>>(textures, positions);
     game->output.makeProcess<SDLRender>(renderables);
 
-    auto& blah = game->simulation.makeTable<Row<Eid, Race>, HashedNonUnique<Key<Race>>, OrderedUnique<Key<Eid>>>();
+    auto& def = game->simulation.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+        (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
 
     Eid::Type player = 1;
 
@@ -106,7 +111,7 @@ unique_ptr<ForgottenGame> createGame()
     bodyDef.type = b2_dynamicBody;
     bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body = game->world.CreateBody(&bodyDef);
-    bodies.put(Row<Eid, Body>(Eid{ player }, Body{ body }));
+    bodies.put(Row<Eid, Body>({ player }, { body }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;

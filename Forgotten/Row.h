@@ -23,7 +23,7 @@
 template<typename... TColumns>
 struct Row : TColumns...
 {
-    Row(TColumns&&... columns) : TColumns(columns)... {}
+    Row(const TColumns&... columns) : TColumns(columns)... {}
 
     template<typename... TOtherColumns>
     Row(const Row<TOtherColumns...>& other)
@@ -89,6 +89,9 @@ struct Key;
 template<typename TColumn>
 struct Key<TColumn>
 {
+    template<typename... TDataColumns>
+    using AsRowWithData = Row<TColumn, TDataColumns...>;
+
     using result_type = Row<TColumn>;
     template<typename... TOtherColumns>
     result_type operator()(const Row<TOtherColumns...>& row) const
@@ -124,6 +127,9 @@ struct Key<TColumn>
 template<typename TColumn, typename... TColumns>
 struct Key<TColumn, TColumns...>
 {
+    template<typename... TDataColumns>
+    using AsRowWithData = Row<TColumn, TColumns..., TDataColumns...>;
+
     using result_type = Row<TColumn, TColumns...>;
     template<typename... TOtherColumns>
     result_type operator()(const Row<TOtherColumns...>& row) const

@@ -60,13 +60,19 @@ struct ProcessHost
     void addChannel(unique_ptr<Channel>);
     void addChannelTicker(unique_ptr<ChannelTicker>);
 
+    template<typename TChannel, typename... TArgs>
+    TChannel& makeChannel(TArgs&&... args)
+    {
+        auto channel = std::make_unique<TChannel>(std::forward<TArgs>(args)...);
+        auto& ret = *channel;
+        addChannel(std::move(channel));
+        return ret;
+    }
+
     template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
     Table<TRow, TIndex, TIndices...>& makeTable(TArgs&&... args)
     {
-        auto table = std::make_unique<Table<TRow, TIndex, TIndices...>>(std::forward<TArgs>(args)...);
-        auto& ret = *table;
-        addChannel(std::move(table));
-        return ret;
+        return makeChannel<Table<TRow, TIndex, TIndices...>>(std::forward<TArgs>(args)...);
     }
 
     template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
