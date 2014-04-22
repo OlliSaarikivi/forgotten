@@ -80,8 +80,9 @@ unique_ptr<ForgottenGame> createGame()
     game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = game->simulation.makeJoin<Row<Eid, Body, MoveAction, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (bodies, move_actions, races, );
+    auto& body_moves_partial = game->simulation.makeJoin<Row<Eid, Race, Body, MoveAction, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+        (bodies, move_actions, races, default_max_speed);
+    auto& body_moves = game->simulation.makeAmend(body_moves_partial, race_max_speeds, max_speeds);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 
     auto& renderables = game->output.makeJoin<Row<SDLTexture, Position>>(textures, positions);

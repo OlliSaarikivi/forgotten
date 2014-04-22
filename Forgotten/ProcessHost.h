@@ -3,6 +3,7 @@
 #include "Process.h"
 #include "Channel.h"
 #include "Join.h"
+#include "Amend.h"
 
 struct ProcessHost
 {
@@ -87,11 +88,13 @@ struct ProcessHost
     template<typename TRow, typename... TChans>
     JoinStream<TRow, TChans...>& makeJoin(TChans&... chans)
     {
+        return makeChannel<JoinStream<TRow, TChans...>>(chans...);
+    }
 
-        auto join = std::make_unique<JoinStream<TRow, TChans...>>(chans...);
-        auto& ret = *join;
-        addChannel(std::move(join));
-        return ret;
+    template<typename TBase, typename... TSources>
+    AmendStream<TBase, TSources...>& makeAmend(TBase& base, TSources&... chans)
+    {
+        return makeChannel<AmendStream<TBase, TSources...>>(base, chans...);
     }
 private:
     flat_set<unique_ptr<Process>> processes;

@@ -128,11 +128,12 @@ struct JoinLookup<TChan, TChans...>
 template<typename... TChans>
 struct CanMerge : std::false_type {};
 template<typename TLeft, typename TRight, typename... TChans>
-struct CanMerge<TLeft, TRight, TChans...> : std::true_type
+struct CanMerge<TLeft, TRight, TChans...>
 {
-    using sfinae1 = typename std::enable_if<TLeft::IndexType::Ordered>::type;
-    using sfinae2 = typename std::enable_if<TRight::IndexType::Ordered>::type;
-    using sfinae3 = typename std::enable_if<std::is_same<typename TLeft::IndexType::KeyType, typename TRight::IndexType::KeyType>::value>::type;
+    static const bool value =
+    TLeft::IndexType::Ordered &&
+    TRight::IndexType::Ordered &&
+    std::is_same<typename TLeft::IndexType::KeyType, typename TRight::IndexType::KeyType>::value;
 };
 
 template<typename TRow, bool CanMerge, typename... TChans>
@@ -315,7 +316,7 @@ struct JoinStream : Channel
     using RowType = TRow;
     using IndexType = JoinIterator<TRow, CanMerge<TChans...>::value, TChans...>;
     using const_iterator = IndexType;
-    
+
     JoinStream(TChans&... chans) :
         channel_helper(chans...)
     {
