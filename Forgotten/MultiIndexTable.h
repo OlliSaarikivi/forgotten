@@ -54,7 +54,7 @@ struct Index : Channel
             ::tErase(boost_index, std::forward<TRow2>(row));
     }
     template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row)
+    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
     {
         return IndexEqualRangeHelper<TRow, TIndex>
             ::tEqualRange(boost_index, std::forward<TRow2>(row));
@@ -104,7 +104,7 @@ template<typename TRow, typename TIndex>
 struct IndexEqualRangeHelper
 {
     template<typename TRow2, typename TBoostIndex>
-    static pair<typename TBoostIndex::const_iterator, typename TBoostIndex::const_iterator> tEqualRange(TBoostIndex& index, TRow2&& row)
+    static pair<typename TBoostIndex::const_iterator, typename TBoostIndex::const_iterator> tEqualRange(const TBoostIndex& index, TRow2&& row)
     {
         return index.equal_range(std::forward<TRow2>(row));
     }

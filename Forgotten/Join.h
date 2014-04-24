@@ -47,16 +47,14 @@ struct JoinLookup;
 template<typename TChan>
 struct JoinLookup<TChan>
 {
-    JoinLookup(const ChannelHelper<TChan>& helper) : chan(helper.chan)
+    JoinLookup(const ChannelHelper<TChan>& helper) : chan(&helper.chan)
     {
     }
-    JoinLookup(const JoinLookup<TChan>& other) : chan(other.chan)
-    {
-    };
+    JoinLookup<TChan>& operator=(const JoinLookup<TChan>& other) = default;
     template<typename TRow>
     void scanTo(const TRow& row)
     {
-        auto range = chan.equal_range(row);
+        auto range = chan->equalRange(row);
         equal_iter = range.first;
         equal_end = range.second;
     }
@@ -73,23 +71,20 @@ struct JoinLookup<TChan>
     {
         joined_row.setAll(*equal_iter);
     }
-    const TChan& chan;
+    const TChan* chan;
     typename TChan::const_iterator equal_iter;
     typename TChan::const_iterator equal_end;
 };
 template<typename TChan, typename... TChans>
 struct JoinLookup<TChan, TChans...>
 {
-    JoinLookup(const ChannelHelper<TChan, TChans...>& helper) : chan(helper.chan), rest(helper.chans)
+    JoinLookup(const ChannelHelper<TChan, TChans...>& helper) : chan(&helper.chan), rest(helper.chans)
     {
     }
-    JoinLookup(const JoinLookup<TChan, TChans...>& other) : chan(other.chan), rest(other.rest)
-    {
-    };
     template<typename TRow>
     void scanTo(const TRow& row)
     {
-        auto range = chan.equalRange(row);
+        auto range = chan->equalRange(row);
         equal_iter = range.first;
         equal_end = range.second;
         syncRest();
@@ -120,7 +115,7 @@ struct JoinLookup<TChan, TChans...>
         rest.populateJoinedRow(joined_row);
     }
     JoinLookup<TChans...> rest;
-    const TChan& chan;
+    const TChan* chan;
     typename TChan::const_iterator equal_iter;
     typename TChan::const_iterator equal_end;
 };
@@ -144,9 +139,6 @@ struct JoinIterator<TRow, CanMerge, TChan>
     JoinIterator(const ChannelHelper<TChan>& helper) : my(helper.chan.begin()), my_end(helper.chan.end())
     {
     }
-    JoinIterator(const JoinIterator<TRow, CanMerge, TChan>& other) : my(other.my), my_end(other.my_end)
-    {
-    };
 
     void goToEnd()
     {
@@ -190,10 +182,6 @@ struct JoinIterator<TRow, true, TLeft, TRight, TChans...>
         incrementUntilEqual();
         first_equal = rest;
     }
-    JoinIterator(const JoinIterator<TRow, true, TLeft, TRight, TChans...>& other)
-        : my(other.my), my_end(other.my_end), rest(other.rest), first_equal(other.first_equal)
-    {
-    };
 
     void goToEnd()
     {
@@ -259,9 +247,6 @@ struct JoinIterator<TRow, false, TLeft, TRight, TChans...>
     {
         incrementUntilEqual();
     }
-    JoinIterator(const JoinIterator<TRow, false, TLeft, TRight, TChans...>& other) : my(other.my), my_end(other.my_end), rest(other.rest)
-    {
-    };
 
     void goToEnd()
     {
@@ -282,7 +267,7 @@ struct JoinIterator<TRow, false, TLeft, TRight, TChans...>
         rest.increment();
         if (!rest.hasValue()) {
             ++my;
-            incrementUntilEqual()
+            incrementUntilEqual();
         }
         return *this;
     }
@@ -321,6 +306,7 @@ struct JoinStream : Channel
         channel_helper(chans...)
     {
     }
+
     virtual void forEachImmediateDependency(function<void(const Process&)> f) const override
     {
         channel_helper.invokeEachImmediateDependency(f);

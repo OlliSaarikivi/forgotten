@@ -57,6 +57,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& deadlies = game->simulation.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
 
     auto& races = game->simulation.makeTable<Row<Eid, Race>, OrderedUnique<Key<Eid>>>();
+    auto& default_race = game->simulation.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
     auto& race_max_speeds =
         game->simulation.makeTable<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
     auto& max_speeds =
@@ -81,7 +82,7 @@ unique_ptr<ForgottenGame> createGame()
     game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
     auto& body_moves_partial = game->simulation.makeJoin<Row<Eid, Race, Body, MoveAction, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (bodies, move_actions, races, default_max_speed);
+        (bodies, move_actions, default_race, races, default_max_speed);
     auto& body_moves = game->simulation.makeAmend(body_moves_partial, race_max_speeds, max_speeds);
     game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
 

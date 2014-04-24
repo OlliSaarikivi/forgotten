@@ -7,39 +7,33 @@ struct AmendLookup;
 template<typename TChan>
 struct AmendLookup<TChan>
 {
-    AmendLookup(const ChannelHelper<TChan>& helper) : chan(helper.chan)
+    AmendLookup(const ChannelHelper<TChan>& helper) : chan(&helper.chan)
     {
     }
-    AmendLookup(const AmendLookup<TChan>& other) : chan(other.chan)
-    {
-    };
     template<typename TRow>
     void amendRow(TRow& row)
     {
-        auto range = chan.equalRange(row);
+        auto range = chan->equalRange(row);
         if (range.first != range.second) {
             row.setAll(*range.first);
         }
     }
     bool operator==(const AmendLookup<TChan>& other)
     {
-        return &chan == &(other.chan);
+        return chan == other.chan;
     }
-    const TChan& chan;
+    const TChan* chan;
 };
 template<typename TChan, typename... TChans>
 struct AmendLookup<TChan, TChans...>
 {
-    AmendLookup(const ChannelHelper<TChan, TChans...>& helper) : chan(helper.chan), rest(helper.chans)
+    AmendLookup(const ChannelHelper<TChan, TChans...>& helper) : chan(&helper.chan), rest(helper.chans)
     {
     }
-    AmendLookup(const AmendLookup<TChan, TChans...>& other) : chan(other.chan), rest(other.rest)
-    {
-    };
     template<typename TRow>
     void amendRow(TRow& row)
     {
-        auto range = chan.equalRange(row);
+        auto range = chan->equalRange(row);
         if (range.first != range.second) {
             row.setAll(*range.first);
         }
@@ -47,10 +41,10 @@ struct AmendLookup<TChan, TChans...>
     }
     bool operator==(const AmendLookup<TChan, TChans...>& other)
     {
-        return &chan == &(other.chan) && rest == other.rest;
+        return chan == other.chan && rest == other.rest;
     }
     AmendLookup<TChans...> rest;
-    const TChan& chan;
+    const TChan* chan;
 };
 
 template<typename TBase, typename... TSources>
@@ -58,10 +52,6 @@ struct AmendIterator
 {
     AmendIterator(typename TBase::const_iterator iterator, const ChannelHelper<TSources...>& sources_helper) :
     current(iterator), lookup(sources_helper)
-    {
-    }
-    AmendIterator(const AmendIterator<TBase, TSources...>& other) :
-        current(other.current), lookup(other.lookup)
     {
     }
 
@@ -97,7 +87,7 @@ struct AmendStream : Channel
     using IndexType = typename TBase::IndexType;
     using const_iterator = AmendIterator<TBase, TSources...>;
 
-    AmendStream(TBase base, TSources&... sources) : base(base), sources_helper(sources...)
+    AmendStream(TBase& base, TSources&... sources) : base(base), sources_helper(sources...)
     {
     }
     virtual void forEachImmediateDependency(function<void(const Process&)> f) const override

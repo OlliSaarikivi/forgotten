@@ -9,7 +9,7 @@
     void set(NAME c) { FIELD = c.##FIELD; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
     template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
-    size_t hash() { return std::hash<FIELD_TYPE>()(FIELD); } \
+    size_t hash() const { return std::hash<FIELD_TYPE>()(FIELD); } \
 };
 
 #define NO_HASH(TYPE) namespace std { \
@@ -23,6 +23,8 @@
 template<typename... TColumns>
 struct Row : TColumns...
 {
+    Row() : TColumns()... {}
+
     Row(const TColumns&... columns) : TColumns(columns)... {}
 
     template<typename... TOtherColumns>
@@ -43,7 +45,7 @@ struct Row : TColumns...
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
     }
 
-    bool operator==(const Row<TColumns...>& other)
+    bool operator==(const Row<TColumns...>& other) const
     {
         return Key<TColumns...>::equal(*this, other);
     }

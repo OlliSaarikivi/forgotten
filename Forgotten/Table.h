@@ -45,7 +45,7 @@ struct Table<TRow, TIndex> : Channel
             ::tErase(container, std::forward<TRow2>(row));
     }
     template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row)
+    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
     {
         return EqualRangeHelper<TRow, ContainerType>
             ::tEqualRange(container, std::forward<TRow2>(row));
@@ -106,7 +106,7 @@ template<typename TRow, typename TContainer>
 struct EqualRangeHelper
 {
     template<typename TRow2>
-    static pair<typename TContainer::const_iterator, typename TContainer::const_iterator> tEqualRange(TContainer& container, TRow2&& row)
+    static pair<typename TContainer::const_iterator, typename TContainer::const_iterator> tEqualRange(const TContainer& container, TRow2&& row)
     {
         return container.equal_range(std::forward<TRow2>(row));
     }
