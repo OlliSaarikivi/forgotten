@@ -20,31 +20,9 @@
     }; \
 };
 
-template<typename TRow, typename... TColumns>
-struct RowTypeHelper;
-template<typename TRow>
-struct RowTypeHelper<TRow>
-{
-    using type = TRow;
-};
-template<typename TRow, typename TColumn, typename... TColumns>
-struct RowTypeHelper<TRow, TColumn, TColumns...>
-{
-    using type = typename std::conditional<std::is_base_of<TColumn, TRow>::value,
-    typename RowTypeHelper<TRow, TColumns...>::type,
-    typename RowTypeHelper<typename TRow::template WithColumn<TColumn>, TColumns...>::type>::type;
-};
-
 template<typename... TColumns>
 struct Row : TColumns...
 {
-    template<typename TOtherColumn>
-    using WithColumn = Row<TColumns..., TOtherColumn>;
-    template<typename... TOtherColumns>
-    using WithDistinctColumns = typename RowTypeHelper<Row<>, TOtherColumns..., TColumns...>::type;
-    template<typename TOtherRow>
-    using Union = typename TOtherRow::template WithDistinctColumns<TColumns...>;
-
     Row() : TColumns()... {}
 
     Row(const TColumns&... columns) : TColumns(columns)... {}
@@ -219,3 +197,30 @@ struct KeyEqual
     }
 };
 
+// Row column concatenation (with removal of duplicates)
+template<typename TRow, typename TColumn, bool isBase>
+struct AddNew;
+template<typename... TColumns, typename TColumn>
+struct AddNew<Row<TColumns...>, TColumn, true>
+{
+    using type = Row<TColumns...>;
+};
+template<typename... TColumns, typename TColumn>
+struct AddNew<Row<TColumns...>, TColumn, false>
+{
+    using type = Row<TColumns..., TColumn>;
+};
+
+template<typename TRow1, typename TRow2>
+struct ConcatRows;
+template<typename TRow>
+struct ConcatRows<TRow, Row<>>
+{
+    using type = TRow;
+};
+template<typename... TColumns1, typename TColumn, typename... TColumns2>
+struct ConcatRows<Row<TColumns1...>, Row<TColumn, TColumns2...>>
+{
+    using type = typename ConcatRows<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
+    Row<TColumns2...>>::type;
+};

@@ -12,7 +12,7 @@ struct SingleValueIterator
         atEnd = true;
         return *this;
     }
-    const TRow& operator*()
+    const TRow& operator*() const
     {
         return row;
     }
@@ -36,7 +36,6 @@ struct DefaultValueStream : Channel
     using IndexType = HashedUnique<TKey>;
     using const_iterator = SingleValueIterator<RowType>;
     DefaultValueStream(const TDefaultColumns&... args) : defaults(args...) {}
-    virtual void clear() override {}
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(const TRow2& row) const
     {

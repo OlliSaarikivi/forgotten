@@ -84,7 +84,6 @@ unique_ptr<ForgottenGame> createGame()
     sim.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     sim.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    typename Row<Eid, Race>::Union<Row<Body>>* a;
     auto& body_moves = sim.from(bodies).join(move_actions).join(default_race).amend(races)
         .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
     sim.makeProcess<MoveActionApplier>(body_moves, forces);

@@ -24,8 +24,8 @@ struct JoinIterator<TRow, TLeft, TRight, true>
     using right_iterator = typename TRight::const_iterator;
 
     JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.cbegin()), left_end(left_chan.cend()),
-        right(right_chan.cbegin()), right_end(right_chan.cend())
+        left(left_chan.begin()), left_end(left_chan.end()),
+        right(right_chan.begin()), right_end(right_chan.end())
     {
         findMatch();
     }
@@ -56,12 +56,13 @@ struct JoinIterator<TRow, TLeft, TRight, true>
             ++left;
             findMatch();
         }
+        return *this;
     }
     TRow operator*() const
     {
         auto joined_row = TRow(*left);
         joined_row.setAll(*right_subscan);
-        return joinded_row;
+        return joined_row;
     }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
@@ -84,11 +85,12 @@ template<typename TRow, typename TLeft, typename TRight>
 struct JoinIterator<TRow, TLeft, TRight, false>
 {
     static const bool Ordered = TLeft::IndexType::Ordered;
+    using KeyType = typename TLeft::IndexType::KeyType;
     using left_iterator = typename TLeft::const_iterator;
     using right_iterator = typename TRight::const_iterator;
 
     JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.cbegin()), left_end(left_chan.cend()), right_chan(&right_chan)
+        left(left_chan.begin()), left_end(left_chan.end()), right_chan(&right_chan)
     {
         findMatch();
     }
@@ -108,13 +110,14 @@ struct JoinIterator<TRow, TLeft, TRight, false>
             ++left;
         }
     }
-    JoinIterator<TRow, TLeft, TRight, true>& operator++()
+    JoinIterator<TRow, TLeft, TRight, false>& operator++()
     {
         ++right;
         if (right == right_end) {
             ++left;
             findMatch();
         }
+        return *this;
     }
     TRow operator*() const
     {
@@ -122,11 +125,11 @@ struct JoinIterator<TRow, TLeft, TRight, false>
         joined_row.setAll(*right);
         return joined_row;
     }
-    bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
+    bool operator==(const JoinIterator<TRow, TLeft, TRight, false>& other) const
     {
         return left == other.left && left_end == other.left_end && right_chan == other.right_chan;
     }
-    bool operator!=(const JoinIterator<TRow, TLeft, TRight, true>& other) const
+    bool operator!=(const JoinIterator<TRow, TLeft, TRight, false>& other) const
     {
         return !operator==(other);
     }
@@ -139,13 +142,10 @@ private:
 };
 
 template<typename TLeft, typename TRight>
-using RowUnion = typename TLeft::RowType::template Union<typename TRight::RowType>;
-
-template<typename TLeft, typename TRight, typename TRow = RowUnion<TLeft, TRight>>
-struct JoinStream
+struct JoinStream : Channel
 {
-    using RowType = TRow;
-    using IndexType = JoinIterator<TRow, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
+    using RowType = typename ConcatRows<typename TLeft::RowType, typename TRight::RowType>::type;
+    using IndexType = JoinIterator<RowType, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
     using const_iterator = IndexType;
 
     JoinStream(const TLeft& left, const TRight& right) : left(left), right(right) {}

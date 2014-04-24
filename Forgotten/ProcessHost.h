@@ -21,7 +21,7 @@ struct JoinBuilder
     {
         return JoinBuilder<AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
     }
-    TChannel& select()
+    const TChannel& select()
     {
         return chan;
     }
@@ -105,7 +105,7 @@ struct ProcessHost
     Table<TRow, TIndex, TIndices...>& makeStream(TArgs&&... args)
     {
         auto& ret = makeTable<TRow, TIndex, TIndices...>(std::forward<TArgs>(args)...);
-        auto ticker = std::make_unique<ClearChannelTicker>(ret);
+        auto ticker = std::make_unique<ClearChannelTicker<Table<TRow, TIndex, TIndices...>>>(ret);
         addChannelTicker(std::move(ticker));
         return ret;
     }
