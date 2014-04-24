@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Row.h"
+#include "ProcessHost.h"
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -20,9 +21,7 @@ struct Channel
     Channel& operator=(const Channel&) = delete;
 
     virtual void registerProducer(const Process*) {};
-    virtual void forEachImmediateDependency(function<void(const Process&)>) const {};
-
-    virtual void clear() = 0;
+    virtual void forEachProducer(function<void(const Process&)>) const {};
 };
 
 template<typename TKey>
@@ -85,15 +84,16 @@ struct ChannelTicker
     virtual void tick() {};
 };
 
+template<typename TChannel>
 struct ClearChannelTicker : ChannelTicker
 {
-    ClearChannelTicker(Channel& channel) : channel(channel) {}
+    ClearChannelTicker(TChannel& channel) : channel(channel) {}
     virtual void tick() override
     {
         channel.clear();
     }
 private:
-    Channel& channel;
+    TChannel& channel;
 };
 
 template<typename TRow, typename... TIndices>

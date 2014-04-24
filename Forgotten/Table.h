@@ -14,7 +14,7 @@ struct Table<TRow, TIndex> : Channel
     {
         producers.emplace_back(process);
     }
-    virtual void forEachImmediateDependency(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(const Process&)> f) const override
     {
         for (const auto& producer : producers) {
             f(*producer);
@@ -28,7 +28,7 @@ struct Table<TRow, TIndex> : Channel
     {
         return container.cend();
     }
-    virtual void clear() override
+    void clear()
     {
         container.clear();
     }

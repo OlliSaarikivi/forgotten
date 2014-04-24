@@ -1,129 +1,9 @@
 #pragma once
 
 #include "Row.h"
-#include "Process.h"
-#include "Channel.h"
 
-template<typename... TChans>
-struct ChannelHelper;
-template<typename TChan>
-struct ChannelHelper<TChan>
-{
-    ChannelHelper(TChan& chan) : chan(chan)
-    {
-    }
-    void invokeEachImmediateDependency(function<void(const Process&)> f) const
-    {
-        chan.forEachImmediateDependency(f);
-    }
-    void clearAll()
-    {
-        chan.clear();
-    }
-    TChan& chan;
-};
-template<typename TChan, typename... TChans>
-struct ChannelHelper<TChan, TChans...>
-{
-    ChannelHelper(TChan& chan, TChans&... chans) : chan(chan), chans(chans...)
-    {
-    }
-    void invokeEachImmediateDependency(function<void(const Process&)> f) const
-    {
-        chan.forEachImmediateDependency(f);
-        chans.invokeEachImmediateDependency(f);
-    }
-    void clearAll()
-    {
-        chan.clear();
-        chans.clearAll();
-    }
-    TChan& chan;
-    ChannelHelper<TChans...> chans;
-};
-
-template<typename... TChans>
-struct JoinLookup;
-template<typename TChan>
-struct JoinLookup<TChan>
-{
-    JoinLookup(const ChannelHelper<TChan>& helper) : chan(&helper.chan)
-    {
-    }
-    JoinLookup<TChan>& operator=(const JoinLookup<TChan>& other) = default;
-    template<typename TRow>
-    void scanTo(const TRow& row)
-    {
-        auto range = chan->equalRange(row);
-        equal_iter = range.first;
-        equal_end = range.second;
-    }
-    bool hasValue() const
-    {
-        return equal_iter != equal_end;
-    }
-    void increment()
-    {
-        ++equal_iter;
-    }
-    template<typename TRow>
-    void populateJoinedRow(TRow& joined_row)
-    {
-        joined_row.setAll(*equal_iter);
-    }
-    const TChan* chan;
-    typename TChan::const_iterator equal_iter;
-    typename TChan::const_iterator equal_end;
-};
-template<typename TChan, typename... TChans>
-struct JoinLookup<TChan, TChans...>
-{
-    JoinLookup(const ChannelHelper<TChan, TChans...>& helper) : chan(&helper.chan), rest(helper.chans)
-    {
-    }
-    template<typename TRow>
-    void scanTo(const TRow& row)
-    {
-        auto range = chan->equalRange(row);
-        equal_iter = range.first;
-        equal_end = range.second;
-        syncRest();
-    }
-    void syncRest()
-    {
-        while (equal_iter != equal_end) {
-            rest.scanTo(*equal_iter);
-            if (rest.hasValue()) {
-                return;
-            }
-            ++equal_iter;
-        }
-    }
-    bool hasValue() const
-    {
-        return equal_iter != equal_end;
-    }
-    void increment()
-    {
-        ++equal_iter;
-        syncRest();
-    }
-    template<typename TRow>
-    void populateJoinedRow(TRow& joined_row)
-    {
-        joined_row.setAll(*equal_iter);
-        rest.populateJoinedRow(joined_row);
-    }
-    JoinLookup<TChans...> rest;
-    const TChan* chan;
-    typename TChan::const_iterator equal_iter;
-    typename TChan::const_iterator equal_end;
-};
-
-template<typename... TChans>
-struct CanMerge : std::false_type {};
-template<typename TLeft, typename TRight, typename... TChans>
-struct CanMerge<TLeft, TRight, TChans...>
+template<typename TLeft, typename TRight>
+struct CanMerge
 {
     static const bool value =
     TLeft::IndexType::Ordered &&
@@ -131,201 +11,161 @@ struct CanMerge<TLeft, TRight, TChans...>
     std::is_same<typename TLeft::IndexType::KeyType, typename TRight::IndexType::KeyType>::value;
 };
 
-template<typename TRow, bool CanMerge, typename... TChans>
+template<typename TRow, typename TLeft, typename TRight, bool CanMerge>
 struct JoinIterator;
-template<typename TRow, bool CanMerge, typename TChan>
-struct JoinIterator<TRow, CanMerge, TChan>
+// Merge join
+template<typename TRow, typename TLeft, typename TRight>
+struct JoinIterator<TRow, TLeft, TRight, true>
 {
-    JoinIterator(const ChannelHelper<TChan>& helper) : my(helper.chan.begin()), my_end(helper.chan.end())
-    {
-    }
-
-    void goToEnd()
-    {
-        my = my_end;
-    }
-    JoinIterator<TRow, CanMerge, TChan>& operator++()
-    {
-        ++my;
-        return *this;
-    }
-    void populateJoinedRow(TRow& joined_row)
-    {
-        joined_row.setAll(*my);
-    }
-    TRow operator*()
-    {
-        TRow joined_row(*my);
-        return joined_row;
-    }
-    bool operator==(const JoinIterator<TRow, CanMerge, TChan>& other)
-    {
-        return my == other.my;
-    }
-    bool operator!=(const JoinIterator<TRow, CanMerge, TChan>& other)
-    {
-        return !operator==(other);
-    }
-    typename TChan::const_iterator my;
-    typename TChan::const_iterator my_end;
-};
-/* Merge join implementation */
-template<typename TRow, typename TLeft, typename TRight, typename... TChans>
-struct JoinIterator<TRow, true, TLeft, TRight, TChans...>
-{
-    using KeyType = typename TLeft::IndexType::KeyType;
-
     static const bool Ordered = true;
+    using KeyType = typename TLeft::IndexType::KeyType;
+    static_assert(std::is_same<KeyType, typename TRight::IndexType::KeyType>::value, "must have same key to merge join");
+    using left_iterator = typename TLeft::const_iterator;
+    using right_iterator = typename TRight::const_iterator;
 
-    JoinIterator(const ChannelHelper<TLeft, TRight, TChans...>& helper) : my(helper.chan.begin()), my_end(helper.chan.end()), rest(helper.chans), first_equal(rest)
+    JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
+        left(left_chan.cbegin()), left_end(left_chan.cend()),
+        right(right_chan.cbegin()), right_end(right_chan.cend())
     {
-        incrementUntilEqual();
-        first_equal = rest;
+        findMatch();
     }
-
     void goToEnd()
     {
-        my = my_end;
-        rest.goToEnd();
+        left = left_end;
+        right = right_end;
+        right_subscan = right_end;
     }
-    void incrementUntilEqual()
+    void findMatch()
     {
-        while (my != my_end && rest.my != rest.my_end) {
-            if (KeyType::less(*my, *(rest.my))) {
-                ++my;
-            } else if (KeyType::less(*(rest.my), *my)) {
-                ++rest;
+        while (left != left_end && right != right_end) {
+            if (KeyType::less(*left, *right)) {
+                ++left;
+            } else if (KeyType::less(*right, *left)) {
+                ++right;
             } else {
+                right_subscan = right;
                 return;
             }
         }
         goToEnd();
     }
-    JoinIterator<TRow, true, TLeft, TRight, TChans...>& operator++()
+    JoinIterator<TRow, TLeft, TRight, true>& operator++()
     {
-        ++rest;
-        if (rest.my == rest.my_end || KeyType::less(*my, *(rest.my))) {
-            rest = first_equal;
-            ++my;
-            incrementUntilEqual();
-            first_equal = rest;
+        ++right_subscan;
+        if (right_subscan == right_end || KeyType::less(*left, *right_subscan)) {
+            ++left;
+            findMatch();
         }
-        return *this;
     }
-    void populateJoinedRow(TRow& joined_row)
+    TRow operator*() const
     {
-        joined_row.setAll(*my);
-        rest.populateJoinedRow(joined_row);
+        auto joined_row = TRow(*left);
+        joined_row.setAll(*right_subscan);
+        return joinded_row;
     }
-    TRow operator*()
+    bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
-        TRow joined_row(*my);
-        rest.populateJoinedRow(joined_row);
-        return joined_row;
+        return left == other.left && right == other.right && right_subscan == other.right_subscan &&
+            left_end == other.left_end && right_end == other.right_end;
     }
-    bool operator==(const JoinIterator<TRow, true, TLeft, TRight, TChans...>& other)
-    {
-        return my == other.my && rest == other.rest;
-    }
-    bool operator!=(const JoinIterator<TRow, true, TLeft, TRight, TChans...>& other)
+    bool operator!=(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
         return !operator==(other);
     }
-    using RestType = JoinIterator<TRow, CanMerge<TRight, TChans...>::value, TRight, TChans...>;
-    RestType rest;
-    RestType first_equal;
-    typename TLeft::const_iterator my;
-    typename TLeft::const_iterator my_end;
+private:
+    left_iterator left;
+    left_iterator left_end;
+    right_iterator right;
+    right_iterator right_subscan;
+    right_iterator right_end;
 };
-/* Hash join implementation */
-template<typename TRow, typename TLeft, typename TRight, typename... TChans>
-struct JoinIterator<TRow, false, TLeft, TRight, TChans...>
+// Hash join
+template<typename TRow, typename TLeft, typename TRight>
+struct JoinIterator<TRow, TLeft, TRight, false>
 {
     static const bool Ordered = TLeft::IndexType::Ordered;
+    using left_iterator = typename TLeft::const_iterator;
+    using right_iterator = typename TRight::const_iterator;
 
-    JoinIterator(const ChannelHelper<TLeft, TRight, TChans...>& helper) : my(helper.chan.begin()), my_end(helper.chan.end()), rest(helper.chans)
+    JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
+        left(left_chan.cbegin()), left_end(left_chan.cend()), right_chan(&right_chan)
     {
-        incrementUntilEqual();
+        findMatch();
     }
-
     void goToEnd()
     {
-        my = my_end;
+        left = left_end;
     }
-    void incrementUntilEqual()
+    void findMatch()
     {
-        while (my != my_end) {
-            rest.scanTo(*my);
-            if (rest.hasValue()) {
+        while (left != left_end) {
+            auto range = right_chan->equalRange(*left);
+            right = range.first;
+            right_end = range.second;
+            if (right != right_end) {
                 return;
             }
-            ++my;
+            ++left;
         }
     }
-    JoinIterator<TRow, false, TLeft, TRight, TChans...>& operator++()
+    JoinIterator<TRow, TLeft, TRight, true>& operator++()
     {
-        rest.increment();
-        if (!rest.hasValue()) {
-            ++my;
-            incrementUntilEqual();
+        ++right;
+        if (right == right_end) {
+            ++left;
+            findMatch();
         }
-        return *this;
     }
-    void populateJoinedRow(TRow& joined_row)
+    TRow operator*() const
     {
-        joined_row.setAll(*my);
-        rest.populateJoinedRow(joined_row);
-    }
-    TRow operator*()
-    {
-        TRow joined_row(*my);
-        rest.populateJoinedRow(joined_row);
+        auto joined_row = TRow(*left);
+        joined_row.setAll(*right);
         return joined_row;
     }
-    bool operator==(const JoinIterator<TRow, false, TLeft, TRight, TChans...>& other)
+    bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
-        return my == other.my;
+        return left == other.left && left_end == other.left_end && right_chan == other.right_chan;
     }
-    bool operator!=(const JoinIterator<TRow, false, TLeft, TRight, TChans...>& other)
+    bool operator!=(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
         return !operator==(other);
     }
-    JoinLookup<TRight, TChans...> rest;
-    typename TLeft::const_iterator my;
-    typename TLeft::const_iterator my_end;
+private:
+    left_iterator left;
+    left_iterator left_end;
+    right_iterator right;
+    right_iterator right_end;
+    const TRight* right_chan;
 };
 
-template<typename TRow, typename... TChans>
-struct JoinStream : Channel
+template<typename TLeft, typename TRight>
+using RowUnion = typename TLeft::RowType::template Union<typename TRight::RowType>;
+
+template<typename TLeft, typename TRight, typename TRow = RowUnion<TLeft, TRight>>
+struct JoinStream
 {
     using RowType = TRow;
-    using IndexType = JoinIterator<TRow, CanMerge<TChans...>::value, TChans...>;
+    using IndexType = JoinIterator<TRow, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
     using const_iterator = IndexType;
 
-    JoinStream(TChans&... chans) :
-        channel_helper(chans...)
-    {
-    }
+    JoinStream(const TLeft& left, const TRight& right) : left(left), right(right) {}
 
-    virtual void forEachImmediateDependency(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(const Process&)> f) const override
     {
-        channel_helper.invokeEachImmediateDependency(f);
-    }
-    virtual void clear() override
-    {
-        channel_helper.clearAll();
+        left.forEachProducer(f);
+        right.forEachProducer(f);
     }
     const_iterator begin() const
     {
-        return const_iterator(channel_helper);
+        return const_iterator(left, right);
     }
     const_iterator end() const
     {
-        const_iterator end_iterator(channel_helper);
+        const_iterator end_iterator(left, right);
         end_iterator.goToEnd();
         return end_iterator;
     }
 private:
-    ChannelHelper<TChans...> channel_helper;
+    const TLeft& left;
+    const TRight& right;
 };
-

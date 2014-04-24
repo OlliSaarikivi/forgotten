@@ -52,44 +52,47 @@ void loadAssets()
 unique_ptr<ForgottenGame> createGame()
 {
     auto game = std::make_unique<ForgottenGame>();
-    auto& textures = game->simulation.makeTable<Row<Eid, SDLTexture>, OrderedUnique<Key<Eid>>>();
-    auto& bodies = game->simulation.makeTable<Row<Eid, Body>, OrderedUnique<Key<Eid>>>();
-    auto& deadlies = game->simulation.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    auto& sim = game->simulation;
+    auto& out = game->output;
 
-    auto& races = game->simulation.makeTable<Row<Eid, Race>, OrderedUnique<Key<Eid>>>();
-    auto& default_race = game->simulation.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
+    auto& textures = sim.makeTable<Row<Eid, SDLTexture>, OrderedUnique<Key<Eid>>>();
+    auto& bodies = sim.makeTable<Row<Eid, Body>, OrderedUnique<Key<Eid>>>();
+    auto& deadlies = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+
+    auto& races = sim.makeTable<Row<Eid, Race>, OrderedUnique<Key<Eid>>>();
+    auto& default_race = sim.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
     auto& race_max_speeds =
-        game->simulation.makeTable<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
+        sim.makeTable<Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
     auto& max_speeds =
-        game->simulation.makeTable<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
-    auto& default_max_speed = game->simulation.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+        sim.makeTable<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
+    auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
         (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
 
-    auto& positions = game->simulation.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
-    auto& velocities = game->simulation.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
-    auto& forces = game->simulation.makeStream<Row<Body, Force>>();
-    auto& contacts = game->simulation.makeTable<Row<Contact>>();
+    auto& positions = sim.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
+    auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
+    auto& forces = sim.makeStream<Row<Body, Force>>();
+    auto& contacts = sim.makeTable<Row<Contact>>();
 
-    auto& keysDown = game->simulation.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
-    auto& keyPresses = game->simulation.makeStream<Row<SDLScancode>>();
-    auto& keyReleases = game->simulation.makeStream<Row<SDLScancode>>();
-    auto& controllables = game->simulation.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
-    auto& move_actions = game->simulation.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
-    auto& heading_actions = game->simulation.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
+    auto& keysDown = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
+    auto& keyPresses = sim.makeStream<Row<SDLScancode>>();
+    auto& keyReleases = sim.makeStream<Row<SDLScancode>>();
+    auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
+    auto& heading_actions = sim.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
 
-    game->simulation.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
-    game->simulation.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
-    game->simulation.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
+    sim.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
+    sim.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
+    sim.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves_partial = game->simulation.makeJoin<Row<Eid, Race, Body, MoveAction, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (bodies, move_actions, default_race, races, default_max_speed);
-    auto& body_moves = game->simulation.makeAmend(body_moves_partial, race_max_speeds, max_speeds);
-    game->simulation.makeProcess<MoveActionApplier>(body_moves, forces);
+    typename Row<Eid, Race>::Union<Row<Body>>* a;
+    auto& body_moves = sim.from(bodies).join(move_actions).join(default_race).amend(races)
+        .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
+    sim.makeProcess<MoveActionApplier>(body_moves, forces);
 
-    auto& renderables = game->output.makeJoin<Row<SDLTexture, Position>>(textures, positions);
-    game->output.makeProcess<SDLRender>(renderables);
+    auto& renderables = out.from(textures).join(positions).select();
+    out.makeProcess<SDLRender>(renderables);
 
-    auto& def = game->simulation.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
+    auto& def = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
         (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
 
     Eid::Type player = 1;

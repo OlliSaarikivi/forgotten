@@ -5,6 +5,31 @@
 #include "Join.h"
 #include "Amend.h"
 
+struct ProcessHost;
+
+template<typename TChannel>
+struct JoinBuilder
+{
+    JoinBuilder(const TChannel& chan, ProcessHost& host) : chan(chan), host(host) {}
+    template<typename TRight>
+    JoinBuilder<JoinStream<TChannel, TRight>> join(const TRight& right)
+    {
+        return JoinBuilder<JoinStream<TChannel, TRight>>(host.makeJoin(chan, right), host);
+    }
+    template<typename TRight>
+    JoinBuilder<AmendStream<TChannel, TRight>> amend(const TRight& right)
+    {
+        return JoinBuilder<AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
+    }
+    TChannel& select()
+    {
+        return chan;
+    }
+private:
+    const TChannel& chan;
+    ProcessHost& host;
+};
+
 struct ProcessHost
 {
     void sortProcesses();
@@ -85,16 +110,22 @@ struct ProcessHost
         return ret;
     }
 
-    template<typename TRow, typename... TChans>
-    JoinStream<TRow, TChans...>& makeJoin(TChans&... chans)
+    template<typename TLeft, typename TRight>
+    JoinStream<TLeft, TRight>& makeJoin(const TLeft& left, const TRight& right)
     {
-        return makeChannel<JoinStream<TRow, TChans...>>(chans...);
+        return makeChannel<JoinStream<TLeft, TRight>>(left, right);
     }
 
-    template<typename TBase, typename... TSources>
-    AmendStream<TBase, TSources...>& makeAmend(TBase& base, TSources&... chans)
+    template<typename TLeft, typename TRight>
+    AmendStream<TLeft, TRight>& makeAmend(const TLeft& left, const TRight& right)
     {
-        return makeChannel<AmendStream<TBase, TSources...>>(base, chans...);
+        return makeChannel<AmendStream<TLeft, TRight>>(left, right);
+    }
+
+    template<typename TChannel>
+    JoinBuilder<TChannel> from(const TChannel& chan)
+    {
+        return JoinBuilder<TChannel>(chan, *this);
     }
 private:
     flat_set<unique_ptr<Process>> processes;
@@ -102,4 +133,3 @@ private:
     flat_set<unique_ptr<ChannelTicker>> channelTickers;
     vector<const Process*> execution_order;
 };
-

@@ -33,7 +33,7 @@ void ProcessHost::sortProcesses()
         }
         visited.emplace(&process);
         process.forEachInput([&](const Channel &input) {
-            input.forEachImmediateDependency([&](const Process &producer) {
+            input.forEachProducer([&](const Process &producer) {
                 visit(producer);
             });
         });
