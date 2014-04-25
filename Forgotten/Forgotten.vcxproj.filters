@@ -93,6 +93,12 @@
     <ClInclude Include="Amend.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
+    <ClInclude Include="Box2DReader.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
+    <ClInclude Include="Behaviors.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

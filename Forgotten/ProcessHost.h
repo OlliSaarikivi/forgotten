@@ -68,12 +68,12 @@ struct ProcessHost
             return makeProcess<TProcess<T1, T2, T3, T4>>(t1, t2, t3, t4, std::forward<TRest>(rest)...);
         }
     template<template<typename, typename, typename> class TProcess, typename T1, typename T2, typename T3, typename... TRest>
-    TProcess<T1, T2, T3>& makeProcess(T1& t1, T2& t2, T3& t3, TRest&... rest)
+    TProcess<T1, T2, T3>& makeProcess(T1& t1, T2& t2, T3& t3, TRest&&... rest)
     {
         return makeProcess<TProcess<T1, T2, T3>>(t1, t2, t3, std::forward<TRest>(rest)...);
     }
     template<template<typename, typename> class TProcess, typename T1, typename T2, typename... TRest>
-    TProcess<T1, T2>& makeProcess(T1& t1, T2& t2, TRest&... rest)
+    TProcess<T1, T2>& makeProcess(T1& t1, T2& t2, TRest&&... rest)
     {
         return makeProcess<TProcess<T1, T2>>(t1, t2, std::forward<TRest>(rest)...);
     }

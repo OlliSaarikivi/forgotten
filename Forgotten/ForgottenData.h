@@ -28,6 +28,7 @@ BUILD_COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
 // Aspect columns
 BUILD_COLUMN(Position, vec2, position)
 BUILD_COLUMN(Velocity, vec2, velocity)
+BUILD_COLUMN(Heading, float, heading)
 BUILD_COLUMN(Body, b2Body*, body)
 BUILD_COLUMN(SDLTexture, SDL_Surface*, sdl_texture)
 BUILD_COLUMN(MaxSpeedForward, float, max_speed_forward)

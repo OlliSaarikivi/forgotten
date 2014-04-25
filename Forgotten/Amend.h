@@ -18,7 +18,11 @@ struct AmendIterator<TRow, TLeft, TRight, true>
         left(left_chan.begin()), left_end(left_chan.end()),
         right(right_chan.begin()), right_end(right_chan.end())
     {
-        findMatch();
+        if (left != left_end) {
+            findMatch();
+        } else {
+            right = right_end;
+        }
     }
     void goToEnd()
     {
@@ -71,7 +75,9 @@ struct AmendIterator<TRow, TLeft, TRight, false>
     AmendIterator(const TLeft& left_chan, const TRight& right_chan) :
         left(left_chan.begin()), left_end(left_chan.end()), right_chan(&right_chan)
     {
-        findMatch();
+        if (left != left_end) {
+            findMatch();
+        }
     }
     void goToEnd()
     {
@@ -116,7 +122,7 @@ private:
 template<typename TLeft, typename TRight>
 struct AmendStream : Channel
 {
-    using RowType = typename ConcatRows<typename TLeft::RowType, typename TRight::RowType>::type;
+    using RowType = typename TLeft::RowType;
     using IndexType = AmendIterator<RowType, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
     using const_iterator = IndexType;
 

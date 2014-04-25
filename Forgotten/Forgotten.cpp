@@ -4,6 +4,7 @@
 #include "ForgottenGame.h"
 #include "Join.h"
 #include "Box2DStep.h"
+#include "Box2DReader.h"
 #include "Debug.h"
 #include "SDLRender.h"
 #include "SDLEvents.h"
@@ -66,10 +67,11 @@ unique_ptr<ForgottenGame> createGame()
     auto& max_speeds =
         sim.makeTable<Row<Eid, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
     auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
+        (MaxSpeedForward{ 10.0f }, MaxSpeedSideways{ 7.5f }, MaxSpeedBackward{ 5.0f });
 
     auto& positions = sim.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
+    auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
     auto& contacts = sim.makeTable<Row<Contact>>();
 
@@ -80,19 +82,17 @@ unique_ptr<ForgottenGame> createGame()
     auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
     auto& heading_actions = sim.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
 
-    sim.makeProcess<Box2DStep>(forces, bodies, positions, velocities, contacts, &game->world, 8, 3);
+    sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
+    sim.makeProcess<Box2DStep>(forces, contacts, &game->world, 8, 3);
     sim.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     sim.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
-    auto& body_moves = sim.from(bodies).join(move_actions).join(default_race).amend(races)
+    auto& body_moves = sim.from(bodies).join(velocities).join(headings).join(move_actions).join(default_race).amend(races)
         .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
     sim.makeProcess<MoveActionApplier>(body_moves, forces);
 
     auto& renderables = out.from(textures).join(positions).select();
     out.makeProcess<SDLRender>(renderables);
-
-    auto& def = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (MaxSpeedForward{ 1.0f }, MaxSpeedSideways{ 0.75f }, MaxSpeedBackward{ 0.5f });
 
     Eid::Type player = 1;
 
@@ -120,7 +120,7 @@ unique_ptr<ForgottenGame> createGame()
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;
     playerFixtureDef.shape = &playerShape;
-    playerFixtureDef.density = 0.01f;
+    playerFixtureDef.density = 75.0f;
     playerFixtureDef.friction = 1.0f;
     body->CreateFixture(&playerFixtureDef);
 
@@ -130,7 +130,7 @@ unique_ptr<ForgottenGame> createGame()
     playerFriction.collideConnected = true;
     playerFriction.localAnchorA = b2Vec2(0, 0);
     playerFriction.localAnchorB = b2Vec2(0, 0);
-    playerFriction.maxForce = 50;
+    playerFriction.maxForce = 7000;
     playerFriction.maxTorque = 5;
     game->world.CreateJoint(&playerFriction);
 
