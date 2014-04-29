@@ -84,9 +84,6 @@
     <ClInclude Include="Table.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
-    <ClInclude Include="MultiIndexTable.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
     <ClInclude Include="DefaultValueStream.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
@@ -100,6 +97,9 @@
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
     <ClInclude Include="Transform.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="HandleTable.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
   </ItemGroup>

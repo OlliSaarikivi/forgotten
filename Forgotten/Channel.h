@@ -25,7 +25,7 @@ struct Channel
 };
 
 template<typename TKey>
-struct HashedUnique : bmi::hashed_unique<TKey, KeyHash<TKey>>
+struct HashedUnique
 {
     static const bool Ordered = false;
     using KeyType = TKey;
@@ -33,7 +33,7 @@ struct HashedUnique : bmi::hashed_unique<TKey, KeyHash<TKey>>
     using SingleIndexContainer = unordered_set<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey>
-struct HashedNonUnique : bmi::hashed_non_unique<TKey, KeyHash<TKey>>
+struct HashedNonUnique
 {
     static const bool Ordered = false;
     using KeyType = TKey;
@@ -41,7 +41,7 @@ struct HashedNonUnique : bmi::hashed_non_unique<TKey, KeyHash<TKey>>
     using SingleIndexContainer = unordered_multiset<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
-struct OrderedUnique : bmi::ordered_unique<TKey, KeyLess<TKey>>
+struct OrderedUnique
 {
     static const bool Ordered = true;
     using KeyType = TKey;
@@ -49,7 +49,7 @@ struct OrderedUnique : bmi::ordered_unique<TKey, KeyLess<TKey>>
     using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
-struct OrderedUnique<TKey, false> : bmi::ordered_unique<TKey, KeyLess<TKey>>
+struct OrderedUnique<TKey, false>
 {
     static const bool Ordered = true;
     using KeyType = TKey;
@@ -57,7 +57,7 @@ struct OrderedUnique<TKey, false> : bmi::ordered_unique<TKey, KeyLess<TKey>>
     using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
-struct OrderedNonUnique : bmi::ordered_non_unique<TKey, KeyLess<TKey>>
+struct OrderedNonUnique
 {
     static const bool Ordered = true;
     using KeyType = TKey;
@@ -65,18 +65,23 @@ struct OrderedNonUnique : bmi::ordered_non_unique<TKey, KeyLess<TKey>>
     using SingleIndexContainer = flat_multiset<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
-struct OrderedNonUnique<TKey, false> : bmi::ordered_non_unique<TKey, KeyLess<TKey>>
+struct OrderedNonUnique<TKey, false>
 {
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
     using SingleIndexContainer = multiset<TRow, KeyLess<TKey>>;
 };
-struct None : bmi::sequenced<>
+struct None
 {
     static const bool Ordered = false;
     template<typename TRow>
     using SingleIndexContainer = vector<TRow>;
+};
+template<int MaxRows>
+struct Handles
+{
+    static const bool Ordered = false;
 };
 
 struct ChannelTicker
@@ -100,5 +105,4 @@ template<typename TRow, typename... TIndices>
 struct Table;
 
 #include "Table.h"
-#include "MultiIndexTable.h"
-
+#include "HandleTable.h"
