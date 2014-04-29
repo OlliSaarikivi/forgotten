@@ -37,7 +37,7 @@ struct Index : Channel
     {
         return boost_index.cend();
     }
-    virtual void clear() override
+    void clear()
     {
         boost_index.clear();
     }
@@ -110,13 +110,24 @@ struct IndexEqualRangeHelper
     }
 };
 
+template<int N, typename TTarget, typename... TIndices>
+struct IndexNum;
+template<int N, typename TTarget, typename TIndex>
+struct IndexNum<N, TTarget, TIndex>
+{
+    using type = typename std::enable_if<std::is_same<TTarget, TIndex>::value, std::integral_constant<int, N>>::type;
+};
+template<int N, typename TTarget, typename TIndex, typename... TIndices>
+struct IndexNum<N, TTarget, TIndex, TIndices...>
+{
+    using type = typename std::conditional<std::is_same<TTarget, TIndex>::value, std::integral_constant<int, N>, typename IndexNum<N + 1, TTarget, TIndices...>::type>::type;
+};
+
 template<typename TRow, int N, template<int> class TIndexList, typename... TIndices>
 struct IndicesHelper;
 template<typename TRow, int N, template<int> class TIndexList, typename TIndex>
 struct IndicesHelper<TRow, N, TIndexList, TIndex>
 {
-    template<typename TIndex2>
-    using IndexNum = typename std::enable_if<std::is_same<TIndex, TIndex2>::value, std::integral_constant<int, N>>::type;
     template<int M>
     using NthIndex = typename std::enable_if<M == N, TIndex>::type;
     template<typename TContainer>
@@ -133,8 +144,7 @@ template<typename TRow, int N, template<int> class TIndexList, typename TIndex, 
 struct IndicesHelper<TRow, N, TIndexList, TIndex, TIndices...>
 {
     using RestType = IndicesHelper<TRow, N + 1, TIndexList, TIndices...>;
-    template<typename TIndex2>
-    using IndexNum = typename std::conditional<std::is_same<TIndex, TIndex2>::value, std::integral_constant<int, N>, typename RestType::template IndexNum<TIndex2>>::type;
+
     template<int M>
     using NthIndex = typename std::conditional<M == N, TIndex, typename RestType::template NthIndex<M>>::type;
     template<typename TContainer>
@@ -167,7 +177,7 @@ struct Table<TRow, TIndex, TIndices...> : Channel
     {
         return container.cend();
     }
-    virtual void clear() override
+    void clear()
     {
         container.clear();
     }
@@ -183,10 +193,10 @@ struct Table<TRow, TIndex, TIndices...> : Channel
         return IndexEraseHelper<TRow, TIndex>
             ::tErase(container, std::forward<TRow2>(row));
     }
-    template<typename TIndex>
-    Index<TRow, TIndex, typename ContainerType::template nth_index<HelperType::template IndexNum<TIndex>::value>::type>& getIndex()
+    template<typename TIndex2>
+    Index<TRow, TIndex2, typename ContainerType::template nth_index<IndexNum<0, TIndex2, TIndex, TIndices...>::type::value>::type>& getIndex()
     {
-        return indices.getIndex<HelperType::template IndexNum<TIndex>::value, TIndex>();
+        return indices.getIndex<IndexNum<0, TIndex2, TIndex, TIndices...>::type::value, TIndex2>();
     }
     template<int N>
     Index<TRow, typename HelperType::template NthIndex<N>, typename ContainerType::template nth_index<N>::type>& getIndex()

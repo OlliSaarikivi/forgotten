@@ -13,6 +13,7 @@
 #include "Actions.h"
 #include "Channel.h"
 #include "DefaultValueStream.h"
+#include "Behaviors.h"
 
 #include <tchar.h>
 
@@ -58,7 +59,6 @@ unique_ptr<ForgottenGame> createGame()
 
     auto& textures = sim.makeTable<Row<Eid, SDLTexture>, OrderedUnique<Key<Eid>>>();
     auto& bodies = sim.makeTable<Row<Eid, Body>, OrderedUnique<Key<Eid>>>();
-    auto& deadlies = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
 
     auto& races = sim.makeTable<Row<Eid, Race>, OrderedUnique<Key<Eid>>>();
     auto& default_race = sim.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
@@ -69,7 +69,9 @@ unique_ptr<ForgottenGame> createGame()
     auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
         (MaxSpeedForward{ 10.0f }, MaxSpeedSideways{ 7.5f }, MaxSpeedBackward{ 5.0f });
 
-    auto& positions = sim.makeStream<Row<Eid, Position>, OrderedUnique<Key<Eid>>>();
+    auto& positions = sim.makeStream<Row<Eid, Position>, HashedUnique<Key<Eid>>>();
+    auto& target_positions = sim.makeTransform<Rename<Eid, Target>, Rename<Position, TargetPosition>>(positions);
+
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
@@ -82,8 +84,14 @@ unique_ptr<ForgottenGame> createGame()
     auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
     auto& heading_actions = sim.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
 
+    auto& targets = sim.makeTable<Row<Eid, Target>, OrderedUnique<Key<Eid>>>();
+
     sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
     sim.makeProcess<Box2DStep>(forces, contacts, &game->world, 8, 3);
+
+    auto& targetings = sim.from(targets).join(positions).join(target_positions).select();
+    sim.makeProcess<TargetFollowing>(targetings, move_actions);
+
     sim.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
     sim.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
         controllables, move_actions, heading_actions);
@@ -91,10 +99,16 @@ unique_ptr<ForgottenGame> createGame()
         .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
     sim.makeProcess<MoveActionApplier>(body_moves, forces);
 
+    //sim.makeProcess<Debug>(positions);
+
     auto& renderables = out.from(textures).join(positions).select();
     out.makeProcess<SDLRender>(renderables);
 
     Eid::Type player = 1;
+    Eid::Type monster = 2;
+
+    race_max_speeds.put(Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>({ 1 }, { 20.0f }, { 15.0f }, { 10.0f }));
+    races.put(Row<Eid, Race>({ player }, { 1 }));
 
     // Add walls
     b2BodyDef wallBodyDef;
@@ -114,31 +128,41 @@ unique_ptr<ForgottenGame> createGame()
     b2BodyDef bodyDef;
     bodyDef.type = b2_dynamicBody;
     bodyDef.position.Set(0.0f, 0.0f);
-    b2Body* body = game->world.CreateBody(&bodyDef);
-    bodies.put(Row<Eid, Body>({ player }, { body }));
+    b2Body* body1 = game->world.CreateBody(&bodyDef);
+    bodies.put(Row<Eid, Body>({ player }, { body1 }));
+    bodyDef.position.Set(5.0f, 5.0f);
+    b2Body* body2 = game->world.CreateBody(&bodyDef);
+    bodies.put(Row<Eid, Body>({ monster }, { body2 }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);
     b2FixtureDef playerFixtureDef;
     playerFixtureDef.shape = &playerShape;
-    playerFixtureDef.density = 75.0f;
-    playerFixtureDef.friction = 1.0f;
-    body->CreateFixture(&playerFixtureDef);
+    playerFixtureDef.density = 0.75f;
+    playerFixtureDef.friction = 0.01f;
+    body1->CreateFixture(&playerFixtureDef);
+    body2->CreateFixture(&playerFixtureDef);
 
     b2FrictionJointDef playerFriction;
-    playerFriction.bodyA = body;
     playerFriction.bodyB = wallBody;
     playerFriction.collideConnected = true;
     playerFriction.localAnchorA = b2Vec2(0, 0);
     playerFriction.localAnchorB = b2Vec2(0, 0);
-    playerFriction.maxForce = 7000;
-    playerFriction.maxTorque = 5;
+    playerFriction.maxForce = 70;
+    playerFriction.maxTorque = 5000;
+    playerFriction.bodyA = body1;
+    game->world.CreateJoint(&playerFriction);
+    playerFriction.bodyA = body2;
     game->world.CreateJoint(&playerFriction);
 
     // Set it controllable
     controllables.put(Row<Eid>({ player }));
 
+    // Add monster target
+    targets.put(Row<Eid, Target>({ monster }, { player }));
+
     // Apply texture to the body
     textures.put(Row<Eid, SDLTexture>({ player }, { defaultSprite }));
+    textures.put(Row<Eid, SDLTexture>({ monster }, { defaultSprite }));
 
     return game;
 }

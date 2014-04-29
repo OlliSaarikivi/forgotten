@@ -4,6 +4,7 @@
 #include "Channel.h"
 #include "Join.h"
 #include "Amend.h"
+#include "Transform.h"
 
 struct ProcessHost;
 
@@ -111,13 +112,13 @@ struct ProcessHost
     }
 
     template<typename TLeft, typename TRight>
-    JoinStream<TLeft, TRight>& makeJoin(const TLeft& left, const TRight& right)
+    const JoinStream<TLeft, TRight>& makeJoin(const TLeft& left, const TRight& right)
     {
         return makeChannel<JoinStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TLeft, typename TRight>
-    AmendStream<TLeft, TRight>& makeAmend(const TLeft& left, const TRight& right)
+    const AmendStream<TLeft, TRight>& makeAmend(const TLeft& left, const TRight& right)
     {
         return makeChannel<AmendStream<TLeft, TRight>>(left, right);
     }
@@ -126,6 +127,12 @@ struct ProcessHost
     JoinBuilder<TChannel> from(const TChannel& chan)
     {
         return JoinBuilder<TChannel>(chan, *this);
+    }
+
+    template<typename... TTransforms, typename TChannel>
+    const TransformStream<TChannel, TTransforms...>& makeTransform(const TChannel& chan)
+    {
+        return makeChannel<TransformStream<TChannel, TTransforms...>>(chan);
     }
 private:
     flat_set<unique_ptr<Process>> processes;

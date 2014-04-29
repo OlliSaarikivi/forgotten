@@ -22,7 +22,7 @@ struct MoveActionApplier : Process
             vec2 optimal_move = glm::normalize(body_move.move_action * body_move.max_speed_forward - body_move.velocity);
             float velocity_towards_move = glm::dot(body_move.velocity, optimal_move);
             float force_multiplier = 1.0f - clamp(2.0f * velocity_towards_move - body_move.max_speed_forward, 0, body_move.max_speed_forward) / body_move.max_speed_forward;
-            forces.put(TForces::RowType({ body_move.body }, { optimal_move * force_multiplier * 20000.0f }));
+            forces.put(TForces::RowType({ body_move.body }, { optimal_move * force_multiplier * 200.0f }));
         }
     }
 private:

@@ -4,9 +4,9 @@
 #include "Process.h"
 
 template<typename TTargetings, typename TMoves>
-struct TargetFollower : Process
+struct TargetFollowing : Process
 {
-    TargetFollower(const TTargetings &targetings, TMoves& moves) :
+    TargetFollowing(const TTargetings &targetings, TMoves& moves) :
     targetings(targetings),
     moves(moves)
     {
@@ -19,10 +19,11 @@ struct TargetFollower : Process
     void tick() const override
     {
         for (const auto& targeting : targetings) {
+            vec2 to_target = targeting.target_position - targeting.position;
+            moves.put(TMoves::RowType({ targeting.eid }, { glm::normalize(to_target) }));
         }
     }
 private:
     const TTargetings& targetings;
     TMoves& moves;
 };
-

@@ -17,7 +17,7 @@ struct Debug : Process
     void tick() const override
     {
         std::cerr << "Positions:\n";
-        for (const auto& position : positions.read()) {
+        for (const auto& position : positions) {
             std::cerr << "Eid: " << position.eid <<
                 "\t x: " << position.position.x <<
                 "\t y: " << position.position.y << "\n";

@@ -30,7 +30,7 @@ struct HashedUnique : bmi::hashed_unique<TKey, KeyHash<TKey>>
     static const bool Ordered = false;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = unordered_set<TRow, KeyHash<TKey>>;
+    using SingleIndexContainer = unordered_set<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey>
 struct HashedNonUnique : bmi::hashed_non_unique<TKey, KeyHash<TKey>>
@@ -38,7 +38,7 @@ struct HashedNonUnique : bmi::hashed_non_unique<TKey, KeyHash<TKey>>
     static const bool Ordered = false;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = unordered_multiset<TRow, KeyHash<TKey>>;
+    using SingleIndexContainer = unordered_multiset<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
 struct OrderedUnique : bmi::ordered_unique<TKey, KeyLess<TKey>>
@@ -46,7 +46,7 @@ struct OrderedUnique : bmi::ordered_unique<TKey, KeyLess<TKey>>
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = flat_set<TRow, KeyLess<TKey>>;
+    using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
 struct OrderedUnique<TKey, false> : bmi::ordered_unique<TKey, KeyLess<TKey>>
@@ -54,7 +54,7 @@ struct OrderedUnique<TKey, false> : bmi::ordered_unique<TKey, KeyLess<TKey>>
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = set<TRow, KeyLess<TKey>>;
+    using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
 struct OrderedNonUnique : bmi::ordered_non_unique<TKey, KeyLess<TKey>>

@@ -99,6 +99,9 @@
     <ClInclude Include="Behaviors.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

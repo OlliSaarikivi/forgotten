@@ -6,7 +6,8 @@
 #define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME { \
     typedef FIELD_TYPE Type; \
     FIELD_TYPE FIELD; \
-    void set(NAME c) { FIELD = c.##FIELD; } \
+    FIELD_TYPE get() const { return FIELD; } \
+    template<typename TOther> void set(const TOther& other) { FIELD = other.get(); } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
     template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
     size_t hash() const { return std::hash<FIELD_TYPE>()(FIELD); } \
@@ -198,6 +199,7 @@ struct KeyEqual
 };
 
 // Row column concatenation (with removal of duplicates)
+
 template<typename TRow, typename TColumn, bool isBase>
 struct AddNew;
 template<typename... TColumns, typename TColumn>
@@ -223,4 +225,19 @@ struct ConcatRows<Row<TColumns1...>, Row<TColumn, TColumns2...>>
 {
     using type = typename ConcatRows<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
     Row<TColumns2...>>::type;
+};
+
+// Row column removal
+
+template<typename TRow, typename TRemove, typename TResult>
+struct RemoveExisting;
+template<typename TRemove, typename... TFiltered>
+struct RemoveExisting<Row<>, TRemove, Row<TFiltered...>>
+{
+    using type = Row<TFiltered...>;
+};
+template<typename TColumn, typename... TColumns, typename TRemove, typename... TFiltered>
+struct RemoveExisting<Row<TColumn, TColumns...>, TRemove, Row<TFiltered...>>
+{
+    using type = typename std::conditional<std::is_same<TColumn, TRemove>::value, Row<TFiltered..., TColumns...>, typename RemoveExisting<Row<TColumns...>, TRemove, Row<TFiltered..., TColumn>>::type>::type;
 };

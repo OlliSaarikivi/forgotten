@@ -20,8 +20,8 @@ void ProcessHost::addChannelTicker(unique_ptr<ChannelTicker> ticker)
 void ProcessHost::sortProcesses()
 {
     execution_order.clear();
-    set<const Process*> visited;
-    set<const Process*> in_this_host;
+    std::set<const Process*> visited;
+    std::set<const Process*> in_this_host;
     for (const auto &process : processes) {
         in_this_host.emplace(process.get());
     }

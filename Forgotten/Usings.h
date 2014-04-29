@@ -7,7 +7,6 @@ using std::shared_ptr;
 using std::weak_ptr;
 using std::array;
 using std::function;
-using std::set;
 using std::multiset;
 using std::unordered_set;
 using std::unordered_multiset;
