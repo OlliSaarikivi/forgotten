@@ -103,7 +103,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="ForgottenGame.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Controls.h" />
-    <ClInclude Include="HandleTable.h" />
+    <ClInclude Include="Stable.h" />
     <ClInclude Include="SDLEvents.h" />
     <ClInclude Include="Join.h" />
     <ClInclude Include="ProcessHost.h" />

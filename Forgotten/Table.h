@@ -3,11 +3,11 @@
 #include "Channel.h"
 
 template<typename TRow, typename TIndex>
-struct Table<TRow, TIndex> : Channel
+struct Table : Channel
 {
-    using RowType = TRow;
     using IndexType = TIndex;
-    using ContainerType = typename TIndex::template SingleIndexContainer<TRow>;
+    using RowType = typename RowWithKey<TRow, typename IndexType::KeyType>::type;
+    using ContainerType = typename TIndex::template ContainerType<RowType>;
     using const_iterator = typename ContainerType::const_iterator;
 
     virtual void registerProducer(const Process *process) override
@@ -35,19 +35,19 @@ struct Table<TRow, TIndex> : Channel
     template<typename TRow2>
     void put(TRow2&& row)
     {
-        PutHelper<TRow, ContainerType>
+        PutHelper<RowType, ContainerType>
             ::tPut(container, std::forward<TRow2>(row));
     }
     template<typename TRow2>
     typename ContainerType::size_type erase(TRow2&& row)
     {
-        return EraseHelper<TRow, ContainerType>
+        return EraseHelper<RowType, ContainerType>
             ::tErase(container, std::forward<TRow2>(row));
     }
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
     {
-        return EqualRangeHelper<TRow, ContainerType>
+        return EqualRangeHelper<RowType, ContainerType>
             ::tEqualRange(container, std::forward<TRow2>(row));
     }
 private:
@@ -108,6 +108,6 @@ struct EqualRangeHelper
     template<typename TRow2>
     static pair<typename TContainer::const_iterator, typename TContainer::const_iterator> tEqualRange(const TContainer& container, TRow2&& row)
     {
-        return container.equal_range(std::forward<TRow2>(row));
+        return container.equal_range(TRow(std::forward<TRow2>(row)));
     }
 };

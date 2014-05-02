@@ -3,15 +3,27 @@
 #include "stdafx.h"
 #include "Utils.h"
 
-#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD) struct NAME { \
-    typedef FIELD_TYPE Type; \
+#include <boost/integer.hpp>
+
+#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,ADDITIONAL_CODE) struct NAME { \
+    using Type = FIELD_TYPE; \
     FIELD_TYPE FIELD; \
     FIELD_TYPE get() const { return FIELD; } \
     template<typename TOther> void set(const TOther& other) { FIELD = other.get(); } \
+    void setField(FIELD_TYPE value) { FIELD = value; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
     template<typename TRight> bool operator==(const TRight &right) const { return FIELD == right.##FIELD; } \
     size_t hash() const { return std::hash<FIELD_TYPE>()(FIELD); } \
+    ADDITIONAL_CODE \
 };
+
+#define COLUMN(NAME,FIELD_TYPE,FIELD)  BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,)
+
+#define COLUMN_ALIAS(ALIAS,FIELD,NAME) COLUMN(ALIAS,NAME##::Type,FIELD)
+
+#define HANDLE(NAME,FIELD,MAX_ROWS)  BUILD_COLUMN(NAME,boost::uint_value_t<MAX_ROWS - 1>::least,FIELD, \
+    static const int MaxRows = MAX_ROWS; \
+)
 
 #define NO_HASH(TYPE) namespace std { \
     template<> \
@@ -29,7 +41,7 @@ struct Row : TColumns...
     Row(const TColumns&... columns) : TColumns(columns)... {}
 
     template<typename... TOtherColumns>
-    Row(const Row<TOtherColumns...>& other)
+    explicit Row(const Row<TOtherColumns...>& other)
     {
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
     }
@@ -89,6 +101,38 @@ struct SetAllHelper<TColumn, TColumns...>
 
 template<typename... TColumns>
 struct Key;
+template<>
+struct Key<>
+{
+    template<typename... TDataColumns>
+    using AsRowWithData = Row<TDataColumns...>;
+
+    template<typename... TOtherColumns>
+    Row<> operator()(const Row<TOtherColumns...>& row) const
+    {
+        return Row<>();
+    }
+    template<typename... TOtherColumns>
+    static Row<> project(const Row<TOtherColumns...>& row)
+    {
+        return Row<>();
+    }
+    template<typename TLeft, typename TRight>
+    static bool less(const TLeft& left, const TRight& right)
+    {
+        return false;
+    }
+    template<typename TLeft, typename TRight>
+    static bool equal(const TLeft& left, const TRight& right)
+    {
+        return true;
+    }
+    template<typename TRow>
+    static size_t hash(const TRow& row)
+    {
+        return 0;
+    }
+};
 template<typename TColumn>
 struct Key<TColumn>
 {
@@ -224,7 +268,21 @@ template<typename... TColumns1, typename TColumn, typename... TColumns2>
 struct ConcatRows<Row<TColumns1...>, Row<TColumn, TColumns2...>>
 {
     using type = typename ConcatRows<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
-    Row<TColumns2...>>::type;
+    Row<TColumns2... >> ::type;
+};
+
+template<typename TRow, typename TKey>
+struct RowWithKey;
+template<typename TRow>
+struct RowWithKey<TRow, Key<>>
+{
+    using type = TRow;
+};
+template<typename... TColumns1, typename TColumn, typename... TColumns2>
+struct RowWithKey<Row<TColumns1...>, Key<TColumn, TColumns2...>>
+{
+    using type = typename RowWithKey<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
+    Key<TColumns2...>>::type;
 };
 
 // Row column removal

@@ -99,7 +99,7 @@
     <ClInclude Include="Transform.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
-    <ClInclude Include="HandleTable.h">
+    <ClInclude Include="Stable.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
   </ItemGroup>

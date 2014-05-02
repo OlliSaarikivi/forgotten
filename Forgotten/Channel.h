@@ -30,7 +30,7 @@ struct HashedUnique
     static const bool Ordered = false;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = unordered_set<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
+    using ContainerType = unordered_set<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey>
 struct HashedNonUnique
@@ -38,7 +38,7 @@ struct HashedNonUnique
     static const bool Ordered = false;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = unordered_multiset<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
+    using ContainerType = unordered_multiset<TRow, KeyHash<TKey>, KeyEqual<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
 struct OrderedUnique
@@ -46,7 +46,7 @@ struct OrderedUnique
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
+    using ContainerType = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
 struct OrderedUnique<TKey, false>
@@ -54,7 +54,7 @@ struct OrderedUnique<TKey, false>
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = std::set<TRow, KeyLess<TKey>>;
+    using ContainerType = std::set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey, bool OptimizeIteration = true>
 struct OrderedNonUnique
@@ -62,7 +62,7 @@ struct OrderedNonUnique
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = flat_multiset<TRow, KeyLess<TKey>>;
+    using ContainerType = flat_multiset<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
 struct OrderedNonUnique<TKey, false>
@@ -70,18 +70,14 @@ struct OrderedNonUnique<TKey, false>
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using SingleIndexContainer = multiset<TRow, KeyLess<TKey>>;
+    using ContainerType = multiset<TRow, KeyLess<TKey>>;
 };
 struct None
 {
     static const bool Ordered = false;
+    using KeyType = Key<>;
     template<typename TRow>
-    using SingleIndexContainer = vector<TRow>;
-};
-template<int MaxRows>
-struct Handles
-{
-    static const bool Ordered = false;
+    using ContainerType = vector<TRow>;
 };
 
 struct ChannelTicker
@@ -101,8 +97,5 @@ private:
     TChannel& channel;
 };
 
-template<typename TRow, typename... TIndices>
-struct Table;
-
 #include "Table.h"
-#include "HandleTable.h"
+#include "Stable.h"

@@ -57,6 +57,10 @@ unique_ptr<ForgottenGame> createGame()
     auto& sim = game->simulation;
     auto& out = game->output;
 
+    auto& position_data = sim.makeStable<Row<Position>, PositionHandle>();
+
+    auto& positions = sim.makeTable<Row<Eid, Position>, HashedUnique<Key<Eid>>>();
+
     auto& textures = sim.makeTable<Row<Eid, SDLTexture>, OrderedUnique<Key<Eid>>>();
     auto& bodies = sim.makeTable<Row<Eid, Body>, OrderedUnique<Key<Eid>>>();
 
@@ -69,7 +73,6 @@ unique_ptr<ForgottenGame> createGame()
     auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
         (MaxSpeedForward{ 10.0f }, MaxSpeedSideways{ 7.5f }, MaxSpeedBackward{ 5.0f });
 
-    auto& positions = sim.makeStream<Row<Eid, Position>, HashedUnique<Key<Eid>>>();
     auto& target_positions = sim.makeTransform<Rename<Eid, Target>, Rename<Position, TargetPosition>>(positions);
 
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();

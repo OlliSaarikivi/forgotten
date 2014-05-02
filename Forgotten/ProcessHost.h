@@ -96,17 +96,23 @@ struct ProcessHost
         return ret;
     }
 
-    template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
-    Table<TRow, TIndex, TIndices...>& makeTable(TArgs&&... args)
+    template<typename TRow, typename TIndex = None, typename... TArgs>
+    Table<TRow, TIndex>& makeTable(TArgs&&... args)
     {
-        return makeChannel<Table<TRow, TIndex, TIndices...>>(std::forward<TArgs>(args)...);
+        return makeChannel<Table<TRow, TIndex>>(std::forward<TArgs>(args)...);
     }
 
-    template<typename TRow, typename TIndex = None, typename... TIndices, typename... TArgs>
-    Table<TRow, TIndex, TIndices...>& makeStream(TArgs&&... args)
+    template<typename TRow, typename THandle, typename... TIndices, typename... TArgs>
+    Stable<TRow, THandle, TIndices...>& makeStable(TArgs&&... args)
     {
-        auto& ret = makeTable<TRow, TIndex, TIndices...>(std::forward<TArgs>(args)...);
-        auto ticker = std::make_unique<ClearChannelTicker<Table<TRow, TIndex, TIndices...>>>(ret);
+        return makeChannel<Stable<TRow, THandle, TIndices...>>(std::forward<TArgs>(args)...);
+    }
+
+    template<typename TRow, typename TIndex = None, typename... TArgs>
+    Table<TRow, TIndex>& makeStream(TArgs&&... args)
+    {
+        auto& ret = makeTable<TRow, TIndex>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<ClearChannelTicker<Table<TRow, TIndex>>>(ret);
         addChannelTicker(std::move(ticker));
         return ret;
     }

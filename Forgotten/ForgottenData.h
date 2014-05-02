@@ -6,10 +6,10 @@
 using eid_t = long;
 using race_t = int;
 
-BUILD_COLUMN(Eid, eid_t, eid)
-BUILD_COLUMN(Race, race_t, race)
+COLUMN(Eid, eid_t, eid)
+COLUMN(Race, race_t, race)
 
-BUILD_COLUMN(Force, vec2, force)
+COLUMN(Force, vec2, force)
 typedef pair<b2Fixture*, b2Fixture*> FixturePair;
 namespace std
 {
@@ -24,21 +24,22 @@ namespace std
         }
     };
 };
-BUILD_COLUMN(Contact, FixturePair, contact)
+COLUMN(Contact, FixturePair, contact)
 NO_HASH(SDL_Scancode)
-BUILD_COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
+COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
 
-BUILD_COLUMN(Position, vec2, position)
-BUILD_COLUMN(Velocity, vec2, velocity)
-BUILD_COLUMN(Heading, float, heading)
-BUILD_COLUMN(Body, b2Body*, body)
-BUILD_COLUMN(SDLTexture, SDL_Surface*, sdl_texture)
-BUILD_COLUMN(MaxSpeedForward, float, max_speed_forward)
-BUILD_COLUMN(MaxSpeedSideways, float, max_speed_sideways)
-BUILD_COLUMN(MaxSpeedBackward, float, max_speed_backwards)
+COLUMN(Position, vec2, position)
+HANDLE(PositionHandle, position_handle, 50000)
+COLUMN(Velocity, vec2, velocity)
+COLUMN(Heading, float, heading)
+COLUMN(Body, b2Body*, body)
+COLUMN(SDLTexture, SDL_Surface*, sdl_texture)
+COLUMN(MaxSpeedForward, float, max_speed_forward)
+COLUMN(MaxSpeedSideways, float, max_speed_sideways)
+COLUMN(MaxSpeedBackward, float, max_speed_backwards)
 
-BUILD_COLUMN(MoveAction, vec2, move_action);
-BUILD_COLUMN(HeadingAction, float, heading_action);
+COLUMN(MoveAction, vec2, move_action);
+COLUMN(HeadingAction, float, heading_action);
 
-BUILD_COLUMN(Target, eid_t, target)
-BUILD_COLUMN(TargetPosition, vec2, target_position)
+COLUMN_ALIAS(Target, target, Eid)
+COLUMN_ALIAS(TargetPosition, target_position, Position)
