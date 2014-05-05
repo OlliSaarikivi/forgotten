@@ -4,6 +4,7 @@
 #include "Utils.h"
 
 #include <boost/integer.hpp>
+#include <limits>
 
 #define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,ADDITIONAL_CODE) struct NAME { \
     using Type = FIELD_TYPE; \
@@ -21,8 +22,17 @@
 
 #define COLUMN_ALIAS(ALIAS,FIELD,NAME) COLUMN(ALIAS,NAME##::Type,FIELD)
 
-#define HANDLE(NAME,FIELD,MAX_ROWS)  BUILD_COLUMN(NAME,boost::uint_value_t<MAX_ROWS - 1>::least,FIELD, \
+#define BUILD_HANDLE(NAME,FIELD,MAX_ROWS,ADDITIONAL_CODE)  BUILD_COLUMN(NAME,boost::uint_value_t<MAX_ROWS>::least,FIELD, \
     static const int MaxRows = MAX_ROWS; \
+    static Type NullHandle() { return std::numeric_limits<Type>::max(); } \
+    ADDITIONAL_CODE \
+)
+
+#define HANDLE(NAME,FIELD,MAX_ROWS) BUILD_HANDLE(NAME,FIELD,MAX_ROWS,)
+
+#define HANDLE_ALIAS(ALIAS,FIELD,NAME) BUILD_HANDLE(ALIAS,FIELD,NAME##::MaxRows, \
+    ALIAS() = default; \
+    ALIAS(const NAME& other) { FIELD = other.get(); } \
 )
 
 #define NO_HASH(TYPE) namespace std { \
@@ -41,7 +51,7 @@ struct Row : TColumns...
     Row(const TColumns&... columns) : TColumns(columns)... {}
 
     template<typename... TOtherColumns>
-    explicit Row(const Row<TOtherColumns...>& other)
+    Row(const Row<TOtherColumns...>& other)
     {
         SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
     }

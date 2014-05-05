@@ -2,57 +2,14 @@
 
 #include "Channel.h"
 
-template<typename THandle, typename TIndex>
-struct StableIndex
-{
-    using IndexType = TIndex;
-    using RowType = typename TIndex::KeyType::template AsRowWithData<THandle>;
-    using ContainerType = typename TIndex::template ContainerType<RowType>;
-    using const_iterator = typename ContainerType::const_iterator;
-
-    const_iterator begin() const
-    {
-        return container.cbegin();
-    }
-    const_iterator end() const
-    {
-        return container.cend();
-    }
-    template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
-    {
-        return EqualRangeHelper<RowType, ContainerType>
-            ::tEqualRange(container, std::forward<TRow2>(row));
-    }
-
-    template<typename THandle, typename TData, typename... TIndices>
-    friend struct Stable;
-private:
-
-
-    ContainerType container;
-};
-
-template<typename THandle, typename... TIndices>
-struct IndicesHelper;
-template<typename THandle, typename TIndex, typename... TIndices>
-struct IndicesHelper<THandle, TIndex, TIndices...>
-{
-    using IndexType = StableIndex<THandle, TIndex>;
-
-private:
-    IndexType index;
-    IndicesHelper<THandle, TIndices...> rest;
-};
-
 template<typename THandle>
-struct HandleEntry
+struct Reference
 {
-    THandle actual;
+    typename THandle::Type actual;
     THandle next_free;
 };
 
-template<typename TData, typename THandle, typename... TIndices>
+template<typename TData, typename THandle>
 struct Stable : Channel
 {
     using HandleType = THandle;
@@ -64,12 +21,12 @@ struct Stable : Channel
 
     Stable() : rows(), valid_end(rows.begin())
     {
-        free_handle.setField(0);
+        free.setField(0);
         for (int i = 0; i < HandleType::MaxRows; ++i) {
-            handles[i].next_free.setField(i + 1);
+            references[i].next_free.setField(i + 1);
+            references[i].actual = HandleType::NullHandle();
         }
     }
-
     const_iterator begin() const
     {
         return rows.begin()
@@ -86,34 +43,53 @@ struct Stable : Channel
     {
         return valid_end;
     }
-    template<typename TRow2>
-    RowType put(TRow2&& row)
+    template<typename TRow>
+    RowType put(const TRow& row)
     {
         assert(valid_end != rows.end());
-        HandleType handle_handle = free_handle;
-        HandleEntry<HandleType>& newEntry = handles[handle_handle.get()];
-        free_handle = newEntry.next_free;
-        newEntry.actual.setField(valid_end - rows.begin());
+        HandleType handle = free;
+        auto& reference = references[handle.get()];
+        free = reference.next_free;
+        reference.actual = valid_end - rows.begin();
         valid_end->setAll(row);
-        valid_end->set(handle_handle);
+        valid_end->set(handle);
         return *(valid_end++);
     }
-    template<typename TRow2>
-    typename ContainerType::size_type erase(const TRow2& row)
+    typename ContainerType::size_type erase(const HandleType& handle)
     {
-        const HandleType& handle = row;
-        iterator to_row = rows.begin() + handle.get();
-        --valid_end;
-        *to_row = *valid_end;
-        to_row->set(handle);
-        handles[handle.get()].next_free = free_handle;
-        free_handle = handle;
-        return 1;
+        auto& reference = references[handle.get()];
+        if (reference.actual != HandleType::NullHandle()) {
+            iterator to_row = rows.begin() + reference.actual;
+            --valid_end;
+            *to_row = *valid_end;
+            references[static_cast<HandleType&>(*to_row).get()] = to_row - rows.begin();
+            references[handle.get()].next_free = free;
+            references[handle.get()].actual = HandleType::NullHandle();
+            free = handle;
+            return 1;
+        } else {
+            return 0;
+        }
     }
-
+    pair<const_iterator, const_iterator> equalRange(const HandleType& handle) const
+    {
+        auto& reference = references[handle.get()];
+        if (reference.actual != HandleType::NullHandle()) {
+            const_iterator iter = rows.begin() + reference.actual;
+            return std::make_pair(iter, iter + 1);
+        } else {
+            return std::make_pair(rows.end(), rows.end());
+        }
+    }
+    RowType& get(const HandleType& handle)
+    {
+        auto& reference = references[handle.get()];
+        assert(reference.actual != HandleType::NullHandle());
+        return rows[reference.actual];
+    }
 private:
-    array<HandleEntry<HandleType>, HandleType::MaxRows> handles;
-    HandleType free_handle;
+    array<Reference<HandleType>, HandleType::MaxRows> references;
+    HandleType free;
     ContainerType rows;
     iterator valid_end;
 };

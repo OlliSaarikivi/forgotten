@@ -18,11 +18,7 @@ struct AmendIterator<TRow, TLeft, TRight, true>
         left(left_chan.begin()), left_end(left_chan.end()),
         right(right_chan.begin()), right_end(right_chan.end())
     {
-        if (left != left_end) {
-            findMatch();
-        } else {
-            right = right_end;
-        }
+        findMatch();
     }
     void goToEnd()
     {
@@ -31,8 +27,12 @@ struct AmendIterator<TRow, TLeft, TRight, true>
     }
     void findMatch()
     {
-        while (right != right_end && KeyType::less(*right, *left)) {
-            ++right;
+        if (left != left_end) {
+            while (right != right_end && KeyType::less(*right, *left)) {
+                ++right;
+            }
+        } else {
+            right = right_end;
         }
     }
     AmendIterator<TRow, TLeft, TRight, true>& operator++()

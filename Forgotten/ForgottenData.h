@@ -41,5 +41,5 @@ COLUMN(MaxSpeedBackward, float, max_speed_backwards)
 COLUMN(MoveAction, vec2, move_action);
 COLUMN(HeadingAction, float, heading_action);
 
-COLUMN_ALIAS(Target, target, Eid)
 COLUMN_ALIAS(TargetPosition, target_position, Position)
+HANDLE_ALIAS(TargetPositionHandle, position_handle, PositionHandle)

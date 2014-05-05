@@ -90,13 +90,15 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     using right_iterator = typename TRight::const_iterator;
 
     JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.begin()), left_end(left_chan.end()), right_chan(&right_chan)
+        left(left_chan.begin()), left_end(left_chan.end()), right_end(right_chan.end()), right(right_chan.end()), right_chan(&right_chan)
     {
         findMatch();
     }
     void goToEnd()
     {
         left = left_end;
+        right_end = right_chan->end();
+        right = right_chan->end();
     }
     void findMatch()
     {
@@ -127,7 +129,8 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, false>& other) const
     {
-        return left == other.left && left_end == other.left_end && right_chan == other.right_chan;
+        return left == other.left && left_end == other.left_end &&
+            right == other.right && right_end == other.right_end && right_chan == other.right_chan;
     }
     bool operator!=(const JoinIterator<TRow, TLeft, TRight, false>& other) const
     {

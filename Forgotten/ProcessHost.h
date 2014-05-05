@@ -102,10 +102,10 @@ struct ProcessHost
         return makeChannel<Table<TRow, TIndex>>(std::forward<TArgs>(args)...);
     }
 
-    template<typename TRow, typename THandle, typename... TIndices, typename... TArgs>
-    Stable<TRow, THandle, TIndices...>& makeStable(TArgs&&... args)
+    template<typename TRow, typename THandle, typename... TArgs>
+    Stable<TRow, THandle>& makeStable(TArgs&&... args)
     {
-        return makeChannel<Stable<TRow, THandle, TIndices...>>(std::forward<TArgs>(args)...);
+        return makeChannel<Stable<TRow, THandle>>(std::forward<TArgs>(args)...);
     }
 
     template<typename TRow, typename TIndex = None, typename... TArgs>

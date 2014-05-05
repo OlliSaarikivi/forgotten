@@ -36,6 +36,16 @@ struct DefaultValueStream : Channel
     using IndexType = HashedUnique<TKey>;
     using const_iterator = SingleValueIterator<RowType>;
     DefaultValueStream(const TDefaultColumns&... args) : defaults(args...) {}
+    const_iterator begin() const
+    {
+        auto temp = RowType(defaults);
+        temp.setAll(TKey::project(row));
+        return const_iterator(temp);
+    }
+    const_iterator end() const
+    {
+        return const_iterator();
+    }
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(const TRow2& row) const
     {

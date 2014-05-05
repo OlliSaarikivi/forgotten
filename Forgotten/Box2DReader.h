@@ -30,7 +30,7 @@ struct Box2DReader : TimedProcess
     {
         for (const auto &body : bodies) {
             b2Body *b = body.body;
-            positions.put(TPositions::RowType({ body.eid }, { toGLM(b->GetPosition()) }));
+            positions.get(body).position = toGLM(b->GetPosition());
             velocities.put(TVelocities::RowType({ body.eid }, { toGLM(b->GetLinearVelocity()) }));
             headings.put(THeadings::RowType({ body.eid }, { b->GetAngle() }));
         }
