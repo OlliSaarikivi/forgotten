@@ -26,7 +26,7 @@ struct Controls : Process
         f(key_releases);
         f(controllables);
     }
-    void tick() const override
+    void tick() override
     {
         vec2 move_sum(0, 0);
         for (const auto& key_down : keys_down) {

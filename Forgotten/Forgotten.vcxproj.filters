@@ -102,6 +102,9 @@
     <ClInclude Include="Stable.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
+    <ClInclude Include="Regeneration.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

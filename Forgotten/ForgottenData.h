@@ -10,6 +10,24 @@ COLUMN(Eid, eid_t, eid)
 COLUMN(Race, race_t, race)
 
 COLUMN(Force, vec2, force)
+NO_HASH(SDL_Scancode)
+COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
+
+COLUMN(Position, vec2, position)
+HANDLE(PositionHandle, position_handle, 50000)
+COLUMN(Velocity, vec2, velocity)
+COLUMN(Heading, float, heading)
+COLUMN(Body, b2Body*, body)
+COLUMN(SDLTexture, SDL_Surface*, sdl_texture)
+COLUMN(MaxSpeed, float, max_speed)
+
+COLUMN(MoveAction, vec2, move_action);
+COLUMN(HeadingAction, float, heading_action);
+
+COLUMN_ALIAS(TargetPosition, target_position, Position)
+HANDLE_ALIAS(TargetPositionHandle, position_handle, PositionHandle)
+
+/* Collision stuff */
 typedef pair<b2Fixture*, b2Fixture*> FixturePair;
 namespace std
 {
@@ -25,21 +43,6 @@ namespace std
     };
 };
 COLUMN(Contact, FixturePair, contact)
-NO_HASH(SDL_Scancode)
-COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
-
-COLUMN(Position, vec2, position)
-HANDLE(PositionHandle, position_handle, 50000)
-COLUMN(Velocity, vec2, velocity)
-COLUMN(Heading, float, heading)
-COLUMN(Body, b2Body*, body)
-COLUMN(SDLTexture, SDL_Surface*, sdl_texture)
-COLUMN(MaxSpeedForward, float, max_speed_forward)
-COLUMN(MaxSpeedSideways, float, max_speed_sideways)
-COLUMN(MaxSpeedBackward, float, max_speed_backwards)
-
-COLUMN(MoveAction, vec2, move_action);
-COLUMN(HeadingAction, float, heading_action);
-
-COLUMN_ALIAS(TargetPosition, target_position, Position)
-HANDLE_ALIAS(TargetPositionHandle, position_handle, PositionHandle)
+COLUMN(Fixture, b2Fixture*, fixture)
+COLUMN(KnockbackImpulse, float, knockback_impulse)
+COLUMN(KnockbackEnergy, float, knockback_energy)

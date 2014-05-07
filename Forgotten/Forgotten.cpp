@@ -14,6 +14,7 @@
 #include "Channel.h"
 #include "DefaultValueStream.h"
 #include "Behaviors.h"
+#include "Regeneration.h"
 
 #include <tchar.h>
 
@@ -58,30 +59,31 @@ unique_ptr<ForgottenGame> createGame()
     auto& out = game->output;
 
     auto& positions = sim.makeStable<Row<Position>, PositionHandle>();
-
-    auto& position_handles = sim.makeTable<Row<PositionHandle>, HashedUnique<Key<Eid>>>();
-
+    auto& position_handles = sim.makeTable<Row<PositionHandle>, OrderedUnique<Key<Eid>>>();
     auto& textures = sim.makeTable<Row<PositionHandle, SDLTexture>>();
     auto& bodies = sim.makeTable<Row<Eid, Body, PositionHandle>, OrderedUnique<Key<Eid>>>();
 
+    /* Racial stuff */
     auto& races = sim.makeTable<Row<Race>, OrderedUnique<Key<Eid>>>();
     auto& default_race = sim.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
     auto& race_max_speeds =
-        sim.makeTable<Row<MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Race>>>();
+        sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Race>>>();
     auto& max_speeds =
-        sim.makeTable<Row<MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>, HashedUnique<Key<Eid>>>();
-    auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>>
-        (MaxSpeedForward{ 10.0f }, MaxSpeedSideways{ 7.5f }, MaxSpeedBackward{ 5.0f });
-
-    auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
+        sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Eid>>>();
+    auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeed>>
+        (MaxSpeed{ 10.0f });
 
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
     auto& contacts = sim.makeTable<Row<Contact>>();
 
+    /* Collision stuff */
+    auto& knockback_impulses = sim.makeTable<Row<KnockbackImpulse>, HashedUnique<Key<Fixture>>>();
+    auto& knockback_energies = sim.makeTable<Row<KnockbackEnergy>, HashedUnique<Key<Fixture>>>();
+    sim.makeProcess<LinearRegeneration<decltype(knockback_energies), KnockbackEnergy, 100, 100>>(knockback_energies);
+
     auto& keysDown = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
-    //keysDown.put(Row<SDLScancode>(SDLScancode{ SDL_SCANCODE_F }));
     auto& keyPresses = sim.makeStream<Row<SDLScancode>>();
     auto& keyReleases = sim.makeStream<Row<SDLScancode>>();
     auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
@@ -93,6 +95,7 @@ unique_ptr<ForgottenGame> createGame()
     sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
     sim.makeProcess<Box2DStep>(forces, contacts, &game->world, 8, 3);
 
+    auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
     auto& targetings = sim.from(targets).join(position_handles).join(positions).join(target_positions).select();
     sim.makeProcess<TargetFollowing>(targetings, move_actions);
 
@@ -111,7 +114,7 @@ unique_ptr<ForgottenGame> createGame()
     Eid::Type player = 1;
     Eid::Type monster = 2;
 
-    race_max_speeds.put(Row<Race, MaxSpeedForward, MaxSpeedSideways, MaxSpeedBackward>({ 1 }, { 20.0f }, { 15.0f }, { 10.0f }));
+    race_max_speeds.put(Row<Race, MaxSpeed>({ 1 }, { 20.0f }));
     races.put(Row<Eid, Race>({ player }, { 1 }));
 
     // Add walls
@@ -134,10 +137,12 @@ unique_ptr<ForgottenGame> createGame()
     bodyDef.position.Set(0.0f, 0.0f);
     b2Body* body1 = game->world.CreateBody(&bodyDef);
     auto& handle1 = positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
+    position_handles.put(Row<Eid, PositionHandle>({ player }, handle1));
     bodies.put(Row<Eid, Body, PositionHandle>({ player }, { body1 }, { handle1 }));
     bodyDef.position.Set(5.0f, 5.0f);
     b2Body* body2 = game->world.CreateBody(&bodyDef);
     auto& handle2 = positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
+    position_handles.put(Row<Eid, PositionHandle>({ monster }, handle2));
     bodies.put(Row<Eid, Body, PositionHandle>({ monster }, { body2 }, { handle2 }));
     b2PolygonShape playerShape;
     playerShape.SetAsBox(1, 1);

@@ -26,7 +26,7 @@ struct Box2DReader : TimedProcess
     {
         f(bodies);
     }
-    void tick(float step) const override
+    void tick(float step) override
     {
         for (const auto &body : bodies) {
             b2Body *b = body.body;

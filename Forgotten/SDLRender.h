@@ -14,7 +14,7 @@ struct SDLRender : Process
     {
         f(renderables);
     }
-    void tick() const override
+    void tick() override
     {
         SDL_FillRect(screenSurface, NULL, SDL_MapRGB(screenSurface->format, 148, 237, 100));
         for (const auto& renderable : renderables) {

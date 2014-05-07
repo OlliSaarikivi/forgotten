@@ -144,5 +144,5 @@ private:
     flat_set<unique_ptr<Process>> processes;
     flat_set<unique_ptr<Channel>> channels;
     flat_set<unique_ptr<ChannelTicker>> channelTickers;
-    vector<const Process*> execution_order;
+    vector<Process*> execution_order;
 };

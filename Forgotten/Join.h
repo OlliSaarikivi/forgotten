@@ -98,7 +98,7 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     {
         left = left_end;
         right_end = right_chan->end();
-        right = right_chan->end();
+        right = right_end;
     }
     void findMatch()
     {
@@ -111,6 +111,7 @@ struct JoinIterator<TRow, TLeft, TRight, false>
             }
             ++left;
         }
+        goToEnd();
     }
     JoinIterator<TRow, TLeft, TRight, false>& operator++()
     {

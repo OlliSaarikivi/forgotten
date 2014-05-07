@@ -8,41 +8,50 @@ struct Table : Channel
     using IndexType = TIndex;
     using RowType = typename RowWithKey<TRow, typename IndexType::KeyType>::type;
     using ContainerType = typename TIndex::template ContainerType<RowType>;
+    using iterator = typename ContainerType::iterator;
     using const_iterator = typename ContainerType::const_iterator;
 
     virtual void registerProducer(const Process *process) override
     {
         producers.emplace_back(process);
     }
-    virtual void forEachProducer(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(Process&)> f) const override
     {
         for (const auto& producer : producers) {
             f(*producer);
         }
     }
-    const_iterator begin() const
+    iterator begin()
     {
-        return container.cbegin();
+        return container.begin();
     }
-    const_iterator end() const
+    iterator end()
     {
-        return container.cend();
+        return container.end();
     }
     void clear()
     {
         container.clear();
     }
-    template<typename TRow2>
-    void put(TRow2&& row)
+    void put(const RowType& row)
     {
         PutHelper<RowType, ContainerType>
-            ::tPut(container, std::forward<TRow2>(row));
+            ::tPut(container, row);
     }
     template<typename TRow2>
     typename ContainerType::size_type erase(TRow2&& row)
     {
         return EraseHelper<RowType, ContainerType>
             ::tErase(container, std::forward<TRow2>(row));
+    }
+    iterator erase(const_iterator first, const_iterator last)
+    {
+        return PositionEraseHelper<ContainerType, iterator>
+            ::tErase(container, first, last);
+    }
+    iterator erase(const_iterator position)
+    {
+        return erase(position, std::advance(position, 1));
     }
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
@@ -99,6 +108,15 @@ struct EraseHelper<TRow, vector<TRow>>
             return row == other;
         }), buffer.end());
         return original_size - buffer.size();
+    }
+};
+
+template<typename TContainer, typename TIterator>
+struct PositionEraseHelper
+{
+    static TIterator tErase(TContainer& container, TIterator first, TIterator last)
+    {
+        return container.erase(first, last);
     }
 };
 

@@ -16,7 +16,7 @@ struct TargetFollowing : Process
     {
         f(targetings);
     }
-    void tick() const override
+    void tick() override
     {
         for (const auto& targeting : targetings) {
             vec2 to_target = targeting.target_position - targeting.position;

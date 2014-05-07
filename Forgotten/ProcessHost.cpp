@@ -20,12 +20,12 @@ void ProcessHost::addChannelTicker(unique_ptr<ChannelTicker> ticker)
 void ProcessHost::sortProcesses()
 {
     execution_order.clear();
-    std::set<const Process*> visited;
-    std::set<const Process*> in_this_host;
-    for (const auto &process : processes) {
+    std::set<Process*> visited;
+    std::set<Process*> in_this_host;
+    for (auto &process : processes) {
         in_this_host.emplace(process.get());
     }
-    function<void(const Process &process)> visit = [&](const Process &process) {
+    function<void(Process &process)> visit = [&](Process &process) {
         if (visited.find(&process) != visited.end() ||
             in_this_host.find(&process) == in_this_host.end())
         {
@@ -33,13 +33,13 @@ void ProcessHost::sortProcesses()
         }
         visited.emplace(&process);
         process.forEachInput([&](const Channel &input) {
-            input.forEachProducer([&](const Process &producer) {
+            input.forEachProducer([&](Process &producer) {
                 visit(producer);
             });
         });
         execution_order.emplace_back(&process);
     };
-    for (const auto &process : processes) {
+    for (auto &process : processes) {
         visit(*process);
     }
 }
@@ -50,7 +50,7 @@ void ProcessHost::tick(float step)
     for (const auto &ticker : channelTickers) {
         ticker->tick();
     }
-    for (const auto &process : execution_order) {
+    for (auto &process : execution_order) {
         process->doTick(step);
     }
 }

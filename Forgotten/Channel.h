@@ -21,7 +21,7 @@ struct Channel
     Channel& operator=(const Channel&) = delete;
 
     virtual void registerProducer(const Process*) {};
-    virtual void forEachProducer(function<void(const Process&)>) const {};
+    virtual void forEachProducer(function<void(Process&)>) const {};
 };
 
 template<typename TKey>

@@ -20,7 +20,7 @@ struct SDLEvents : Process
     void forEachInput(function<void(const Channel&)> f) const override
     {
     }
-    void tick() const override
+    void tick() override
     {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {

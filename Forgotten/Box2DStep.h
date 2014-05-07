@@ -23,7 +23,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
     {
         f(center_forces);
     }
-    void tick(float step) const override
+    void tick(float step) override
     {
         for (const auto &center_force : center_forces) {
             b2Body *b = center_force.body;
