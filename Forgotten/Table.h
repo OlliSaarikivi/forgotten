@@ -2,30 +2,38 @@
 
 #include "Channel.h"
 
+template<typename TKey, typename TRow, typename TRow2>
+TRow MakeKeyRow(const TRow2& row)
+{
+    static_assert(ColumnsCover<TRow2, typename TKey::AsRow>::value, "all key columns must be set");
+    TRow new_row;
+    new_row.setAll(row);
+    return new_row;
+}
+
 template<typename TRow, typename TIndex>
 struct Table : Channel
 {
     using IndexType = TIndex;
     using RowType = typename RowWithKey<TRow, typename IndexType::KeyType>::type;
     using ContainerType = typename TIndex::template ContainerType<RowType>;
-    using iterator = typename ContainerType::iterator;
     using const_iterator = typename ContainerType::const_iterator;
 
-    virtual void registerProducer(const Process *process) override
+    virtual void registerProducer(Process *process) override
     {
         producers.emplace_back(process);
     }
     virtual void forEachProducer(function<void(Process&)> f) const override
     {
-        for (const auto& producer : producers) {
+        for (auto& producer : producers) {
             f(*producer);
         }
     }
-    iterator begin()
+    const_iterator begin() const
     {
         return container.begin();
     }
-    iterator end()
+    const_iterator end() const
     {
         return container.end();
     }
@@ -42,26 +50,30 @@ struct Table : Channel
     typename ContainerType::size_type erase(TRow2&& row)
     {
         return EraseHelper<RowType, ContainerType>
-            ::tErase(container, std::forward<TRow2>(row));
+            ::tErase(container, MakeKeyRow<typename IndexType::KeyType, RowType>(std::forward<TRow2>(row)));
     }
-    iterator erase(const_iterator first, const_iterator last)
+    const_iterator erase(const_iterator first, const_iterator last)
     {
-        return PositionEraseHelper<ContainerType, iterator>
-            ::tErase(container, first, last);
+        return container.erase(first, last);
     }
-    iterator erase(const_iterator position)
+    const_iterator erase(const_iterator position)
     {
-        return erase(position, std::advance(position, 1));
+        return container.erase(position);
+    }
+    template<typename TRow2>
+    void update(const_iterator position, const TRow2& row)
+    {
+        static_assert(!Intersects<TRow2, typename IndexType::KeyType::AsRow>::value, "can not update key columns in place");
+        const_cast<RowType&>(*position).setAll(row);
     }
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
     {
-        return EqualRangeHelper<RowType, ContainerType>
-            ::tEqualRange(container, std::forward<TRow2>(row));
+        return container.equal_range(MakeKeyRow<typename IndexType::KeyType, RowType>(std::forward<TRow2>(row)));
     }
 private:
     ContainerType container;
-    vector<const Process*> producers;
+    vector<Process*> producers;
 };
 
 template<typename TRow, typename TContainer>
@@ -91,10 +103,9 @@ struct PutHelper<TRow, vector<TRow>>
 template<typename TRow, typename TContainer>
 struct EraseHelper
 {
-    template<typename TRow2>
-    static typename TContainer::size_type tErase(TContainer& buffer, TRow2&& row)
+    static typename TContainer::size_type tErase(TContainer& buffer, const TRow& row)
     {
-        return buffer.erase(std::forward<TRow2>(row));
+        return buffer.erase(row);
     }
 };
 template<typename TRow>
@@ -108,24 +119,5 @@ struct EraseHelper<TRow, vector<TRow>>
             return row == other;
         }), buffer.end());
         return original_size - buffer.size();
-    }
-};
-
-template<typename TContainer, typename TIterator>
-struct PositionEraseHelper
-{
-    static TIterator tErase(TContainer& container, TIterator first, TIterator last)
-    {
-        return container.erase(first, last);
-    }
-};
-
-template<typename TRow, typename TContainer>
-struct EqualRangeHelper
-{
-    template<typename TRow2>
-    static pair<typename TContainer::const_iterator, typename TContainer::const_iterator> tEqualRange(const TContainer& container, TRow2&& row)
-    {
-        return container.equal_range(TRow(std::forward<TRow2>(row)));
     }
 };

@@ -3,13 +3,6 @@
 #include "Row.h"
 #include "ProcessHost.h"
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-
-namespace bmi = boost::multi_index;
-
 struct Process;
 
 struct Channel
@@ -20,7 +13,7 @@ struct Channel
     Channel(const Channel&) = delete;
     Channel& operator=(const Channel&) = delete;
 
-    virtual void registerProducer(const Process*) {};
+    virtual void registerProducer(Process*) {};
     virtual void forEachProducer(function<void(Process&)>) const {};
 };
 
@@ -46,7 +39,7 @@ struct OrderedUnique
     static const bool Ordered = true;
     using KeyType = TKey;
     template<typename TRow>
-    using ContainerType = std::set<TRow, KeyLess<TKey>>;
+    using ContainerType = flat_set<TRow, KeyLess<TKey>>;
 };
 template<typename TKey>
 struct OrderedUnique<TKey, false>

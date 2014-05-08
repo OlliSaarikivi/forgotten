@@ -49,8 +49,7 @@ struct DefaultValueStream : Channel
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(const TRow2& row) const
     {
-        auto temp = RowType(defaults);
-        temp.setAll(TKey::project(row));
+        auto temp = RowType(defaults, TKey::project(row));
         return std::make_pair(const_iterator(temp), const_iterator());
     }
 private:

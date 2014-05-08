@@ -105,6 +105,9 @@
     <ClInclude Include="Regeneration.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="ContactEffects.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -60,8 +60,7 @@ struct JoinIterator<TRow, TLeft, TRight, true>
     }
     TRow operator*() const
     {
-        auto joined_row = TRow(*left);
-        joined_row.setAll(*right_subscan);
+        auto joined_row = TRow(*left, *right_subscan);
         return joined_row;
     }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
@@ -124,8 +123,7 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     }
     TRow operator*() const
     {
-        auto joined_row = TRow(*left);
-        joined_row.setAll(*right);
+        auto joined_row = TRow(*left, *right);
         return joined_row;
     }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, false>& other) const
@@ -152,9 +150,9 @@ struct JoinStream : Channel
     using IndexType = JoinIterator<RowType, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
     using const_iterator = IndexType;
 
-    JoinStream(const TLeft& left, const TRight& right) : left(left), right(right) {}
+    JoinStream(TLeft& left, TRight& right) : left(left), right(right) {}
 
-    virtual void forEachProducer(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(Process&)> f) const override
     {
         left.forEachProducer(f);
         right.forEachProducer(f);
@@ -170,6 +168,6 @@ struct JoinStream : Channel
         return end_iterator;
     }
 private:
-    const TLeft& left;
-    const TRight& right;
+    TLeft& left;
+    TRight& right;
 };

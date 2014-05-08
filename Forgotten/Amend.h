@@ -80,6 +80,7 @@ struct AmendIterator<TRow, TLeft, TRight, false>
     void goToEnd()
     {
         left = left_end;
+        right = right_end;
     }
     void findMatch()
     {
@@ -111,6 +112,10 @@ struct AmendIterator<TRow, TLeft, TRight, false>
     {
         return !operator==(other);
     }
+
+    template<typename TLeft, typename TRight>
+    friend struct AmendStream;
+
 private:
     left_iterator left;
     left_iterator left_end;
@@ -126,9 +131,9 @@ struct AmendStream : Channel
     using IndexType = AmendIterator<RowType, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
     using const_iterator = IndexType;
 
-    AmendStream(const TLeft& left, const TRight& right) : left(left), right(right) {}
+    AmendStream(TLeft& left, TRight& right) : left(left), right(right) {}
 
-    virtual void forEachProducer(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(Process&)> f) const override
     {
         left.forEachProducer(f);
         right.forEachProducer(f);
@@ -143,7 +148,18 @@ struct AmendStream : Channel
         end_iterator.goToEnd();
         return end_iterator;
     }
+    template<typename TRow2>
+    void update(const_iterator position, const TRow2& row)
+    {
+        // NOT NEEDED: static_assert(!Intersects<TRow2, typename TRight::IndexType::KeyType::AsRow>::value, "can not update key columns in place");
+        // Do updates to right and then left (without the columns that right contained)
+        if (position.right != position.right_end) {
+            right.update(position.right, row);
+        } else {
+            right.put(TRight::RowType(*(position.left), row));
+        }
+    }
 private:
-    const TLeft& left;
-    const TRight& right;
+    TLeft& left;
+    TRight& right;
 };

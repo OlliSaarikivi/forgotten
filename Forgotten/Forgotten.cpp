@@ -15,6 +15,7 @@
 #include "DefaultValueStream.h"
 #include "Behaviors.h"
 #include "Regeneration.h"
+#include "ContactEffects.h"
 
 #include <tchar.h>
 
@@ -76,14 +77,20 @@ unique_ptr<ForgottenGame> createGame()
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
-    auto& contacts = sim.makeTable<Row<Contact>>();
+    auto& linear_impulses = sim.makeStream<Row<Body, LinearImpulse, LinearImpulsePoint>>();
+    auto& contacts = sim.makeTable<Row<Contact, FixtureA, FixtureB>, HashedUnique<Key<Contact>>>();
 
     /* Collision stuff */
-    auto& knockback_impulses = sim.makeTable<Row<KnockbackImpulse>, HashedUnique<Key<Fixture>>>();
-    auto& knockback_energies = sim.makeTable<Row<KnockbackEnergy>, HashedUnique<Key<Fixture>>>();
-    sim.makeProcess<LinearRegeneration<decltype(knockback_energies), KnockbackEnergy, 100, 100>>(knockback_energies);
+    auto& knockback_impulses = sim.makeTable<Row<KnockbackImpulse>, HashedUnique<Key<FixtureA>>>();
+    auto& knockback_energies = sim.makeTable<Row<KnockbackEnergy>, HashedUnique<Key<FixtureA, FixtureB>>>();
+    sim.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 100>>(knockback_energies);
+    auto& max_knockback_energy = sim.makeChannel<DefaultValueStream<Key<FixtureA, FixtureB>, KnockbackEnergy>>
+        (KnockbackEnergy{ 1.0f });
+    auto& knockback_contacts = sim.from(contacts).join(knockback_impulses).join(max_knockback_energy).amend(knockback_energies).select();
+    sim.makeProcess<KnockbackEffect>(knockback_contacts, linear_impulses);
 
     auto& keysDown = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
+    //keysDown.put(Row<SDLScancode>({ SDL_SCANCODE_S }));
     auto& keyPresses = sim.makeStream<Row<SDLScancode>>();
     auto& keyReleases = sim.makeStream<Row<SDLScancode>>();
     auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
@@ -93,7 +100,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& targets = sim.makeTable<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>();
 
     sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
-    sim.makeProcess<Box2DStep>(forces, contacts, &game->world, 8, 3);
+    sim.makeProcess<Box2DStep>(forces, linear_impulses, contacts, &game->world, 8, 3);
 
     auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
     auto& targetings = sim.from(targets).join(position_handles).join(positions).join(target_positions).select();

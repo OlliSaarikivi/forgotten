@@ -50,10 +50,11 @@ struct Row : TColumns...
 
     Row(const TColumns&... columns) : TColumns(columns)... {}
 
-    template<typename... TOtherColumns>
-    Row(const Row<TOtherColumns...>& other)
+    template<typename TOther, typename... TOthers, typename sfinae = typename std::enable_if<IsRow<TOther>::value>::type>
+    Row(const TOther& other, const TOthers&... others)
     {
-        SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
+        static_assert(ColumnsCover<typename ConcatRows<TOther, TOthers...>::type, Row<TColumns...>>::value, "all columns must be set");
+        SetRowsHelper<TOther, TOthers...>::tSetRows(*this, other, others...);
     }
 
     template<typename TColumn>
@@ -62,10 +63,10 @@ struct Row : TColumns...
         SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tSet(*this, c);
     }
 
-    template<typename... TOtherColumns>
-    void setAll(const Row<TOtherColumns...>& other)
+    template<typename TOther>
+    void setAll(const TOther& other)
     {
-        SetAllHelper<TOtherColumns...>::tSetAll(*this, other);
+        SetAllHelper<TOther>::tSetAll(*this, other);
     }
 
     bool operator==(const Row<TColumns...>& other) const
@@ -90,22 +91,44 @@ struct SetHelper<TRow, true>
     }
 };
 
-template<typename... TColumns>
+template<typename TRow>
 struct SetAllHelper;
 template<>
-struct SetAllHelper<>
+struct SetAllHelper<Row<>>
 {
     template<typename TRow, typename TOther>
     static void tSetAll(TRow&& row, TOther&& other) {}
 };
 template<typename TColumn, typename... TColumns>
-struct SetAllHelper<TColumn, TColumns...>
+struct SetAllHelper<Row<TColumn, TColumns...>>
 {
     template<typename TRow, typename TOther>
     static void tSetAll(TRow&& row, TOther&& other)
     {
         row.set(static_cast<TColumn>(other));
-        return SetAllHelper<TColumns...>::tSetAll(std::forward<TRow>(row), std::forward<TOther>(other));
+        return SetAllHelper<Row<TColumns...>>::tSetAll(std::forward<TRow>(row), std::forward<TOther>(other));
+    }
+};
+
+template<typename... TOthers>
+struct SetRowsHelper;
+template<typename TOther>
+struct SetRowsHelper<TOther>
+{
+    template<typename TRow>
+    static void tSetRows(TRow&& row, const TOther& other)
+    {
+        SetAllHelper<TOther>::tSetAll(std::forward<TRow>(row), other);
+    }
+};
+template<typename TOther, typename... TOthers>
+struct SetRowsHelper<TOther, TOthers...>
+{
+    template<typename TRow>
+    static void tSetRows(TRow&& row, const TOther& other, const TOthers&... others)
+    {
+        SetAllHelper<TOther>::tSetAll(std::forward<TRow>(row), other);
+        return SetRowsHelper<TOthers...>::tSetRows(std::forward<TRow>(row), others...);
     }
 };
 
@@ -114,6 +137,7 @@ struct Key;
 template<>
 struct Key<>
 {
+    using AsRow = Row<>;
     template<typename... TDataColumns>
     using AsRowWithData = Row<TDataColumns...>;
 
@@ -146,6 +170,7 @@ struct Key<>
 template<typename TColumn>
 struct Key<TColumn>
 {
+    using AsRow = Row<TColumn>;
     template<typename... TDataColumns>
     using AsRowWithData = Row<TColumn, TDataColumns...>;
 
@@ -184,6 +209,7 @@ struct Key<TColumn>
 template<typename TColumn, typename... TColumns>
 struct Key<TColumn, TColumns...>
 {
+    using AsRow = Row<TColumn, TColumns...>;
     template<typename... TDataColumns>
     using AsRowWithData = Row<TColumn, TColumns..., TDataColumns...>;
 
@@ -268,17 +294,30 @@ struct AddNew<Row<TColumns...>, TColumn, false>
 };
 
 template<typename TRow1, typename TRow2>
-struct ConcatRows;
+struct ConcatTwoRows;
 template<typename TRow>
-struct ConcatRows<TRow, Row<>>
+struct ConcatTwoRows<TRow, Row<>>
 {
     using type = TRow;
 };
 template<typename... TColumns1, typename TColumn, typename... TColumns2>
-struct ConcatRows<Row<TColumns1...>, Row<TColumn, TColumns2...>>
+struct ConcatTwoRows<Row<TColumns1...>, Row<TColumn, TColumns2...>>
 {
-    using type = typename ConcatRows<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
+    using type = typename ConcatTwoRows<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
     Row<TColumns2... >> ::type;
+};
+
+template<typename... TRows>
+struct ConcatRows;
+template<>
+struct ConcatRows<>
+{
+    using type = Row<>;
+};
+template<typename TRow, typename... TRows>
+struct ConcatRows<TRow, TRows...>
+{
+    using type = typename ConcatTwoRows<TRow, typename ConcatRows<TRows...>::type>::type;
 };
 
 template<typename TRow, typename TKey>
@@ -309,3 +348,36 @@ struct RemoveExisting<Row<TColumn, TColumns...>, TRemove, Row<TFiltered...>>
 {
     using type = typename std::conditional<std::is_same<TColumn, TRemove>::value, Row<TFiltered..., TColumns...>, typename RemoveExisting<Row<TColumns...>, TRemove, Row<TFiltered..., TColumn>>::type>::type;
 };
+
+// TODO: SubtractColumns
+
+template<typename TRow1, typename TRow2>
+struct ColumnsCover;
+template<typename TRow1>
+struct ColumnsCover<TRow1, Row<>>
+{
+    static const bool value = true;
+};
+template<typename TRow1, typename TColumn, typename... TColumns>
+struct ColumnsCover<TRow1, Row<TColumn, TColumns...>>
+{
+    static const bool value = std::is_base_of<TColumn, TRow1>::value && ColumnsCover<TRow1, Row<TColumns...>>::value;
+};
+
+template<typename TRow1, typename TRow2>
+struct Intersects;
+template<typename TRow1>
+struct Intersects<TRow1, Row<>>
+{
+    static const bool value = false;
+};
+template<typename TRow1, typename TColumn, typename... TColumns>
+struct Intersects<TRow1, Row<TColumn, TColumns...>>
+{
+    static const bool value = std::is_base_of<TColumn, TRow1>::value || Intersects<TRow1, Row<TColumns...>>::value;
+};
+
+template<typename T>
+struct IsRow : std::false_type {};
+template<typename... TColumns>
+struct IsRow<Row<TColumns...>> : std::true_type {};

@@ -69,7 +69,7 @@ struct TransformStream : Channel
 
     TransformStream(const TChannel& chan) : chan(chan) {}
 
-    virtual void forEachProducer(function<void(const Process&)> f) const override
+    virtual void forEachProducer(function<void(Process&)> f) const override
     {
         chan.forEachProducer(f);
     }
@@ -101,9 +101,10 @@ struct RenameHelper<TFrom, TTo, true>
     template<typename TIn>
     static OutType<TIn> doRename(const TIn& in)
     {
-        auto renamed = OutType<TIn>(in);
+        Row<TTo> renamed;
         static_cast<TTo&>(renamed).set(static_cast<const TFrom&>(in));
-        return renamed;
+        auto result = OutType<TIn>(in, renamed);
+        return result;
     }
 };
 template<typename TFrom, typename TTo>
