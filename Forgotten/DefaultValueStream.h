@@ -52,6 +52,11 @@ struct DefaultValueStream : Channel
         auto temp = RowType(defaults, TKey::project(row));
         return std::make_pair(const_iterator(temp), const_iterator());
     }
+    template<typename TRow2>
+    void update(const_iterator position, const TRow2& row)
+    {
+        static_assert(!Intersects<TRow2, RowType>::value, "can not update default values");
+    }
 private:
     Row<TDefaultColumns...> defaults;
 };

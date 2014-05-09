@@ -11,23 +11,23 @@ struct ProcessHost;
 template<typename TChannel>
 struct JoinBuilder
 {
-    JoinBuilder(const TChannel& chan, ProcessHost& host) : chan(chan), host(host) {}
+    JoinBuilder(TChannel& chan, ProcessHost& host) : chan(chan), host(host) {}
     template<typename TRight>
-    JoinBuilder<JoinStream<TChannel, TRight>> join(const TRight& right)
+    JoinBuilder<JoinStream<TChannel, TRight>> join(TRight& right)
     {
         return JoinBuilder<JoinStream<TChannel, TRight>>(host.makeJoin(chan, right), host);
     }
     template<typename TRight>
-    JoinBuilder<AmendStream<TChannel, TRight>> amend(const TRight& right)
+    JoinBuilder<AmendStream<TChannel, TRight>> amend(TRight& right)
     {
         return JoinBuilder<AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
     }
-    const TChannel& select()
+    TChannel& select()
     {
         return chan;
     }
 private:
-    const TChannel& chan;
+    TChannel& chan;
     ProcessHost& host;
 };
 
@@ -118,19 +118,19 @@ struct ProcessHost
     }
 
     template<typename TLeft, typename TRight>
-    const JoinStream<TLeft, TRight>& makeJoin(const TLeft& left, const TRight& right)
+    JoinStream<TLeft, TRight>& makeJoin(TLeft& left, TRight& right)
     {
         return makeChannel<JoinStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TLeft, typename TRight>
-    const AmendStream<TLeft, TRight>& makeAmend(const TLeft& left, const TRight& right)
+    AmendStream<TLeft, TRight>& makeAmend(TLeft& left, TRight& right)
     {
         return makeChannel<AmendStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TChannel>
-    JoinBuilder<TChannel> from(const TChannel& chan)
+    JoinBuilder<TChannel> from(TChannel& chan)
     {
         return JoinBuilder<TChannel>(chan, *this);
     }

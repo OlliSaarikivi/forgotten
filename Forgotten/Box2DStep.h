@@ -43,6 +43,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
+        contact->GetWorldManifold();
         contacts.put(TContacts::RowType({ contact }, { fixtureA }, { fixtureB }));
         contacts.put(TContacts::RowType({ contact }, { fixtureB }, { fixtureA }));
     }

@@ -151,13 +151,16 @@ struct AmendStream : Channel
     template<typename TRow2>
     void update(const_iterator position, const TRow2& row)
     {
-        // NOT NEEDED: static_assert(!Intersects<TRow2, typename TRight::IndexType::KeyType::AsRow>::value, "can not update key columns in place");
-        // Do updates to right and then left (without the columns that right contained)
         if (position.right != position.right_end) {
             right.update(position.right, row);
         } else {
             right.put(TRight::RowType(*(position.left), row));
         }
+        left.update(position.left, SubtractColumns<TRow2, typename TRight::RowType>::type(row));
+    }
+    template<>
+    void update(const_iterator position, const Row<>& row)
+    {
     }
 private:
     TLeft& left;

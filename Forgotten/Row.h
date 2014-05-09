@@ -278,6 +278,33 @@ struct KeyEqual
     }
 };
 
+// Row with no columns
+template<>
+struct Row<>
+{
+    Row() {}
+
+    template<typename TOther, typename... TOthers, typename sfinae = typename std::enable_if<IsRow<TOther>::value>::type>
+    Row(const TOther& other, const TOthers&... others)
+    {
+    }
+
+    template<typename TColumn>
+    void set(const TColumn& c)
+    {
+    }
+
+    template<typename TOther>
+    void setAll(const TOther& other)
+    {
+    }
+
+    bool operator==(const Row<>& other) const
+    {
+        return Key<>::equal(*this, other);
+    }
+};
+
 // Row column concatenation (with removal of duplicates)
 
 template<typename TRow, typename TColumn, bool isBase>
@@ -349,7 +376,18 @@ struct RemoveExisting<Row<TColumn, TColumns...>, TRemove, Row<TFiltered...>>
     using type = typename std::conditional<std::is_same<TColumn, TRemove>::value, Row<TFiltered..., TColumns...>, typename RemoveExisting<Row<TColumns...>, TRemove, Row<TFiltered..., TColumn>>::type>::type;
 };
 
-// TODO: SubtractColumns
+template<typename TRow1, typename TRow2>
+struct SubtractColumns;
+template<typename TRow1>
+struct SubtractColumns<TRow1, Row<>>
+{
+    using type = TRow1;
+};
+template<typename TRow1, typename TColumn, typename... TColumns>
+struct SubtractColumns<TRow1, Row<TColumn, TColumns...>>
+{
+    using type = typename SubtractColumns<typename RemoveExisting<TRow1, TColumn, Row<>>::type, Row<TColumns...>>::type;
+};
 
 template<typename TRow1, typename TRow2>
 struct ColumnsCover;

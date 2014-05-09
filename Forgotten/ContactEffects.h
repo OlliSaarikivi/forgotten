@@ -24,6 +24,7 @@ struct KnockbackEffect : Process
         while (current != end) {
             auto contact = *current;
             b2Contact* b2_contact = contact.contact;
+            
             contacts.update(current, Row<KnockbackEnergy>({ 0.0f }));
         }
     }

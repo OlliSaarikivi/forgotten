@@ -78,6 +78,11 @@ private:
     right_iterator right;
     right_iterator right_subscan;
     right_iterator right_end;
+
+    right_iterator getRightIterator()
+    {
+        return right_subscan;
+    }
 };
 // Hash join
 template<typename TRow, typename TLeft, typename TRight>
@@ -135,12 +140,21 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     {
         return !operator==(other);
     }
+
+    template<typename TLeft, typename TRight>
+    friend struct JoinStream;
+
 private:
     left_iterator left;
     left_iterator left_end;
     right_iterator right;
     right_iterator right_end;
     const TRight* right_chan;
+
+    right_iterator getRightIterator()
+    {
+        return right;
+    }
 };
 
 template<typename TLeft, typename TRight>
@@ -166,6 +180,16 @@ struct JoinStream : Channel
         const_iterator end_iterator(left, right);
         end_iterator.goToEnd();
         return end_iterator;
+    }
+    template<typename TRow2>
+    void update(const_iterator position, const TRow2& row)
+    {
+        right.update(position.getRightIterator(), row);
+        left.update(position.left, SubtractColumns<TRow2, typename TRight::RowType>::type(row));
+    }
+    template<>
+    void update(const_iterator position, const Row<>& row)
+    {
     }
 private:
     TLeft& left;

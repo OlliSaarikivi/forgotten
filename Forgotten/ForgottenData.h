@@ -46,6 +46,7 @@ HANDLE_ALIAS(TargetPositionHandle, position_handle, PositionHandle)
 
 /* Collision stuff */
 COLUMN(Contact, b2Contact*, contact)
+COLUMN(ContactNormal, vec2, contact_normal)
 COLUMN(FixtureA, b2Fixture*, fixture_a)
 COLUMN(FixtureB, b2Fixture*, fixture_b)
 COLUMN(KnockbackImpulse, float, knockback_impulse)

@@ -78,7 +78,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
     auto& linear_impulses = sim.makeStream<Row<Body, LinearImpulse, LinearImpulsePoint>>();
-    auto& contacts = sim.makeTable<Row<Contact, FixtureA, FixtureB>, HashedUnique<Key<Contact>>>();
+    auto& contacts = sim.makeTable<Row<Contact, FixtureA, FixtureB, ContactNormal>, HashedUnique<Key<Contact>>>();
 
     /* Collision stuff */
     auto& knockback_impulses = sim.makeTable<Row<KnockbackImpulse>, HashedUnique<Key<FixtureA>>>();
