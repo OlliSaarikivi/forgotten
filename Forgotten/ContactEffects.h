@@ -24,7 +24,8 @@ struct KnockbackEffect : Process
         while (current != end) {
             auto contact = *current;
             b2Contact* b2_contact = contact.contact;
-            
+            vec2 impulse = contact.contact_normal * contact.knockback_impulse * contact.knockback_energy;
+            linear_impulses.put(TLinearImpulses::RowType({ contact.fixture_a->GetBody() }, { impulse }));
             contacts.update(current, Row<KnockbackEnergy>({ 0.0f }));
         }
     }

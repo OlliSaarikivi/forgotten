@@ -34,7 +34,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
 
         for (const auto &linear_impulse : linear_impulses) {
             b2Body *b = linear_impulse.body;
-            b->ApplyLinearImpulse(toB2(linear_impulse.linear_impulse), toB2(linear_impulse.linear_impulse_point), true);
+            b->ApplyLinearImpulse(toB2(linear_impulse.linear_impulse), b->GetWorldCenter(), true);
         }
 
         world->Step(step, velocity_iterations, position_iterations);
@@ -43,9 +43,11 @@ struct Box2DStep : TimedProcess, b2ContactListener
     {
         auto fixtureA = contact->GetFixtureA();
         auto fixtureB = contact->GetFixtureB();
-        contact->GetWorldManifold();
-        contacts.put(TContacts::RowType({ contact }, { fixtureA }, { fixtureB }));
-        contacts.put(TContacts::RowType({ contact }, { fixtureB }, { fixtureA }));
+        b2WorldManifold manifold;
+        contact->GetWorldManifold(&manifold);
+        vec2 normal = toGLM(manifold.normal);
+        contacts.put(TContacts::RowType({ contact }, { fixtureA }, { fixtureB }, { normal }));
+        contacts.put(TContacts::RowType({ contact }, { fixtureB }, { fixtureA }, { -normal }));
     }
     void EndContact(b2Contact *contact) override
     {

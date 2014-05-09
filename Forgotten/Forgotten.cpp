@@ -77,7 +77,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
     auto& forces = sim.makeStream<Row<Body, Force>>();
-    auto& linear_impulses = sim.makeStream<Row<Body, LinearImpulse, LinearImpulsePoint>>();
+    auto& center_impulses = sim.makeStream<Row<Body, LinearImpulse>>();
     auto& contacts = sim.makeTable<Row<Contact, FixtureA, FixtureB, ContactNormal>, HashedUnique<Key<Contact>>>();
 
     /* Collision stuff */
@@ -87,7 +87,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& max_knockback_energy = sim.makeChannel<DefaultValueStream<Key<FixtureA, FixtureB>, KnockbackEnergy>>
         (KnockbackEnergy{ 1.0f });
     auto& knockback_contacts = sim.from(contacts).join(knockback_impulses).join(max_knockback_energy).amend(knockback_energies).select();
-    sim.makeProcess<KnockbackEffect>(knockback_contacts, linear_impulses);
+    sim.makeProcess<KnockbackEffect>(knockback_contacts, center_impulses);
 
     auto& keysDown = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
     //keysDown.put(Row<SDLScancode>({ SDL_SCANCODE_S }));
@@ -100,7 +100,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& targets = sim.makeTable<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>();
 
     sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
-    sim.makeProcess<Box2DStep>(forces, linear_impulses, contacts, &game->world, 8, 3);
+    sim.makeProcess<Box2DStep>(forces, center_impulses, contacts, &game->world, 8, 3);
 
     auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
     auto& targetings = sim.from(targets).join(position_handles).join(positions).join(target_positions).select();
@@ -158,7 +158,7 @@ unique_ptr<ForgottenGame> createGame()
     playerFixtureDef.density = 0.75f;
     playerFixtureDef.friction = 0.01f;
     body1->CreateFixture(&playerFixtureDef);
-    body2->CreateFixture(&playerFixtureDef);
+    b2Fixture* enemy_fixture = body2->CreateFixture(&playerFixtureDef);
 
     b2FrictionJointDef playerFriction;
     playerFriction.bodyB = wallBody;
