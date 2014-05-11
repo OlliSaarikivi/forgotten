@@ -90,5 +90,32 @@ private:
     TChannel& channel;
 };
 
+template<typename TChannel>
+struct BufferTicker : ChannelTicker
+{
+    BufferTicker(TChannel& new_chan, TChannel& old_chan) : new_chan(new_chan), old_chan(old_chan) {}
+    virtual void tick() override
+    {
+        old_chan.copyRowsFrom(new_chan);
+    }
+private:
+    TChannel& new_chan;
+    TChannel& old_chan;
+};
+
+template<typename TChannel>
+struct BufferAndClearTicker : ChannelTicker
+{
+    BufferAndClearTicker(TChannel& new_chan, TChannel& old_chan) : new_chan(new_chan), old_chan(old_chan) {}
+    virtual void tick() override
+    {
+        new_chan.swap(old_chan);
+        new_chan.clear();
+    }
+private:
+    TChannel& new_chan;
+    TChannel& old_chan;
+};
+
 #include "Table.h"
 #include "Stable.h"

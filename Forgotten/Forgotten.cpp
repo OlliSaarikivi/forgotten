@@ -59,64 +59,66 @@ unique_ptr<ForgottenGame> createGame()
     auto& sim = game->simulation;
     auto& out = game->output;
 
+    // Entity state
     auto& positions = sim.makeStable<Row<Position>, PositionHandle>();
     auto& position_handles = sim.makeTable<Row<PositionHandle>, OrderedUnique<Key<Eid>>>();
-    auto& textures = sim.makeTable<Row<PositionHandle, SDLTexture>>();
     auto& bodies = sim.makeTable<Row<Eid, Body, PositionHandle>, OrderedUnique<Key<Eid>>>();
-
-    /* Racial stuff */
-    auto& races = sim.makeTable<Row<Race>, OrderedUnique<Key<Eid>>>();
-    auto& default_race = sim.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
-    auto& race_max_speeds =
-        sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Race>>>();
-    auto& max_speeds =
-        sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Eid>>>();
-    auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeed>>
-        (MaxSpeed{ 10.0f });
-
     auto& velocities = sim.makeStream<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>();
     auto& headings = sim.makeStream<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>();
+    sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
+
+    // Physics
     auto& forces = sim.makeStream<Row<Body, Force>>();
     auto& center_impulses = sim.makeStream<Row<Body, LinearImpulse>>();
-    auto& contacts = sim.makeTable<Row<Contact, FixtureA, FixtureB, ContactNormal>, HashedUnique<Key<Contact>>>();
+    auto& contacts = sim.makeBuffer<Row<Contact, FixtureA, FixtureB, ContactNormal>, HashedUnique<Key<Contact>>>();
+    sim.makeProcess<Box2DStep>(forces, center_impulses, contacts.first, &game->world, 8, 3);
 
-    /* Collision stuff */
+    // Stats
+    auto& races = sim.makeTable<Row<Race>, OrderedUnique<Key<Eid>>>();
+    auto& default_race = sim.makeChannel<DefaultValueStream<Key<Eid>, Race>>(Race{ 0 });
+    auto& default_max_speed = sim.makeChannel<DefaultValueStream<Key<Eid, Race>, MaxSpeed>>(MaxSpeed{ 10.0f });
+    auto& race_max_speeds = sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Race>>>();
+    auto& max_speeds = sim.makeTable<Row<MaxSpeed>, HashedUnique<Key<Eid>>>();
+
+    // SDL events
+    auto& keys_down = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
+    auto& key_presses = sim.makeStream<Row<SDLKeysym>>();
+    auto& key_releases = sim.makeStream<Row<SDLKeysym>>();
+    sim.makeProcess<SDLEvents>(keys_down, key_presses, key_releases);
+
+    // True speech
+    auto& current_true_sentences = sim.makeTable<Row<Eid, TrueSentenceString>, OrderedUnique<Key<Eid>>>();
+
+    // Controls
+    auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
+    sim.makeProcess<Controls>(keys_down, key_presses, key_releases,
+        controllables, move_actions);
+    auto& body_moves = sim.from(bodies).join(velocities).join(headings).join(move_actions).join(default_race).amend(races)
+        .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
+    sim.makeProcess<MoveActionApplier>(body_moves, forces);
+
+    // AI
+    auto& targets = sim.makeTable<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>();
+    auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
+    auto& targetings = sim.from(targets).join(position_handles).join(positions).join(target_positions).select();
+    sim.makeProcess<TargetFollowing>(targetings, move_actions);
+
+    // Collsisions
     auto& knockback_impulses = sim.makeTable<Row<KnockbackImpulse>, HashedUnique<Key<FixtureA>>>();
     auto& knockback_energies = sim.makeTable<Row<KnockbackEnergy>, HashedUnique<Key<FixtureA, FixtureB>>>();
     sim.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 100>>(knockback_energies);
     auto& max_knockback_energy = sim.makeChannel<DefaultValueStream<Key<FixtureA, FixtureB>, KnockbackEnergy>>
         (KnockbackEnergy{ 1.0f });
-    auto& knockback_contacts = sim.from(contacts).join(knockback_impulses).join(max_knockback_energy).amend(knockback_energies).select();
+    auto& knockback_contacts = sim.from(contacts.second).join(knockback_impulses).join(max_knockback_energy).amend(knockback_energies).select();
     sim.makeProcess<KnockbackEffect>(knockback_contacts, center_impulses);
 
-    auto& keysDown = sim.makeTable<Row<SDLScancode>, OrderedUnique<Key<SDLScancode>>>();
-    //keysDown.put(Row<SDLScancode>({ SDL_SCANCODE_S }));
-    auto& keyPresses = sim.makeStream<Row<SDLScancode>>();
-    auto& keyReleases = sim.makeStream<Row<SDLScancode>>();
-    auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
-    auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
-    auto& heading_actions = sim.makeStream<Row<Eid, HeadingAction>, OrderedUnique<Key<Eid>>>();
-
-    auto& targets = sim.makeTable<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>();
-
-    sim.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &game->world);
-    sim.makeProcess<Box2DStep>(forces, center_impulses, contacts, &game->world, 8, 3);
-
-    auto& target_positions = sim.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
-    auto& targetings = sim.from(targets).join(position_handles).join(positions).join(target_positions).select();
-    sim.makeProcess<TargetFollowing>(targetings, move_actions);
-
-    sim.makeProcess<SDLEvents>(keysDown, keyPresses, keyReleases);
-    sim.makeProcess<Controls>(keysDown, keyPresses, keyReleases,
-        controllables, move_actions, heading_actions);
-    auto& body_moves = sim.from(bodies).join(velocities).join(headings).join(move_actions).join(default_race).amend(races)
-        .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
-    sim.makeProcess<MoveActionApplier>(body_moves, forces);
-
-    //sim.makeProcess<Debug>(positions);
-
+    // Render
+    auto& textures = sim.makeTable<Row<PositionHandle, SDLTexture>>();
     auto& renderables = out.from(textures).join(positions).select();
     out.makeProcess<SDLRender>(renderables);
+
+    /*********************** ENGINE SETUP DONE ***************************/
 
     Eid::Type player = 1;
     Eid::Type monster = 2;
@@ -146,7 +148,7 @@ unique_ptr<ForgottenGame> createGame()
     auto& handle1 = positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
     position_handles.put(Row<Eid, PositionHandle>({ player }, handle1));
     bodies.put(Row<Eid, Body, PositionHandle>({ player }, { body1 }, { handle1 }));
-    bodyDef.position.Set(5.0f, 5.0f);
+    bodyDef.position.Set(15.0f, 5.0f);
     b2Body* body2 = game->world.CreateBody(&bodyDef);
     auto& handle2 = positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
     position_handles.put(Row<Eid, PositionHandle>({ monster }, handle2));
@@ -159,6 +161,7 @@ unique_ptr<ForgottenGame> createGame()
     playerFixtureDef.friction = 0.01f;
     body1->CreateFixture(&playerFixtureDef);
     b2Fixture* enemy_fixture = body2->CreateFixture(&playerFixtureDef);
+    knockback_impulses.put(Row<FixtureA, KnockbackImpulse>({ enemy_fixture }, { 50.0f }));
 
     b2FrictionJointDef playerFriction;
     playerFriction.bodyB = wallBody;

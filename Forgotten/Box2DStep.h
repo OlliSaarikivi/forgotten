@@ -24,6 +24,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
     void forEachInput(function<void(const Channel&)> f) const override
     {
         f(center_forces);
+        f(linear_impulses);
     }
     void tick(float step) override
     {

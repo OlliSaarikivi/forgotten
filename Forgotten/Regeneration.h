@@ -9,7 +9,6 @@ struct LinearRegeneration : TimedProcess
     LinearRegeneration(TStats& stats) :
     stats(stats)
     {
-        stats.registerProducer(this);
     }
     void forEachInput(function<void(const Channel&)> f) const override
     {
@@ -30,6 +29,7 @@ struct LinearRegeneration : TimedProcess
                 current = stats.erase(current);
             } else {
                 stats.update(current, Key<TStat>::project(row));
+                ++current;
             }
         }
     }

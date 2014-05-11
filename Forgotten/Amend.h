@@ -158,10 +158,6 @@ struct AmendStream : Channel
         }
         left.update(position.left, SubtractColumns<TRow2, typename TRight::RowType>::type(row));
     }
-    template<>
-    void update(const_iterator position, const Row<>& row)
-    {
-    }
 private:
     TLeft& left;
     TRight& right;

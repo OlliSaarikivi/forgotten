@@ -3,21 +3,24 @@
 #include "Row.h"
 #include "Process.h"
 
+enum class ControlMode
+{
+    Act, Speak
+};
+
 template<typename TKeysDown, typename TKeyPresses, typename TKeyReleases,
-    typename TControllables, typename TMoveActions, typename THeadingActions>
+    typename TControllables, typename TMoveActions>
 struct Controls : Process
 {
     Controls(const TKeysDown& keys_down, const TKeyPresses& key_presses, const TKeyReleases& key_releases,
-    const TControllables& controllables, TMoveActions& move_actions, THeadingActions& heading_actions) :
+    const TControllables& controllables, TMoveActions& move_actions) :
     keys_down(keys_down),
     key_presses(key_presses),
     key_releases(key_releases),
     controllables(controllables),
-    move_actions(move_actions),
-    heading_actions(heading_actions)
+    move_actions(move_actions)
     {
         move_actions.registerProducer(this);
-        heading_actions.registerProducer(this);
     }
     void forEachInput(function<void(const Channel&)> f) const override
     {
@@ -26,7 +29,7 @@ struct Controls : Process
         f(key_releases);
         f(controllables);
     }
-    void tick() override
+    void tickAct()
     {
         vec2 move_sum(0, 0);
         for (const auto& key_down : keys_down) {
@@ -47,11 +50,47 @@ struct Controls : Process
         }
         if (glm::length(move_sum) > 0.0001f) {
             auto move_normalized = glm::normalize(move_sum);
-            float heading = glm::atan(move_normalized.y, move_normalized.x);
             for (const auto& controllable : controllables) {
                 move_actions.put(TMoveActions::RowType((Eid)controllable, { move_normalized }));
-                heading_actions.put(THeadingActions::RowType((Eid)controllable, { heading }));
             }
+        }
+    }
+    void tickSpeak()
+    {
+
+    }
+    string applyEdits(string str)
+    {
+        for (const auto& key_press : key_presses) {
+            SDL_Keysym key = key_presses.sdl_keysym;
+            if (key.sym & SDLK_SCANCODE_MASK != 0) {
+                continue;
+            }
+            // We now know that the sym is printable (after a fashion, it does include e.g. '\b' backspaces)
+            switch (key.sym) {
+            case SDLK_BACKSPACE:
+                str.pop_back();
+                break;
+            default:
+                if ((SDLK_a <= key.sym && key.sym <= SDLK_z) ||
+                    key.sym == SDLK_SPACE) {
+
+                    str.push_back(key.sym);
+                }
+                break;
+            }
+        }
+        return str;
+    }
+    void tick() override
+    {
+        switch (mode) {
+        case ControlMode::Act:
+            tickAct();
+            break;
+        case ControlMode::Speak:
+            tickSpeak();
+            break;
         }
     }
 private:
@@ -60,6 +99,6 @@ private:
     const TKeyReleases& key_releases;
     const TControllables& controllables;
     TMoveActions& move_actions;
-    THeadingActions& heading_actions;
-};
 
+    ControlMode mode = ControlMode::Act;
+};

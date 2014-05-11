@@ -71,6 +71,10 @@ struct Table : Channel
     {
         return container.equal_range(MakeKeyRow<typename IndexType::KeyType, RowType>(std::forward<TRow2>(row)));
     }
+    void copyRowsFrom(const Table<TRow, TIndex>& other)
+    {
+        container = other.container;
+    }
 private:
     ContainerType container;
     vector<Process*> producers;

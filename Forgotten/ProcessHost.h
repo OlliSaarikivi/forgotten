@@ -102,6 +102,16 @@ struct ProcessHost
         return makeChannel<Table<TRow, TIndex>>(std::forward<TArgs>(args)...);
     }
 
+    template<typename TRow, typename TIndex = None, typename... TArgs>
+    pair<Table<TRow, TIndex>&, Table<TRow, TIndex>&> makeBuffer(TArgs&&... args)
+    {
+        auto& new_table = makeTable<TRow, TIndex>(args...);
+        auto& old_table = makeTable<TRow, TIndex>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<BufferTicker<Table<TRow, TIndex>>>(new_table, old_table);
+        addChannelTicker(std::move(ticker));
+        return std::pair<Table<TRow, TIndex>&, Table<TRow, TIndex>&>(new_table, old_table);
+    }
+
     template<typename TRow, typename THandle, typename... TArgs>
     Stable<TRow, THandle>& makeStable(TArgs&&... args)
     {

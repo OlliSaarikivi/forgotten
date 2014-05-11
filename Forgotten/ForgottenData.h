@@ -23,8 +23,11 @@ using race_t = int;
 COLUMN(Eid, eid_t, eid)
 COLUMN(Race, race_t, race)
 
+NO_HASH(SDL_Keysym)
+COLUMN(SDLKeysym, SDL_Keysym, sdl_keysym)
 NO_HASH(SDL_Scancode)
 COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
+COLUMN(ProcessPointer, Process*, process)
 
 COLUMN(Position, vec2, position)
 HANDLE(PositionHandle, position_handle, 50000)
@@ -44,10 +47,13 @@ COLUMN(HeadingAction, float, heading_action);
 COLUMN_ALIAS(TargetPosition, target_position, Position)
 HANDLE_ALIAS(TargetPositionHandle, position_handle, PositionHandle)
 
-/* Collision stuff */
+// Collision stuff
 COLUMN(Contact, b2Contact*, contact)
 COLUMN(ContactNormal, vec2, contact_normal)
 COLUMN(FixtureA, b2Fixture*, fixture_a)
 COLUMN(FixtureB, b2Fixture*, fixture_b)
 COLUMN(KnockbackImpulse, float, knockback_impulse)
 COLUMN(KnockbackEnergy, float, knockback_energy)
+
+// True speech
+COLUMN(TrueSentenceString, string, true_sentence_string);
