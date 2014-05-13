@@ -4,6 +4,7 @@
 #include "Channel.h"
 #include "Join.h"
 #include "Amend.h"
+#include "Subtract.h"
 #include "Transform.h"
 
 struct ProcessHost;
@@ -21,6 +22,11 @@ struct JoinBuilder
     JoinBuilder<AmendStream<TChannel, TRight>> amend(TRight& right)
     {
         return JoinBuilder<AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
+    }
+    template<typename TRight>
+    JoinBuilder<SubtractStream<TChannel, TRight>> subtract(TRight& right)
+    {
+        return JoinBuilder<SubtractStream<TChannel, TRight>>(host.makeSubtract(chan, right), host);
     }
     TChannel& select()
     {
@@ -47,6 +53,13 @@ struct ProcessHost
         return ret;
     }
 
+    template<template<typename, typename, typename, typename, typename, typename, typename> class TProcess,
+        typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7,
+        typename... TRest>
+        TProcess<T1, T2, T3, T4, T5, T6, T7>& makeProcess(T1& t1, T2& t2, T3& t3, T4& t4, T5& t5, T6& t6, T7& t7, TRest&&... rest)
+    {
+            return makeProcess<TProcess<T1, T2, T3, T4, T5, T6, T7>>(t1, t2, t3, t4, t5, t6, t7, std::forward<TRest>(rest)...);
+        }
     template<template<typename, typename, typename, typename, typename, typename> class TProcess,
         typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
         typename... TRest>
@@ -137,6 +150,12 @@ struct ProcessHost
     AmendStream<TLeft, TRight>& makeAmend(TLeft& left, TRight& right)
     {
         return makeChannel<AmendStream<TLeft, TRight>>(left, right);
+    }
+
+    template<typename TLeft, typename TRight>
+    SubtractStream<TLeft, TRight>& makeSubtract(TLeft& left, TRight& right)
+    {
+        return makeChannel<SubtractStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TChannel>

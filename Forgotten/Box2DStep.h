@@ -18,13 +18,10 @@ struct Box2DStep : TimedProcess, b2ContactListener
     velocity_iterations(velocity_iterations),
     position_iterations(position_iterations)
     {
+        registerInput(center_forces);
+        registerInput(linear_impulses);
         contacts.registerProducer(this);
         world->SetContactListener(this);
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(center_forces);
-        f(linear_impulses);
     }
     void tick(float step) override
     {

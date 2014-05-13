@@ -56,4 +56,4 @@ COLUMN(KnockbackImpulse, float, knockback_impulse)
 COLUMN(KnockbackEnergy, float, knockback_energy)
 
 // True speech
-COLUMN(TrueSentenceString, string, true_sentence_string);
+COLUMN(SentenceString, string, sentence_string);

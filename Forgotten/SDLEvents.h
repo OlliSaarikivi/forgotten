@@ -17,9 +17,6 @@ struct SDLEvents : Process
         key_presses.registerProducer(this);
         key_releases.registerProducer(this);
     }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-    }
     void tick() override
     {
         SDL_Event event;

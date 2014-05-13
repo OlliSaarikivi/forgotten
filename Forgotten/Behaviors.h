@@ -10,11 +10,8 @@ struct TargetFollowing : Process
     targetings(targetings),
     moves(moves)
     {
+        registerInput(targetings);
         moves.registerProducer(this);
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(targetings);
     }
     void tick() override
     {

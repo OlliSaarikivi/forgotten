@@ -9,10 +9,7 @@ struct SDLRender : Process
     SDLRender(const TRenderables &renderables) :
     renderables(renderables)
     {
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(renderables);
+        registerInput(renderables);
     }
     void tick() override
     {

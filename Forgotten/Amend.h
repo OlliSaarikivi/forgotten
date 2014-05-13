@@ -32,7 +32,7 @@ struct AmendIterator<TRow, TLeft, TRight, true>
                 ++right;
             }
         } else {
-            right = right_end;
+            goToEnd();
         }
     }
     AmendIterator<TRow, TLeft, TRight, true>& operator++()
@@ -88,6 +88,8 @@ struct AmendIterator<TRow, TLeft, TRight, false>
             auto range = right_chan->equalRange(*left);
             right = range.first;
             right_end = range.second;
+        } else {
+            goToEnd();
         }
     }
     AmendIterator<TRow, TLeft, TRight, false>& operator++()

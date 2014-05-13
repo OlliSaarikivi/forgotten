@@ -108,6 +108,12 @@
     <ClInclude Include="ContactEffects.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
+    <ClInclude Include="Subtract.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="Proxies.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -10,11 +10,8 @@ struct KnockbackEffect : Process
     contacts(contacts),
     linear_impulses(linear_impulses)
     {
+        registerInput(contacts);
         linear_impulses.registerProducer(this);
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(contacts);
     }
     void tick() override
     {

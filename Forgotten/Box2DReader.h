@@ -18,13 +18,10 @@ struct Box2DReader : TimedProcess
     headings(headings),
     world(world)
     {
+        registerInput(bodies);
         positions.registerProducer(this);
         velocities.registerProducer(this);
         headings.registerProducer(this);
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(bodies);
     }
     void tick(float step) override
     {

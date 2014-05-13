@@ -12,7 +12,19 @@ struct Process
         tick();
     }
     virtual void tick() = 0;
-    virtual void forEachInput(function<void(const Channel&)>) const = 0;
+
+    void forEachInput(function<void(const Channel&)> f) const
+    {
+        for (auto input : inputs) {
+            f(*input);
+        }
+    }
+    void registerInput(const Channel& channel)
+    {
+        inputs.emplace_back(&channel);
+    }
+private:
+    vector<const Channel*> inputs;
 };
 
 struct TimedProcess : Process

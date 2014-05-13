@@ -83,6 +83,9 @@ private:
     {
         return right_subscan;
     }
+
+    template<typename TLeft, typename TRight>
+    friend struct JoinStream;
 };
 // Hash join
 template<typename TRow, typename TLeft, typename TRight>
@@ -141,9 +144,6 @@ struct JoinIterator<TRow, TLeft, TRight, false>
         return !operator==(other);
     }
 
-    template<typename TLeft, typename TRight>
-    friend struct JoinStream;
-
 private:
     left_iterator left;
     left_iterator left_end;
@@ -155,6 +155,9 @@ private:
     {
         return right;
     }
+
+    template<typename TLeft, typename TRight>
+    friend struct JoinStream;
 };
 
 template<typename TLeft, typename TRight>

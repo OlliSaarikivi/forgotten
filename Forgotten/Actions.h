@@ -10,11 +10,8 @@ struct MoveActionApplier : Process
     body_moves(body_moves),
     forces(forces)
     {
+        registerInput(body_moves);
         forces.registerProducer(this);
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(body_moves);
     }
     void tick() override
     {

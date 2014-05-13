@@ -47,10 +47,10 @@ struct Table : Channel
             ::tPut(container, row);
     }
     template<typename TRow2>
-    typename ContainerType::size_type erase(TRow2&& row)
+    typename ContainerType::size_type erase(const TRow2& row)
     {
         return EraseHelper<RowType, ContainerType>
-            ::tErase(container, MakeKeyRow<typename IndexType::KeyType, RowType>(std::forward<TRow2>(row)));
+            ::tErase(container, MakeKeyRow<typename IndexType::KeyType, RowType>(row));
     }
     const_iterator erase(const_iterator first, const_iterator last)
     {

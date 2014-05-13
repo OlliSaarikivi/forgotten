@@ -9,10 +9,7 @@ struct LinearRegeneration : TimedProcess
     LinearRegeneration(TStats& stats) :
     stats(stats)
     {
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(stats);
+        registerInput(stats);
     }
     void tick(float step) override
     {

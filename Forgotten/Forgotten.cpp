@@ -87,16 +87,19 @@ unique_ptr<ForgottenGame> createGame()
     sim.makeProcess<SDLEvents>(keys_down, key_presses, key_releases);
 
     // True speech
-    auto& current_true_sentences = sim.makeTable<Row<Eid, TrueSentenceString>, OrderedUnique<Key<Eid>>>();
+    auto& current_sentences = sim.makeTable<Row<Eid, SentenceString>, OrderedUnique<Key<Eid>>>();
+    auto& speak_actions = sim.makeStream<Row<Eid, SentenceString>, OrderedUnique<Key<Eid>>>();
 
-    // Controls
-    auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    // Movement
     auto& move_actions = sim.makeStream<Row<Eid, MoveAction>, OrderedUnique<Key<Eid>>>();
-    sim.makeProcess<Controls>(keys_down, key_presses, key_releases,
-        controllables, move_actions);
     auto& body_moves = sim.from(bodies).join(velocities).join(headings).join(move_actions).join(default_race).amend(races)
         .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
     sim.makeProcess<MoveActionApplier>(body_moves, forces);
+
+    // Player
+    auto& controllables = sim.makeTable<Row<Eid>, OrderedUnique<Key<Eid>>>();
+    sim.makeProcess<Controls>(keys_down, key_presses, key_releases,
+        controllables, move_actions, speak_actions, current_sentences);
 
     // AI
     auto& targets = sim.makeTable<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>();
