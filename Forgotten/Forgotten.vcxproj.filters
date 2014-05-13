@@ -51,9 +51,6 @@
     <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ForgottenGame.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Debug.h">
       <Filter>Header Files\Processes</Filter>
     </ClInclude>
@@ -84,9 +81,6 @@
     <ClInclude Include="Table.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
-    <ClInclude Include="DefaultValueStream.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
     <ClInclude Include="Amend.h">
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
@@ -113,6 +107,12 @@
     </ClInclude>
     <ClInclude Include="Proxies.h">
       <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="DefaultValue.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="Apply.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

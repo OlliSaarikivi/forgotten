@@ -1,13 +1,6 @@
 #include "stdafx.h"
 #include "Game.h"
 
-Game::Game(Clock::duration max_sim_step, Clock::duration min_sim_step, int max_simulation_substeps) :
-max_sim_step(max_sim_step),
-min_sim_step(min_sim_step),
-max_simulation_substeps(max_simulation_substeps)
-{
-}
-
 void Game::preRun()
 {
     simulation.sortProcesses();

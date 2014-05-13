@@ -1,33 +1,21 @@
 #pragma once
 
+#include "Game.h"
 #include "Row.h"
 #include "Process.h"
 
-template<typename TKeysDown, typename TKeyPresses, typename TKeyReleases,
-    typename TControllables, typename TMoveActions, typename TSpeakActions,
-    typename TSentences>
 struct Controls : Process
 {
-    Controls(const TKeysDown& keys_down, const TKeyPresses& key_presses, const TKeyReleases& key_releases,
-    TControllables& controllables, TMoveActions& move_actions, TSpeakActions& speak_actions, TSentences& sentences) :
-    keys_down(keys_down),
-    key_presses(key_presses),
-    key_releases(key_releases),
-    controllables(controllables),
-    move_actions(move_actions),
-    speak_actions(speak_actions),
-    sentences(sentences),
-    action_controllables(controllables, sentences),
-    controllable_sentences(controllables, sentences)
-    {
-        registerInput(keys_down);
-        registerInput(key_presses);
-        registerInput(key_releases);
-        registerInput(controllables);
-        move_actions.registerProducer(this);
-        speak_actions.registerProducer(this);
-        sentences.registerProducer(this);
-    }
+    SOURCE(keys_down, game.keys_down);
+    SOURCE(key_presses, game.key_presses);
+    SOURCE(key_releases, game.key_releases);
+    SOURCE(controllables, game.controllables);
+    SINK(move_actions, game.move_actions);
+    SINK(speak_actions, game.speak_actions);
+    MUTABLE(sentences, game.current_sentences);
+
+    Controls(Game& game, ProcessHost& host) : Process(game, host) {}
+
     string applyEdit(string str, const SDL_Keysym& key)
     {
         if ((key.sym & SDLK_SCANCODE_MASK) != 0) {
@@ -50,6 +38,9 @@ struct Controls : Process
     }
     void tick() override
     {
+        static auto& action_controllables = host.from(controllables).subtract(sentences).select();
+        static auto& controllable_sentences = host.from(controllables).join(sentences).select();
+
         // Continuous controls in action mode. These may theoretically see single frame
         // errors when the speech mode is entered and another key pressed in the same frame.
         vec2 move_sum(0, 0);
@@ -73,30 +64,25 @@ struct Controls : Process
         if (glm::length(move_sum) > 0.0001f) {
             auto move_normalized = glm::normalize(move_sum);
             for (const auto& controllable : action_controllables) {
-                move_actions.put(TMoveActions::RowType((Eid)controllable, { move_normalized }));
+                move_actions.put({ (Eid)controllable, { move_normalized } });
             }
         }
 
         for (const Row<SDLKeysym>& key_press : key_presses) {
-            // Controls in action mode
+            vector<Eid> to_speech_mode;
+            vector<Eid> to_action_mode;
+            // Position based controls
             switch (key_press.sdl_keysym.scancode) {
-            case SDL_SCANCODE_SPACE:
+            case SDL_SCANCODE_RETURN:
+            case SDL_SCANCODE_RETURN2:
+            case SDL_SCANCODE_KP_ENTER:
                 for (const Row<Eid>& entity : action_controllables) {
-                    sentences.put(TSentences::RowType(entity, { "" }));
+                    to_speech_mode.emplace_back(entity);
                 }
-                break;
-            }
-            // Controls
-            switch (key_press.sdl_keysym.sym) {
-            case SDLK_RETURN:
-            case SDLK_RETURN2:
-            case SDLK_KP_ENTER:
                 for (const Row<Eid, SentenceString>& sentence : controllable_sentences) {
                     std::cerr << sentence.eid << ": " << sentence.sentence_string << "\n";
                     speak_actions.put(sentence);
-                }
-                for (const Row<Eid>& entity : controllables) {
-                    sentences.erase(entity);
+                    to_action_mode.emplace_back((Eid)sentence);
                 }
                 break;
             }
@@ -109,17 +95,15 @@ struct Controls : Process
                 controllable_sentences.update(s_current, Row<SentenceString>({ edited }));
                 ++s_current;
             }
+            // Apply the deferred mode changes
+            for (const Eid& eid : to_speech_mode) {
+                sentences.put({ eid, { "" } });
+            }
+            to_speech_mode.clear();
+            for (const Eid& eid : to_action_mode) {
+                sentences.erase(Row<Eid>(eid));
+            }
+            to_action_mode.clear();
         }
     }
-private:
-    const TKeysDown& keys_down;
-    const TKeyPresses& key_presses;
-    const TKeyReleases& key_releases;
-    const TControllables& controllables;
-    TMoveActions& move_actions;
-    TSpeakActions& speak_actions;
-    TSentences& sentences;
-
-    SubtractStream<TControllables, TSentences> action_controllables;
-    JoinStream<TControllables, TSentences> controllable_sentences;
 };

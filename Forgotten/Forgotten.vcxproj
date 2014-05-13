@@ -93,15 +93,15 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
   <ItemGroup>
     <ClInclude Include="Actions.h" />
     <ClInclude Include="Amend.h" />
+    <ClInclude Include="Apply.h" />
     <ClInclude Include="Behaviors.h" />
     <ClInclude Include="Box2DReader.h" />
     <ClInclude Include="Box2DStep.h" />
     <ClInclude Include="Channel.h" />
     <ClInclude Include="ContactEffects.h" />
     <ClInclude Include="Debug.h" />
-    <ClInclude Include="DefaultValueStream.h" />
+    <ClInclude Include="DefaultValue.h" />
     <ClInclude Include="ForgottenData.h" />
-    <ClInclude Include="ForgottenGame.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Controls.h" />
     <ClInclude Include="Proxies.h" />

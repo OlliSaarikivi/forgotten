@@ -11,7 +11,7 @@ TRow MakeKeyRow(const TRow2& row)
     return new_row;
 }
 
-template<typename TRow, typename TIndex>
+template<typename TRow, typename TIndex = None>
 struct Table : Channel
 {
     using IndexType = TIndex;

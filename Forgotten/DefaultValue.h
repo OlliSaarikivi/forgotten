@@ -30,12 +30,12 @@ private:
 };
 
 template<typename TKey, typename... TDefaultColumns>
-struct DefaultValueStream : Channel
+struct DefaultValue : Channel
 {
     using RowType = typename TKey::template AsRowWithData<TDefaultColumns...>;
     using IndexType = HashedUnique<TKey>;
     using const_iterator = SingleValueIterator<RowType>;
-    DefaultValueStream(const TDefaultColumns&... args) : defaults(args...) {}
+    DefaultValue(const TDefaultColumns&... args) : defaults(args...) {}
     const_iterator begin() const
     {
         auto temp = RowType(defaults);

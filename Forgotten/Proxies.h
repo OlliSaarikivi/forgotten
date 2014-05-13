@@ -2,43 +2,12 @@
 
 #include "Row.h"
 
-template<typename TRow, typename TIterator>
-struct ProjectionIterator
-{
-    ProjectionIterator(TIterator iterator) : iterator(iterator) {}
-    ProjectionIterator<TRow, TIterator>& operator++()
-    {
-        ++iterator;
-        return *this;
-    }
-    const TRow& operator*() const
-    {
-        return *iterator;
-    }
-    bool operator==(const ProjectionIterator<TRow, TIterator>& other) const
-    {
-        return iterator == other.iterator;
-    }
-    bool operator!=(const ProjectionIterator<TRow, TIterator>& other) const
-    {
-        return !operator==(other);
-    }
-private:
-    TIterator iterator;
-
-    template<typename TRow, typename TChannel>
-    friend struct Input;
-
-    template<typename TRow, typename TChannel>
-    friend struct Mutable;
-};
-
-template<typename TRow, typename TChannel>
+template<typename TChannel>
 struct Source
 {
     using IndexType = typename TChannel::IndexType;
-    using RowType = TRow;
-    using const_iterator = ProjectionIterator<TRow, typename TChannel::const_iterator>;
+    using RowType = typename TChannel::RowType;
+    using const_iterator = typename TChannel::const_iterator;
 
     Source(Process* process, const TChannel& source_channel) : source_channel(source_channel)
     {
@@ -47,31 +16,27 @@ struct Source
 
     const_iterator begin() const
     {
-        return const_iterator(source_channel.begin());
+        return source_channel.begin();
     }
     const_iterator end() const
     {
-        return const_iterator(source_channel.end());
+        return source_channel.end();
     }
     template<typename TRow2>
     pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
     {
-        auto range = source_channel.equalRange(std::forward<TRow2>(row));
-        return make_pair(const_iterator(range.first), const_iterator(range.second));
+        return source_channel.equalRange(std::forward<TRow2>(row));
     }
 private:
     const TChannel& source_channel;
 };
 
-template<typename TRow, typename TChannel>
+template<typename TChannel>
 struct Sink
 {
     using IndexType = typename TChannel::IndexType;
-    using RowType = TRow;
-    using const_iterator = ProjectionIterator<TRow, typename TChannel::const_iterator>;
-
-    static_assert(ColumnsCover<RowType, typename TChannel::RowType>::value && ColumnsCover<typename TChannel::RowType, RowType>::value,
-    "when mutable the columns must match those of the underlying table's rows");
+    using RowType = typename TChannel::RowType;
+    using const_iterator = typename TChannel::const_iterator;
 
     Sink(Process* process, TChannel& sink_channel) : sink_channel(sink_channel)
     {
@@ -93,27 +58,27 @@ struct Sink
     }
     const_iterator erase(const_iterator first, const_iterator last)
     {
-        return const_iterator(sink_channel.erase(first.iterator, last.iterator));
+        return sink_channel.erase(first, last);
     }
     const_iterator erase(const_iterator position)
     {
-        return const_iterator(sink_channel.erase(position.iterator));
+        return sink_channel.erase(position);
     }
     template<typename TRow2>
     void update(const_iterator position, const TRow2& row)
     {
-        sink_channel.update(position.iterator, row);
+        sink_channel.update(position, row);
     }
 private:
     TChannel& sink_channel;
 };
 
-template<typename TRow, typename TChannel>
-struct Mutable : Source<TRow, TChannel>, Sink<TRow, TChannel>
+template<typename TChannel>
+struct Mutable : Source<TChannel>, Sink<TChannel>
 {
     using IndexType = typename TChannel::IndexType;
-    using RowType = TRow;
-    using const_iterator = ProjectionIterator<TRow, typename TChannel::const_iterator>;
+    using RowType = typename TChannel::RowType;
+    using const_iterator = ProjectionIterator<RowType, typename TChannel::const_iterator>;
 
     Mutable(Process* process, TChannel& channel) : Source(process, channel), Sink(process, channel) {}
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Apply.h"
 #include "Process.h"
 #include "Channel.h"
 #include "Join.h"
@@ -37,8 +38,70 @@ private:
     ProcessHost& host;
 };
 
+template<typename TTable, typename... TArgs>
+auto callMake(ProcessHost* host, const TArgs&... args) -> decltype(host->make<TTable>(args...))
+{
+    return host->make<TTable>(args...);
+}
+
+template<typename TTable, typename... TArgs>
+auto callMakeStream(ProcessHost* host, const TArgs&... args) -> decltype(host->makeStream<TTable>(args...))
+{
+    return host->makeStream<TTable>(args...);
+}
+
+template<typename TTable, typename... TArgs>
+auto callMakeBuffer(ProcessHost* host, const TArgs&... args) -> decltype(host->makeBuffer<TTable>(args...))
+{
+    return host->makeBuffer<TTable>(args...);
+}
+
+template<typename... TArgs>
+struct PlainBuilder
+{
+    PlainBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+
+    template<typename TTable>
+    operator TTable&()
+    {
+        return apply(callMake<std::remove_reference<TTable>::type, TArgs...>, args);
+    }
+private:
+    std::tuple<ProcessHost*, TArgs...> args;
+};
+
+template<typename... TArgs>
+struct StreamBuilder
+{
+    StreamBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+
+    template<typename TTable>
+    operator TTable&()
+    {
+        return apply(callMakeStream<std::remove_reference<TTable>::type, TArgs...>, args);
+    }
+private:
+    std::tuple<ProcessHost*, TArgs...> args;
+};
+
+template<typename... TArgs>
+struct BufferBuilder
+{
+    BufferBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+
+    template<typename TTable>
+    operator std::pair<TTable&, TTable&>()
+    {
+        return apply(callMakeBuffer<std::remove_reference<TTable>::type, TArgs...>, args);
+    }
+private:
+    std::tuple<ProcessHost*, TArgs...> args;
+};
+
 struct ProcessHost
 {
+    ProcessHost(ForgottenGame& game) : game(game) {}
+
     void sortProcesses();
     void tick(float step);
 
@@ -47,7 +110,7 @@ struct ProcessHost
     TProcess& makeProcess(TArgs&&... args)
     {
         static_assert(std::is_base_of<Process, TProcess>::value, "the type must be a subclass of Process");
-        auto process = std::make_unique<TProcess>(std::forward<TArgs>(args)...);
+        auto process = std::make_unique<TProcess>(game, *this, std::forward<TArgs>(args)...);
         TProcess& ret = *process;
         addProcess(std::move(process));
         return ret;
@@ -101,7 +164,7 @@ struct ProcessHost
     void addChannelTicker(unique_ptr<ChannelTicker>);
 
     template<typename TChannel, typename... TArgs>
-    TChannel& makeChannel(TArgs&&... args)
+    TChannel& make(TArgs&&... args)
     {
         auto channel = std::make_unique<TChannel>(std::forward<TArgs>(args)...);
         auto& ret = *channel;
@@ -109,33 +172,21 @@ struct ProcessHost
         return ret;
     }
 
-    template<typename TRow, typename TIndex = None, typename... TArgs>
-    Table<TRow, TIndex>& makeTable(TArgs&&... args)
+    template<typename TTable, typename... TArgs>
+    pair<TTable&, TTable&> makeBuffer(TArgs&&... args)
     {
-        return makeChannel<Table<TRow, TIndex>>(std::forward<TArgs>(args)...);
-    }
-
-    template<typename TRow, typename TIndex = None, typename... TArgs>
-    pair<Table<TRow, TIndex>&, Table<TRow, TIndex>&> makeBuffer(TArgs&&... args)
-    {
-        auto& new_table = makeTable<TRow, TIndex>(args...);
-        auto& old_table = makeTable<TRow, TIndex>(std::forward<TArgs>(args)...);
-        auto ticker = std::make_unique<BufferTicker<Table<TRow, TIndex>>>(new_table, old_table);
+        auto& new_table = make<TTable>(args...);
+        auto& old_table = make<TTable>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<BufferTicker<TTable>>(new_table, old_table);
         addChannelTicker(std::move(ticker));
-        return std::pair<Table<TRow, TIndex>&, Table<TRow, TIndex>&>(new_table, old_table);
+        return std::pair<TTable&, TTable&>(new_table, old_table);
     }
 
-    template<typename TRow, typename THandle, typename... TArgs>
-    Stable<TRow, THandle>& makeStable(TArgs&&... args)
+    template<typename TTable, typename... TArgs>
+    TTable& makeStream(TArgs&&... args)
     {
-        return makeChannel<Stable<TRow, THandle>>(std::forward<TArgs>(args)...);
-    }
-
-    template<typename TRow, typename TIndex = None, typename... TArgs>
-    Table<TRow, TIndex>& makeStream(TArgs&&... args)
-    {
-        auto& ret = makeTable<TRow, TIndex>(std::forward<TArgs>(args)...);
-        auto ticker = std::make_unique<ClearChannelTicker<Table<TRow, TIndex>>>(ret);
+        auto& ret = make<TTable>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<ClearChannelTicker<TTable>>(ret);
         addChannelTicker(std::move(ticker));
         return ret;
     }
@@ -143,19 +194,19 @@ struct ProcessHost
     template<typename TLeft, typename TRight>
     JoinStream<TLeft, TRight>& makeJoin(TLeft& left, TRight& right)
     {
-        return makeChannel<JoinStream<TLeft, TRight>>(left, right);
+        return make<JoinStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TLeft, typename TRight>
     AmendStream<TLeft, TRight>& makeAmend(TLeft& left, TRight& right)
     {
-        return makeChannel<AmendStream<TLeft, TRight>>(left, right);
+        return make<AmendStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TLeft, typename TRight>
     SubtractStream<TLeft, TRight>& makeSubtract(TLeft& left, TRight& right)
     {
-        return makeChannel<SubtractStream<TLeft, TRight>>(left, right);
+        return make<SubtractStream<TLeft, TRight>>(left, right);
     }
 
     template<typename TChannel>
@@ -167,11 +218,30 @@ struct ProcessHost
     template<typename... TTransforms, typename TChannel>
     const TransformStream<TChannel, TTransforms...>& makeTransform(const TChannel& chan)
     {
-        return makeChannel<TransformStream<TChannel, TTransforms...>>(chan);
+        return make<TransformStream<TChannel, TTransforms...>>(chan);
+    }
+
+    template<typename... TArgs>
+    PlainBuilder<TArgs...> plain(TArgs&&... args)
+    {
+        return PlainBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
+    }
+
+    template<typename... TArgs>
+    StreamBuilder<TArgs...> stream(TArgs&&... args)
+    {
+        return StreamBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
+    }
+
+    template<typename... TArgs>
+    BufferBuilder<TArgs...> buffer(TArgs&&... args)
+    {
+        return BufferBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
     }
 private:
     flat_set<unique_ptr<Process>> processes;
     flat_set<unique_ptr<Channel>> channels;
     flat_set<unique_ptr<ChannelTicker>> channelTickers;
     vector<Process*> execution_order;
+    ForgottenGame& game;
 };
