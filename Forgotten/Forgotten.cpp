@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "Forgotten.h"
 #include "ProcessHost.h"
-#include "ForgottenGame.h"
 #include "Join.h"
+#include "Game.h"
+
 #include <tchar.h>
 
 const int SCREEN_WIDTH = 800;
@@ -11,8 +12,6 @@ const int SCREEN_HEIGHT = 600;
 SDL_Window* window;
 SDL_Surface* screenSurface;
 SDL_Surface* defaultSprite;
-
-ProcessHost host;
 
 void init()
 {
@@ -54,9 +53,9 @@ class A
     B c = decltype(c)(3);
 };
 
-unique_ptr<ForgottenGame> createGame()
+unique_ptr<Game> createGame()
 {
-    auto game = std::make_unique<ForgottenGame>();
+    auto game = std::make_unique<Game>();
 
     /*********************** ENGINE SETUP DONE ***************************/
 

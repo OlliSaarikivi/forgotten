@@ -7,3 +7,5 @@
 	).str())
 
 inline void fatal_error(string message = "A fatal error was encountered", string title = "Error");
+
+extern SDL_Window* window;

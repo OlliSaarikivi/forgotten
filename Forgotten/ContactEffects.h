@@ -1,32 +1,31 @@
 #pragma once
 
-#include "Row.h"
-#include "Process.h"
+#include "GameProcess.h"
 
-template<typename TContacts, typename TLinearImpulses>
-struct KnockbackEffect : Process
+struct KnockbackEffect : GameProcess
 {
-    KnockbackEffect(TContacts &contacts, TLinearImpulses& linear_impulses) :
-    contacts(contacts),
-    linear_impulses(linear_impulses)
-    {
-        registerInput(contacts);
-        linear_impulses.registerProducer(this);
-    }
+    KnockbackEffect(Game& game, ProcessHost<Game>& host) : GameProcess(game, host) {}
+
     void tick() override
     {
-        auto current = contacts.begin();
-        auto end = contacts.end();
+        static auto& knockback_contacts = host.from(contacts).join(knockback_impulses)
+            .join(max_knockback_energy).amend(knockback_energies).select();
+
+        auto current = knockback_contacts.begin();
+        auto end = knockback_contacts.end();
         while (current != end) {
             auto contact = *current;
             b2Contact* b2_contact = contact.contact;
             vec2 impulse = contact.contact_normal * contact.knockback_impulse * contact.knockback_energy;
-            linear_impulses.put(TLinearImpulses::RowType({ contact.fixture_b->GetBody() }, { impulse }));
-            contacts.update(current, Row<KnockbackEnergy>({ 0.0f }));
+            linear_impulses.put({ { contact.fixture_b->GetBody() }, { impulse } });
+            knockback_contacts.update(current, Row<KnockbackEnergy>({ 0.0f }));
             ++current;
         }
     }
 private:
-    TContacts& contacts;
-    TLinearImpulses& linear_impulses;
+    BUFFER_SOURCE(contacts, contacts);
+    SOURCE(knockback_impulses, knockback_impulses);
+    SOURCE(max_knockback_energy, max_knockback_energy);
+    MUTABLE(knockback_energies, knockback_energies);
+    SINK(linear_impulses, center_impulses);
 };

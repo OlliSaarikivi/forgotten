@@ -2,26 +2,8 @@
 
 #include "ProcessHost.h"
 #include "Channel.h"
-
 #include "ForgottenData.h"
-
-#include "Box2DStep.h"
-#include "Box2DReader.h"
-#include "Debug.h"
-#include "SDLRender.h"
-#include "SDLEvents.h"
-#include "ForgottenData.h"
-#include "Controls.h"
-#include "Actions.h"
-#include "Channel.h"
 #include "DefaultValue.h"
-#include "Behaviors.h"
-#include "Regeneration.h"
-#include "ContactEffects.h"
-
-static const Game::Clock::duration forgotten_max_step_size = boost::chrono::milliseconds(10);
-static const Game::Clock::duration forgotten_min_step_size = boost::chrono::milliseconds(2);
-static const int forgotten_max_simulation_substeps = 10;
 
 #define PLAIN(HOST,VAR) HOST##.make<std::remove_reference<decltype(VAR)>::type>()
 #define STREAM(HOST,VAR) HOST##.makeStream<std::remove_reference<decltype(VAR)>::type>()
@@ -104,39 +86,11 @@ struct Game
     Table<Row<PositionHandle, SDLTexture>>& textures
         = simulation.plain();
 
-    Game() :
-        max_sim_step(forgotten_max_step_size),
-        min_sim_step(forgotten_min_step_size),
-        max_simulation_substeps(forgotten_max_simulation_substeps),
-        simulation(*this),
-        output(*this),
-        world(b2Vec2(0, 0)) // Set gravity to zero
-    {
-        simulation.makeProcess<Box2DReader>(bodies, positions, velocities, headings, &world);
-        simulation.makeProcess<Box2DStep>(forces, center_impulses, contacts.first, &world, 8, 3);
-        simulation.makeProcess<SDLEvents>(keys_down, key_presses, key_releases);
-
-        simulation.makeProcess<MoveActionApplier>();
-
-        simulation.makeProcess<Controls>(keys_down, key_presses, key_releases,
-            controllables, move_actions, speak_actions, current_sentences);
-
-        auto& target_positions = simulation.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
-        auto& targetings = simulation.from(targets).join(position_handles).join(positions).join(target_positions).select();
-        simulation.makeProcess<TargetFollowing>(targetings, move_actions);
-
-        simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 100>>(knockback_energies);
-        auto& knockback_contacts = simulation.from(contacts.second).join(knockback_impulses)
-            .join(max_knockback_energy).amend(knockback_energies).select();
-        simulation.makeProcess<KnockbackEffect>(knockback_contacts, center_impulses);
-
-        auto& renderables = output.from(textures).join(positions).select();
-        output.makeProcess<SDLRender>(renderables);
-    }
+    Game();
 
     void run();
-    ProcessHost simulation;
-    ProcessHost output;
+    ProcessHost<Game> simulation = ProcessHost<Game>(*this);
+    ProcessHost<Game> output = ProcessHost<Game>(*this);
 private:
     void preRun();
     Clock::duration max_sim_step;

@@ -1,26 +1,24 @@
 #pragma once
 
-#include "Row.h"
-#include "Process.h"
+#include "GameProcess.h"
 
-template<typename TTargetings, typename TMoves>
-struct TargetFollowing : Process
+struct TargetFollowing : GameProcess
 {
-    TargetFollowing(const TTargetings &targetings, TMoves& moves) :
-    targetings(targetings),
-    moves(moves)
-    {
-        registerInput(targetings);
-        moves.registerProducer(this);
-    }
+    TargetFollowing(Game& game, ProcessHost<Game>& host) : GameProcess(game, host) {}
+
     void tick() override
     {
+        auto& target_positions = host.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
+        auto& targetings = host.from(targets).join(position_handles).join(positions).join(target_positions).select();
+
         for (const auto& targeting : targetings) {
             vec2 to_target = targeting.target_position - targeting.position;
-            moves.put(TMoves::RowType({ targeting.eid }, { glm::normalize(to_target) }));
+            moves.put({ { targeting.eid }, { glm::normalize(to_target) } });
         }
     }
 private:
-    const TTargetings& targetings;
-    TMoves& moves;
+    SOURCE(targets, targets);
+    SOURCE(position_handles, position_handles);
+    SOURCE(positions, positions);
+    SINK(moves, move_actions);
 };

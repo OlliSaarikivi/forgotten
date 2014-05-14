@@ -1,20 +1,10 @@
 #pragma once
 
-#include "Game.h"
-#include "Row.h"
-#include "Process.h"
+#include "GameProcess.h"
 
-struct Controls : Process
+struct Controls : GameProcess
 {
-    SOURCE(keys_down, game.keys_down);
-    SOURCE(key_presses, game.key_presses);
-    SOURCE(key_releases, game.key_releases);
-    SOURCE(controllables, game.controllables);
-    SINK(move_actions, game.move_actions);
-    SINK(speak_actions, game.speak_actions);
-    MUTABLE(sentences, game.current_sentences);
-
-    Controls(Game& game, ProcessHost& host) : Process(game, host) {}
+    Controls(Game& game, ProcessHost<Game>& host) : GameProcess(game, host) {}
 
     string applyEdit(string str, const SDL_Keysym& key)
     {
@@ -44,7 +34,7 @@ struct Controls : Process
         // Continuous controls in action mode. These may theoretically see single frame
         // errors when the speech mode is entered and another key pressed in the same frame.
         vec2 move_sum(0, 0);
-        for (const Row<SDLScancode>& key_down : keys_down) {
+        for (const auto& key_down : keys_down) {
             switch (key_down.sdl_scancode) {
             case SDL_SCANCODE_E:
                 move_sum += vec2(0, -1);
@@ -106,4 +96,12 @@ struct Controls : Process
             to_action_mode.clear();
         }
     }
+private:
+    SOURCE(keys_down, keys_down);
+    SOURCE(key_presses, key_presses);
+    SOURCE(key_releases, key_releases);
+    SOURCE(controllables, controllables);
+    SINK(move_actions, move_actions);
+    SINK(speak_actions, speak_actions);
+    MUTABLE(sentences, current_sentences);
 };

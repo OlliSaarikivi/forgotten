@@ -1,6 +1,43 @@
 #include "stdafx.h"
 #include "Game.h"
 
+#include "Forgotten.h"
+
+#include "Box2DStep.h"
+#include "Box2DReader.h"
+#include "Debug.h"
+#include "SDLRender.h"
+#include "SDLEvents.h"
+#include "Controls.h"
+#include "Actions.h"
+#include "Behaviors.h"
+#include "Regeneration.h"
+#include "ContactEffects.h"
+
+Game::Game() :
+max_sim_step(boost::chrono::milliseconds(10)),
+min_sim_step(boost::chrono::milliseconds(2)),
+max_simulation_substeps(10),
+simulation(*this),
+output(*this),
+world(b2Vec2(0, 0)) // Set gravity to zero
+{
+    simulation.makeProcess<Box2DReader>();
+    simulation.makeProcess<Box2DStep>(8, 3);
+    simulation.makeProcess<SDLEvents>();
+
+    simulation.makeProcess<MoveActionApplier>();
+
+    simulation.makeProcess<Controls>();
+
+    simulation.makeProcess<TargetFollowing>();
+
+    simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 100>>(knockback_energies);
+    simulation.makeProcess<KnockbackEffect>();
+
+    output.makeProcess<SDLRender>(window);
+}
+
 void Game::preRun()
 {
     simulation.sortProcesses();

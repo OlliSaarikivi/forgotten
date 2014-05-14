@@ -1,27 +1,16 @@
 #pragma once
 
-#include "Row.h"
-#include "Process.h"
+#include "GameProcess.h"
 #include "Utils.h"
 
-template<
-    typename TCenterForces,
-    typename TLinearImpulses,
-    typename TContacts>
-struct Box2DStep : TimedProcess, b2ContactListener
+struct Box2DStep : TimedGameProcess, b2ContactListener
 {
-    Box2DStep(const TCenterForces& center_forces, const TLinearImpulses& linear_impulses, TContacts& contacts, b2World* world, int velocity_iterations, int position_iterations) :
-    center_forces(center_forces),
-    linear_impulses(linear_impulses),
-    contacts(contacts),
-    world(world),
+    Box2DStep(Game& game, ProcessHost<Game>& host, int velocity_iterations, int position_iterations) : TimedGameProcess(game, host),
     velocity_iterations(velocity_iterations),
-    position_iterations(position_iterations)
+    position_iterations(position_iterations),
+    world(game.world)
     {
-        registerInput(center_forces);
-        registerInput(linear_impulses);
-        contacts.registerProducer(this);
-        world->SetContactListener(this);
+        world.SetContactListener(this);
     }
     void tick(float step) override
     {
@@ -35,7 +24,7 @@ struct Box2DStep : TimedProcess, b2ContactListener
             b->ApplyLinearImpulse(toB2(linear_impulse.linear_impulse), b->GetWorldCenter(), true);
         }
 
-        world->Step(step, velocity_iterations, position_iterations);
+        world.Step(step, velocity_iterations, position_iterations);
     }
     void BeginContact(b2Contact *contact) override
     {
@@ -44,18 +33,19 @@ struct Box2DStep : TimedProcess, b2ContactListener
         b2WorldManifold manifold;
         contact->GetWorldManifold(&manifold);
         vec2 normal = toGLM(manifold.normal);
-        contacts.put(TContacts::RowType({ contact }, { fixtureA }, { fixtureB }, { normal }));
-        contacts.put(TContacts::RowType({ contact }, { fixtureB }, { fixtureA }, { -normal }));
+        contacts.put({ { contact }, { fixtureA }, { fixtureB }, { normal } });
+        contacts.put({ { contact }, { fixtureB }, { fixtureA }, { -normal } });
     }
     void EndContact(b2Contact *contact) override
     {
         contacts.erase(Row<Contact>({ contact }));
     }
 private:
-    const TCenterForces& center_forces;
-    const TLinearImpulses& linear_impulses;
-    TContacts &contacts;
-    b2World* world;
+    SOURCE(center_forces, forces);
+    SOURCE(linear_impulses, center_impulses);
+    BUFFER_SINK(contacts, contacts);
+
+    b2World& world;
     int velocity_iterations, position_iterations;
 };
 

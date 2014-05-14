@@ -4,9 +4,9 @@
 #include "Process.h"
 
 template<typename TStats, typename TStat, int MaximumX100, int RateX100>
-struct LinearRegeneration : TimedProcess
+struct LinearRegeneration : TimedGameProcess
 {
-    LinearRegeneration(TStats& stats) :
+    LinearRegeneration(Game& game, ProcessHost<Game>& host, TStats& stats) : TimedGameProcess(game, host),
     stats(stats)
     {
         registerInput(stats);

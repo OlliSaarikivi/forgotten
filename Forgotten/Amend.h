@@ -135,6 +135,7 @@ struct AmendStream : Channel
 
     AmendStream(TLeft& left, TRight& right) : left(left), right(right) {}
 
+
     virtual void forEachProducer(function<void(Process&)> f) const override
     {
         left.forEachProducer(f);
@@ -158,7 +159,8 @@ struct AmendStream : Channel
         } else {
             right.put(TRight::RowType(*(position.left), row));
         }
-        left.update(position.left, SubtractColumns<TRow2, typename TRight::RowType>::type(row));
+        ConditionalUpdateHelper<TLeft, typename TLeft::const_iterator, typename SubtractColumns<TRow2, typename TRight::RowType>::type>::
+            tUpdate(left, position.left, row);
     }
 private:
     TLeft& left;

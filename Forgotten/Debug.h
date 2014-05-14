@@ -1,23 +1,17 @@
 #pragma once
 
-#include "Row.h"
-#include "Process.h"
+#include "GameProcess.h"
 
-template<typename TPositions>
-struct Debug : Process
+struct Debug : GameProcess
 {
-    Debug(const TPositions &positions) :
-    positions(positions)
+    Debug(Game& game, ProcessHost<Game>& host) : GameProcess(game, host) {}
+
+    void tick() override
     {
-    }
-    void forEachInput(function<void(const Channel&)> f) const override
-    {
-        f(positions);
-    }
-    void tick() const override
-    {
+        static auto& entity_positions = host.from(position_handles).join(positions).select();
+
         std::cerr << "Positions:\n";
-        for (const auto& position : positions) {
+        for (const auto& position : entity_positions) {
             std::cerr << "Eid: " << position.eid <<
                 "\t x: " << position.position.x <<
                 "\t y: " << position.position.y << "\n";
@@ -25,6 +19,7 @@ struct Debug : Process
         std::cerr << "\n";
     }
 private:
-    const TPositions &positions;
+    SOURCE(position_handles, position_handles);
+    SOURCE(positions, positions);
 };
 

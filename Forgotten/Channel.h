@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Row.h"
-#include "ProcessHost.h"
 
 struct Process;
 

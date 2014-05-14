@@ -1,42 +1,27 @@
 #pragma once
 
-#include "Row.h"
-#include "Process.h"
-#include "Utils.h"
+#include "GameProcess.h"
 
-template<
-    typename TBodies,
-    typename TPositions,
-    typename TVelocities,
-    typename THeadings>
-struct Box2DReader : TimedProcess
+struct Box2DReader : TimedGameProcess
 {
-    Box2DReader(const TBodies& bodies, TPositions& positions, TVelocities& velocities, THeadings& headings, b2World* world) :
-    bodies(bodies),
-    positions(positions),
-    velocities(velocities),
-    headings(headings),
-    world(world)
-    {
-        registerInput(bodies);
-        positions.registerProducer(this);
-        velocities.registerProducer(this);
-        headings.registerProducer(this);
-    }
+    Box2DReader(Game& game, ProcessHost<Game>& host) : TimedGameProcess(game, host) {}
+
     void tick(float step) override
     {
         for (const auto &body : bodies) {
             b2Body *b = body.body;
-            positions.get(body).position = toGLM(b->GetPosition());
-            velocities.put(TVelocities::RowType({ body.eid }, { toGLM(b->GetLinearVelocity()) }));
-            headings.put(THeadings::RowType({ body.eid }, { b->GetAngle() }));
+            auto range = positions.equalRange(body);
+            if (range.first != range.second) {
+                positions.update(range.first, Row<Position>({ toGLM(b->GetPosition()) }));
+            }
+            velocities.put({ { body.eid }, { toGLM(b->GetLinearVelocity()) } });
+            headings.put({ { body.eid }, { b->GetAngle() } });
         }
     }
 private:
-    const TBodies& bodies;
-    TPositions& positions;
-    TVelocities& velocities;
-    THeadings& headings;
-    b2World* world;
+    SOURCE(bodies, bodies);
+    MUTABLE(positions, positions);
+    SINK(velocities, velocities);
+    SINK(headings, headings);
 };
 

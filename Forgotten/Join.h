@@ -160,6 +160,22 @@ private:
     friend struct JoinStream;
 };
 
+template<typename TChannel, typename TIterator, typename TRow>
+struct ConditionalUpdateHelper
+{
+    static void tUpdate(TChannel& left, TIterator iterator, const TRow& row)
+    {
+        left.update(iterator, row);
+    }
+};
+template<typename TChannel, typename TIterator>
+struct ConditionalUpdateHelper<TChannel, TIterator, Row<>>
+{
+    static void tUpdate(TChannel& left, TIterator iterator, const Row<>& row)
+    {
+    }
+};
+
 template<typename TLeft, typename TRight>
 struct JoinStream : Channel
 {
@@ -188,7 +204,8 @@ struct JoinStream : Channel
     void update(const_iterator position, const TRow2& row)
     {
         right.update(position.getRightIterator(), row);
-        left.update(position.left, SubtractColumns<TRow2, typename TRight::RowType>::type(row));
+        ConditionalUpdateHelper<TLeft, typename TLeft::const_iterator, typename SubtractColumns<TRow2, typename TRight::RowType>::type>::
+            tUpdate(left, position.left, row);
     }
 private:
     TLeft& left;

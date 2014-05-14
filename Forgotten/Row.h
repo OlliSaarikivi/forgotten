@@ -1,6 +1,5 @@
 #pragma once
 
-#include "stdafx.h"
 #include "Utils.h"
 
 #include <boost/integer.hpp>

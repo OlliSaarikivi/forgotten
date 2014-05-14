@@ -1,33 +1,34 @@
 #pragma once
 
-#include "Apply.h"
 #include "Process.h"
+#include "Apply.h"
 #include "Channel.h"
 #include "Join.h"
 #include "Amend.h"
 #include "Subtract.h"
 #include "Transform.h"
 
+template<typename TGame>
 struct ProcessHost;
 
-template<typename TChannel>
+template<typename TGame, typename TChannel>
 struct JoinBuilder
 {
-    JoinBuilder(TChannel& chan, ProcessHost& host) : chan(chan), host(host) {}
+    JoinBuilder(TChannel& chan, ProcessHost<TGame>& host) : chan(chan), host(host) {}
     template<typename TRight>
-    JoinBuilder<JoinStream<TChannel, TRight>> join(TRight& right)
+    JoinBuilder<TGame, JoinStream<TChannel, TRight>> join(TRight& right)
     {
-        return JoinBuilder<JoinStream<TChannel, TRight>>(host.makeJoin(chan, right), host);
+        return JoinBuilder<TGame, JoinStream<TChannel, TRight>>(host.makeJoin(chan, right), host);
     }
     template<typename TRight>
-    JoinBuilder<AmendStream<TChannel, TRight>> amend(TRight& right)
+    JoinBuilder<TGame, AmendStream<TChannel, TRight>> amend(TRight& right)
     {
-        return JoinBuilder<AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
+        return JoinBuilder<TGame, AmendStream<TChannel, TRight>>(host.makeAmend(chan, right), host);
     }
     template<typename TRight>
-    JoinBuilder<SubtractStream<TChannel, TRight>> subtract(TRight& right)
+    JoinBuilder<TGame, SubtractStream<TChannel, TRight>> subtract(TRight& right)
     {
-        return JoinBuilder<SubtractStream<TChannel, TRight>>(host.makeSubtract(chan, right), host);
+        return JoinBuilder<TGame, SubtractStream<TChannel, TRight>>(host.makeSubtract(chan, right), host);
     }
     TChannel& select()
     {
@@ -35,77 +36,74 @@ struct JoinBuilder
     }
 private:
     TChannel& chan;
-    ProcessHost& host;
+    ProcessHost<TGame>& host;
 };
 
-template<typename TTable, typename... TArgs>
-auto callMake(ProcessHost* host, const TArgs&... args) -> decltype(host->make<TTable>(args...))
+template<typename TGame, typename TTable, typename... TArgs>
+auto callMake(ProcessHost<TGame>* host, const TArgs&... args) -> decltype(host->make<TTable>(args...))
 {
     return host->make<TTable>(args...);
 }
 
-template<typename TTable, typename... TArgs>
-auto callMakeStream(ProcessHost* host, const TArgs&... args) -> decltype(host->makeStream<TTable>(args...))
+template<typename TGame, typename TTable, typename... TArgs>
+auto callMakeStream(ProcessHost<TGame>* host, const TArgs&... args) -> decltype(host->makeStream<TTable>(args...))
 {
     return host->makeStream<TTable>(args...);
 }
 
-template<typename TTable, typename... TArgs>
-auto callMakeBuffer(ProcessHost* host, const TArgs&... args) -> decltype(host->makeBuffer<TTable>(args...))
+template<typename TGame, typename TTable, typename... TArgs>
+auto callMakeBuffer(ProcessHost<TGame>* host, const TArgs&... args) -> decltype(host->makeBuffer<TTable>(args...))
 {
     return host->makeBuffer<TTable>(args...);
 }
 
-template<typename... TArgs>
+template<typename TGame, typename... TArgs>
 struct PlainBuilder
 {
-    PlainBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+    PlainBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
 
     template<typename TTable>
     operator TTable&()
     {
-        return apply(callMake<std::remove_reference<TTable>::type, TArgs...>, args);
+        return apply(callMake<TGame, std::remove_reference<TTable>::type, TArgs...>, args);
     }
 private:
-    std::tuple<ProcessHost*, TArgs...> args;
+    std::tuple<ProcessHost<TGame>*, TArgs...> args;
 };
 
-template<typename... TArgs>
+template<typename TGame, typename... TArgs>
 struct StreamBuilder
 {
-    StreamBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+    StreamBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
 
     template<typename TTable>
     operator TTable&()
     {
-        return apply(callMakeStream<std::remove_reference<TTable>::type, TArgs...>, args);
+        return apply(callMakeStream<TGame, std::remove_reference<TTable>::type, TArgs...>, args);
     }
 private:
-    std::tuple<ProcessHost*, TArgs...> args;
+    std::tuple<ProcessHost<TGame>*, TArgs...> args;
 };
 
-template<typename... TArgs>
+template<typename TGame, typename... TArgs>
 struct BufferBuilder
 {
-    BufferBuilder(ProcessHost* host, TArgs&&... args) : args(host, args...) {}
+    BufferBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
 
     template<typename TTable>
     operator std::pair<TTable&, TTable&>()
     {
-        return apply(callMakeBuffer<std::remove_reference<TTable>::type, TArgs...>, args);
+        return apply(callMakeBuffer<TGame, std::remove_reference<TTable>::type, TArgs...>, args);
     }
 private:
-    std::tuple<ProcessHost*, TArgs...> args;
+    std::tuple<ProcessHost<TGame>*, TArgs...> args;
 };
 
+template<typename TGame>
 struct ProcessHost
 {
-    ProcessHost(ForgottenGame& game) : game(game) {}
+    ProcessHost(TGame& game) : game(game) {}
 
-    void sortProcesses();
-    void tick(float step);
-
-    void addProcess(unique_ptr<Process>);
     template<typename TProcess, typename... TArgs>
     TProcess& makeProcess(TArgs&&... args)
     {
@@ -160,9 +158,6 @@ struct ProcessHost
         return makeProcess<TProcess<T1>>(t1, std::forward<TRest>(rest)...);
     }
 
-    void addChannel(unique_ptr<Channel>);
-    void addChannelTicker(unique_ptr<ChannelTicker>);
-
     template<typename TChannel, typename... TArgs>
     TChannel& make(TArgs&&... args)
     {
@@ -210,9 +205,9 @@ struct ProcessHost
     }
 
     template<typename TChannel>
-    JoinBuilder<TChannel> from(TChannel& chan)
+    JoinBuilder<TGame, TChannel> from(TChannel& chan)
     {
-        return JoinBuilder<TChannel>(chan, *this);
+        return JoinBuilder<TGame, TChannel>(chan, *this);
     }
 
     template<typename... TTransforms, typename TChannel>
@@ -222,26 +217,77 @@ struct ProcessHost
     }
 
     template<typename... TArgs>
-    PlainBuilder<TArgs...> plain(TArgs&&... args)
+    PlainBuilder<TGame, TArgs...> plain(TArgs&&... args)
     {
-        return PlainBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
+        return PlainBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
     }
 
     template<typename... TArgs>
-    StreamBuilder<TArgs...> stream(TArgs&&... args)
+    StreamBuilder<TGame, TArgs...> stream(TArgs&&... args)
     {
-        return StreamBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
+        return StreamBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
     }
 
     template<typename... TArgs>
-    BufferBuilder<TArgs...> buffer(TArgs&&... args)
+    BufferBuilder<TGame, TArgs...> buffer(TArgs&&... args)
     {
-        return BufferBuilder<TArgs...>(this, std::forward<TArgs>(args)...);
+        return BufferBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
+    }
+
+
+
+    void addProcess(unique_ptr<Process> process)
+    {
+        processes.emplace(std::move(process));
+        execution_order.clear();
+    }
+    void addChannel(unique_ptr<Channel> channel)
+    {
+        channels.emplace(std::move(channel));
+    }
+    void addChannelTicker(unique_ptr<ChannelTicker> ticker)
+    {
+        channelTickers.emplace(std::move(ticker));
+    }
+    void sortProcesses()
+    {
+        execution_order.clear();
+        std::set<Process*> visited;
+        std::set<Process*> in_this_host;
+        for (auto &process : processes) {
+            in_this_host.emplace(process.get());
+        }
+        function<void(Process &process)> visit = [&](Process &process) {
+            if (visited.find(&process) != visited.end() ||
+                in_this_host.find(&process) == in_this_host.end()) {
+                return;
+            }
+            visited.emplace(&process);
+            process.forEachInput([&](const Channel &input) {
+                input.forEachProducer([&](Process &producer) {
+                    visit(producer);
+                });
+            });
+            execution_order.emplace_back(&process);
+        };
+        for (auto &process : processes) {
+            visit(*process);
+        }
+    }
+    void tick(float step)
+    {
+        assert(execution_order.size() == processes.size());
+        for (const auto &ticker : channelTickers) {
+            ticker->tick();
+        }
+        for (auto &process : execution_order) {
+            process->doTick(step);
+        }
     }
 private:
     flat_set<unique_ptr<Process>> processes;
     flat_set<unique_ptr<Channel>> channels;
     flat_set<unique_ptr<ChannelTicker>> channelTickers;
     vector<Process*> execution_order;
-    ForgottenGame& game;
+    TGame& game;
 };

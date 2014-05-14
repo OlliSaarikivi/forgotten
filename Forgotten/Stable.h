@@ -35,14 +35,6 @@ struct Stable : Channel
     {
         return valid_end;
     }
-    iterator begin()
-    {
-        return rows.begin()
-    }
-    iterator end()
-    {
-        return valid_end;
-    }
     template<typename TRow>
     RowType put(const TRow& row)
     {
@@ -81,11 +73,11 @@ struct Stable : Channel
             return std::make_pair(rows.end(), rows.end());
         }
     }
-    RowType& get(const HandleType& handle)
+    template<typename TRow2>
+    void update(const_iterator position, const TRow2& row)
     {
-        auto& reference = references[handle.get()];
-        assert(reference.actual != HandleType::NullHandle());
-        return rows[reference.actual];
+        static_assert(!Intersects<TRow2, typename Row<HandleType>>::value, "can not update handle column");
+        const_cast<RowType&>(*position).setAll(row);
     }
 private:
     array<Reference<HandleType>, HandleType::MaxRows> references;
