@@ -104,6 +104,10 @@ struct ProcessHost
 {
     ProcessHost(TGame& game) : game(game) {}
 
+    // No copies
+    ProcessHost(const ProcessHost<TGame>&) = delete;
+    ProcessHost<TGame>& operator=(const ProcessHost<TGame>&) = delete;
+
     template<typename TProcess, typename... TArgs>
     TProcess& makeProcess(TArgs&&... args)
     {
@@ -238,16 +242,16 @@ struct ProcessHost
 
     void addProcess(unique_ptr<Process> process)
     {
-        processes.emplace(std::move(process));
+        processes.emplace_back(std::move(process));
         execution_order.clear();
     }
     void addChannel(unique_ptr<Channel> channel)
     {
-        channels.emplace(std::move(channel));
+        channels.emplace_back(std::move(channel));
     }
     void addChannelTicker(unique_ptr<ChannelTicker> ticker)
     {
-        channelTickers.emplace(std::move(ticker));
+        channelTickers.emplace_back(std::move(ticker));
     }
     void sortProcesses()
     {
@@ -285,9 +289,9 @@ struct ProcessHost
         }
     }
 private:
-    flat_set<unique_ptr<Process>> processes;
-    flat_set<unique_ptr<Channel>> channels;
-    flat_set<unique_ptr<ChannelTicker>> channelTickers;
+    vector<unique_ptr<Process>> processes;
+    vector<unique_ptr<Channel>> channels;
+    vector<unique_ptr<ChannelTicker>> channelTickers;
     vector<Process*> execution_order;
     TGame& game;
 };

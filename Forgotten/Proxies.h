@@ -71,7 +71,7 @@ struct Sink : Channel
     template<typename TRow2>
     typename TChannel::ContainerType::size_type erase(const TRow2& row)
     {
-        channel.erase(row);
+        return channel.erase(row);
     }
     const_iterator erase(const_iterator first, const_iterator last)
     {
@@ -133,7 +133,7 @@ struct Mutable : Channel
     template<typename TRow2>
     typename TChannel::ContainerType::size_type erase(const TRow2& row)
     {
-        channel.erase(row);
+        return channel.erase(row);
     }
     const_iterator erase(const_iterator first, const_iterator last)
     {
