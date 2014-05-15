@@ -15,8 +15,8 @@ struct SubtractIterator<TLeft, TRight, true>
     using left_iterator = typename TLeft::const_iterator;
     using right_iterator = typename TRight::const_iterator;
 
-    SubtractIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.begin()), left_end(left_chan.end()),
+    SubtractIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
+        left(left), left_end(left_end),
         right(right_chan.begin()), right_end(right_chan.end())
     {
         findNoMatch();
@@ -54,6 +54,10 @@ struct SubtractIterator<TLeft, TRight, true>
     {
         return *left;
     }
+    FauxRowPointer<RowType> operator->() const
+    {
+        return FauxRowPointer<RowType>(this->operator*());
+    }
     bool operator==(const SubtractIterator<TLeft, TRight, true>& other) const
     {
         return left == other.left && right == other.right && left_end == other.left_end && right_end == other.right_end;
@@ -78,8 +82,8 @@ struct SubtractIterator<TLeft, TRight, false>
     using left_iterator = typename TLeft::const_iterator;
     using right_iterator = typename TRight::const_iterator;
 
-    SubtractIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.begin()), left_end(left_chan.end()), right_chan(&right_chan)
+    SubtractIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
+        left(left), left_end(left_end), right_chan(&right_chan)
     {
         findNoMatch();
     }
@@ -107,6 +111,10 @@ struct SubtractIterator<TLeft, TRight, false>
     RowType operator*() const
     {
         return *left;
+    }
+    FauxRowPointer<RowType> operator->() const
+    {
+        return FauxRowPointer<RowType>(this->operator*());
     }
     bool operator==(const SubtractIterator<TLeft, TRight, false>& other) const
     {
@@ -142,11 +150,11 @@ struct SubtractStream : Channel
     }
     const_iterator begin() const
     {
-        return const_iterator(left, right);
+        return const_iterator(left.begin(), left.end(), right);
     }
     const_iterator end() const
     {
-        const_iterator end_iterator(left, right);
+        const_iterator end_iterator(left.end(), left.end(), right);
         end_iterator.goToEnd();
         return end_iterator;
     }
@@ -155,6 +163,15 @@ struct SubtractStream : Channel
     {
         static_assert(!Intersects<TRow2, typename TRight::IndexType::KeyType::AsRow>::value, "can not update a subtract's right key columns");
         left.update(position.left, row);
+    }
+    template<typename TRow2>
+    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
+    {
+        auto left_range = left.equalRange(row);
+        const_iterator range_begin(left_range.first, left_range.second, right);
+        const_iterator range_end = range_begin;
+        range_end.goToEnd();
+        return std::make_pair(range_begin, range_end);
     }
 private:
     TLeft& left;

@@ -8,8 +8,8 @@ struct TargetFollowing : GameProcess
 
     void tick() override
     {
-        auto& target_positions = host.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
-        auto& targetings = host.from(targets).join(position_handles).join(positions).join(target_positions).select();
+        static auto& target_positions = host.makeTransform<Rename<PositionHandle, TargetPositionHandle>, Rename<Position, TargetPosition>>(positions);
+        static auto& targetings = host.from(targets).join(position_handles).join(positions).join(target_positions).select();
 
         for (const auto& targeting : targetings) {
             vec2 to_target = targeting.target_position - targeting.position;

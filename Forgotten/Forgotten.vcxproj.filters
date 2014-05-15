@@ -120,6 +120,9 @@
     <ClInclude Include="GameProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TrueSentenceInterpreter.h">
+      <Filter>Header Files\Processes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

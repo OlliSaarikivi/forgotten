@@ -418,3 +418,12 @@ template<typename T>
 struct IsRow : std::false_type {};
 template<typename... TColumns>
 struct IsRow<Row<TColumns...>> : std::true_type {};
+
+template<typename TKey, typename TRow, typename TRow2>
+TRow MakeKeyRow(const TRow2& row)
+{
+    static_assert(ColumnsCover<TRow2, typename TKey::AsRow>::value, "all key columns must be set");
+    TRow new_row;
+    new_row.setAll(row);
+    return new_row;
+}

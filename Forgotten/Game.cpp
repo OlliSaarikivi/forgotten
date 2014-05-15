@@ -13,28 +13,24 @@
 #include "Behaviors.h"
 #include "Regeneration.h"
 #include "ContactEffects.h"
+#include "TrueSentenceInterpreter.h"
 
 Game::Game() :
+Hosts(*this),
 max_sim_step(boost::chrono::milliseconds(10)),
 min_sim_step(boost::chrono::milliseconds(2)),
 max_simulation_substeps(10),
-simulation(*this),
-output(*this),
 world(b2Vec2(0, 0)) // Set gravity to zero
 {
     simulation.makeProcess<Box2DReader>();
     simulation.makeProcess<Box2DStep>(8, 3);
     simulation.makeProcess<SDLEvents>();
-
     simulation.makeProcess<MoveActionApplier>();
-
     simulation.makeProcess<Controls>();
-
     simulation.makeProcess<TargetFollowing>();
-
-    simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 100>>(knockback_energies);
+    simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 1000>>(knockback_energies);
     simulation.makeProcess<KnockbackEffect>();
-
+    simulation.makeProcess<TrueSentenceInterpreter>();
     output.makeProcess<SDLRender>(window);
 }
 
@@ -43,40 +39,6 @@ void Game::preRun()
     simulation.sortProcesses();
     output.sortProcesses();
 }
-
-/*
-void Game::runFixSimVarOut()
-{
-preRun();
-
-Clock::time_point simulation_time = Clock::now();
-Clock::time_point now;
-bool still_behind;
-
-while (true) {
-int simulation_tick_count = 0;
-now = Clock::now();
-while ((still_behind = (now - (simulation_time - simulation_step_size)) > simulation_step_size) &&
-simulation_tick_count < max_simulation_output_tick_ratio) {
-// Tick the simulation
-simulation.tick(((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_step_size).count()) / 1e9);
-// Do timing
-simulation_time = simulation_time + simulation_step_size;
-now = Clock::now();
-++simulation_tick_count;
-}
-
-// If we are lagging behind advance the simulation time to the current time. This has the effect
-// of slowing the game down.
-if (still_behind) {
-simulation_time = now;
-}
-
-// Tick the output (graphics etc.)
-output.tick(Process::timeless_step);
-}
-}
-*/
 
 template<int WINDOW_SIZE>
 struct FilteredMovingAveragePredictor
@@ -168,11 +130,6 @@ void Game::run()
 
             clamped_step = std::max(min_sim_step, std::min(max_sim_step, ideal_step));
 
-            //std::cerr << std::fixed << std::setprecision(5);
-            //std::cerr << "Ideal: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(ideal_step).count()) / 1e6f);
-            //std::cerr << " Clamped: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count()) / 1e6f);
-            //std::cerr << " Prediction: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_prediction).count()) / 1e6f);
-
             auto begin_simulation = now;
             simulation.tick(((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count()) / 1e9f);
             now = Clock::now();
@@ -180,16 +137,7 @@ void Game::run()
             auto simulation_actual = now - begin_simulation;
             simulation_predictor.update(simulation_actual);
             ++simulation_substeps;
-
-            //std::cerr << " Error: " << std::setw(9) << ((((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_actual - simulation_prediction).count()) / 1e6f) - (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_prediction).count()) / 1e6f));
-            //std::cerr << "\n";
-
         }
-
-        //std::cerr << std::fixed << std::setprecision(5);
-        //std::cerr << " Clamped: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count()) / 1e6f);
-        //std::cerr << " Drift: " << std::setw(9) << (((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(simulation_time - now).count()) / 1e6f);
-        //std::cerr << "\n";
 
         if (simulation_time < now && now - simulation_time > max_sim_step) {
             simulation_time = now - max_sim_step;

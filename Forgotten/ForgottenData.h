@@ -57,3 +57,4 @@ COLUMN(KnockbackEnergy, float, knockback_energy)
 
 // True speech
 COLUMN(SentenceString, string, sentence_string);
+COLUMN(TrueName, string, true_name);

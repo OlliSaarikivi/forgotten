@@ -124,6 +124,8 @@ unique_ptr<Game> createGame()
     game->textures.put(Row<PositionHandle, SDLTexture>({ handle1 }, { defaultSprite }));
     game->textures.put(Row<PositionHandle, SDLTexture>({ handle2 }, { defaultSprite }));
 
+    game->true_names.put({ { "bob" }, { monster } });
+
     return game;
 }
 
