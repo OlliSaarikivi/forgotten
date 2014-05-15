@@ -121,6 +121,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="Table.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="TrueSentenceInterpreter.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>

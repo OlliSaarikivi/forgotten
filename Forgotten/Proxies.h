@@ -15,10 +15,9 @@ struct Source : Channel
     {
         process->registerInput(channel);
     }
-    Source(const Source<TChannel>&) = delete;
-    Source<TChannel>& operator=(const Source<TChannel>&) = delete;
+    Source(const Source<TChannel>& other) : channel(other.channel) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+    void forEachProducer(function<void(Process&)> f) const
     {
         channel.forEachProducer(f);
     }
@@ -53,10 +52,9 @@ struct Sink : Channel
     {
         channel.registerProducer(process);
     }
-    Sink(const Sink<TChannel>&) = delete;
-    Sink<TChannel>& operator=(const Sink<TChannel>&) = delete;
+    Sink(const Sink<TChannel>& other) : channel(other.channel) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+    void forEachProducer(function<void(Process&)> f) const
     {
         channel.forEachProducer(f);
     }
@@ -102,10 +100,9 @@ struct Mutable : Channel
         process->registerInput(channel);
         channel.registerProducer(process);
     }
-    Mutable(const Mutable<TChannel>&) = delete;
-    Mutable<TChannel>& operator=(const Mutable<TChannel>&) = delete;
+    Mutable(const Mutable<TChannel>& other) : channel(other.channel) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+    void forEachProducer(function<void(Process&)> f) const
     {
         channel.forEachProducer(f);
     }

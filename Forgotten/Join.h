@@ -11,6 +11,22 @@ struct CanMerge
     std::is_same<typename TLeft::IndexType::KeyType, typename TRight::IndexType::KeyType>::value;
 };
 
+template<typename TRow>
+struct FauxRowPointer
+{
+    FauxRowPointer(const TRow& row) : row(row) {}
+    const TRow& operator*() const
+    {
+        return row;
+    }
+    const TRow* operator->() const
+    {
+        return &row;
+    }
+private:
+    TRow row;
+};
+
 template<typename TRow, typename TLeft, typename TRight, bool CanMerge>
 struct JoinIterator;
 // Merge join
@@ -23,8 +39,8 @@ struct JoinIterator<TRow, TLeft, TRight, true>
     using left_iterator = typename TLeft::const_iterator;
     using right_iterator = typename TRight::const_iterator;
 
-    JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.begin()), left_end(left_chan.end()),
+    JoinIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
+        left(left), left_end(left_end),
         right(right_chan.begin()), right_end(right_chan.end())
     {
         findMatch();
@@ -63,6 +79,10 @@ struct JoinIterator<TRow, TLeft, TRight, true>
         auto joined_row = TRow(*left, *right_subscan);
         return joined_row;
     }
+    FauxRowPointer<TRow> operator->() const
+    {
+        return FauxRowPointer<TRow>(this->operator*());
+    }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
     {
         return left == other.left && right == other.right && right_subscan == other.right_subscan &&
@@ -96,8 +116,8 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     using left_iterator = typename TLeft::const_iterator;
     using right_iterator = typename TRight::const_iterator;
 
-    JoinIterator(const TLeft& left_chan, const TRight& right_chan) :
-        left(left_chan.begin()), left_end(left_chan.end()), right_end(right_chan.end()), right(right_chan.end()), right_chan(&right_chan)
+    JoinIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
+        left(left), left_end(left_end), right_end(right_chan.end()), right(right_chan.end()), right_chan(&right_chan)
     {
         findMatch();
     }
@@ -133,6 +153,10 @@ struct JoinIterator<TRow, TLeft, TRight, false>
     {
         auto joined_row = TRow(*left, *right);
         return joined_row;
+    }
+    FauxRowPointer<TRow> operator->() const
+    {
+        return FauxRowPointer<TRow>(this->operator*());
     }
     bool operator==(const JoinIterator<TRow, TLeft, TRight, false>& other) const
     {
@@ -192,11 +216,11 @@ struct JoinStream : Channel
     }
     const_iterator begin() const
     {
-        return const_iterator(left, right);
+        return const_iterator(left.begin(), left.end(), right);
     }
     const_iterator end() const
     {
-        const_iterator end_iterator(left, right);
+        const_iterator end_iterator(left.end(), left.end(), right);
         end_iterator.goToEnd();
         return end_iterator;
     }
@@ -206,6 +230,15 @@ struct JoinStream : Channel
         right.update(position.getRightIterator(), row);
         ConditionalUpdateHelper<TLeft, typename TLeft::const_iterator, typename SubtractColumns<TRow2, typename TRight::RowType>::type>::
             tUpdate(left, position.left, row);
+    }
+    template<typename TRow2>
+    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
+    {
+        auto left_range = left.equalRange(row);
+        const_iterator range_begin(left_range.first, left_range.second, right);
+        const_iterator range_end = range_begin;
+        range_end.goToEnd();
+        return std::make_pair(range_begin, range_end);
     }
 private:
     TLeft& left;

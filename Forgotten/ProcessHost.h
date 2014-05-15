@@ -57,10 +57,16 @@ auto callMakeBuffer(ProcessHost<TGame>* host, const TArgs&... args) -> decltype(
     return host->makeBuffer<TTable>(args...);
 }
 
-template<typename TGame, typename... TArgs>
-struct PlainBuilder
+template<typename TGame, typename TTable, typename... TArgs>
+auto callMakeBufferedStream(ProcessHost<TGame>* host, const TArgs&... args) -> decltype(host->makeBuffer<TTable>(args...))
 {
-    PlainBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
+    return host->makeBufferedStream<TTable>(args...);
+}
+
+template<typename TGame, typename... TArgs>
+struct PersistentBuilder
+{
+    PersistentBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
 
     template<typename TTable>
     operator TTable&()
@@ -94,6 +100,20 @@ struct BufferBuilder
     operator std::pair<TTable&, TTable&>()
     {
         return apply(callMakeBuffer<TGame, std::remove_reference<TTable>::type, TArgs...>, args);
+    }
+private:
+    std::tuple<ProcessHost<TGame>*, TArgs...> args;
+};
+
+template<typename TGame, typename... TArgs>
+struct BufferedStreamBuilder
+{
+    BufferedStreamBuilder(ProcessHost<TGame>* host, TArgs&&... args) : args(host, args...) {}
+
+    template<typename TTable>
+    operator std::pair<TTable&, TTable&>()
+    {
+        return apply(callMakeBufferedStream<TGame, std::remove_reference<TTable>::type, TArgs...>, args);
     }
 private:
     std::tuple<ProcessHost<TGame>*, TArgs...> args;
@@ -182,6 +202,16 @@ struct ProcessHost
     }
 
     template<typename TTable, typename... TArgs>
+    pair<TTable&, TTable&> makeBufferedStream(TArgs&&... args)
+    {
+        auto& new_table = make<TTable>(args...);
+        auto& old_table = make<TTable>(std::forward<TArgs>(args)...);
+        auto ticker = std::make_unique<BufferAndClearTicker<TTable>>(new_table, old_table);
+        addChannelTicker(std::move(ticker));
+        return std::pair<TTable&, TTable&>(new_table, old_table);
+    }
+
+    template<typename TTable, typename... TArgs>
     TTable& makeStream(TArgs&&... args)
     {
         auto& ret = make<TTable>(std::forward<TArgs>(args)...);
@@ -221,9 +251,9 @@ struct ProcessHost
     }
 
     template<typename... TArgs>
-    PlainBuilder<TGame, TArgs...> plain(TArgs&&... args)
+    PersistentBuilder<TGame, TArgs...> persistent(TArgs&&... args)
     {
-        return PlainBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
+        return PersistentBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
     }
 
     template<typename... TArgs>
@@ -236,6 +266,12 @@ struct ProcessHost
     BufferBuilder<TGame, TArgs...> buffer(TArgs&&... args)
     {
         return BufferBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
+    }
+
+    template<typename... TArgs>
+    BufferedStreamBuilder<TGame, TArgs...> bufferedStream(TArgs&&... args)
+    {
+        return BufferedStreamBuilder<TGame, TArgs...>(this, std::forward<TArgs>(args)...);
     }
 
 
