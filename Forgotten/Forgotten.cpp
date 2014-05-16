@@ -9,55 +9,35 @@
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 
-SDL_Window* window;
-SDL_Surface* screenSurface;
-SDL_Surface* defaultSprite;
+SDL_Window* main_window;
 
 void init()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fatal_error(FORMAT("Could not initialize SDL: " << SDL_GetError()));
+        fatalSDLError("Could not initialize SDL");
     }
-    window = SDL_CreateWindow(
-        "Forgotten",
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+
+    main_window = SDL_CreateWindow(
+        game_name.c_str(),
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         SCREEN_WIDTH, SCREEN_HEIGHT,
-        SDL_WINDOW_SHOWN);
-    if (!window) {
-        fatal_error(FORMAT("Could not create window: " << SDL_GetError()));
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (!main_window) {
+        fatalSDLError("Could not create SDL window");
     }
-    screenSurface = SDL_GetWindowSurface(window);
+
+    CHECK_SDL_ERROR;
 }
-
-void loadAssets()
-{
-    defaultSprite = SDL_LoadBMP("sprite_default.bmp");
-    if (!defaultSprite) {
-        fatal_error("Could not load an asset.");
-    }
-}
-
-struct B
-{
-    B(int a)
-    {
-
-    }
-};
-
-class A
-{
-    int a = 3;
-    int b = a;
-    B c = decltype(c)(3);
-};
 
 unique_ptr<Game> createGame()
 {
     auto game = std::make_unique<Game>();
-
-    /*********************** ENGINE SETUP DONE ***************************/
 
     Eid::Type player = 1;
     Eid::Type monster = 2;
@@ -120,10 +100,6 @@ unique_ptr<Game> createGame()
     // Add monster target
     game->targets.put(Row<Eid, TargetPositionHandle>({ monster }, { handle1 }));
 
-    // Apply texture to the body
-    game->textures.put(Row<PositionHandle, SDLTexture>({ handle1 }, { defaultSprite }));
-    game->textures.put(Row<PositionHandle, SDLTexture>({ handle2 }, { defaultSprite }));
-
     game->true_names.put({ { "bob" }, { monster } });
 
     return game;
@@ -131,13 +107,9 @@ unique_ptr<Game> createGame()
 
 void close()
 {
-    if (defaultSprite) {
-        SDL_FreeSurface(defaultSprite);
-        defaultSprite = nullptr;
-    }
-    if (window) {
-        SDL_DestroyWindow(window);
-        window = nullptr;
+    if (main_window) {
+        SDL_DestroyWindow(main_window);
+        main_window = nullptr;
     }
     SDL_Quit();
 }
@@ -145,18 +117,34 @@ void close()
 int _tmain(int argc, _TCHAR* argv[])
 {
     init();
-    loadAssets();
 
-    auto game = createGame();
-    game->run();
+    createGame()->run();
 
     close();
     return 0;
 }
 
-void fatal_error(string message, string title)
+void fatalError(string message, string title)
 {
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), window);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), main_window);
     close();
     exit(-1);
+}
+void fatalSDLError(string message)
+{
+    fatalError(FORMAT(message << ": " << SDL_GetError()));
+}
+void checkSDLError(int line)
+{
+#ifndef NDEBUG
+    const char *error = SDL_GetError();
+    if (*error != '\0') {
+        if (line != -1) {
+            std::cerr << "SDL Error (on line " << line << "): " << error << "\n";
+        } else {
+            std::cerr << "SDL Error: " << error << "\n";
+        }
+        SDL_ClearError();
+    }
+#endif
 }

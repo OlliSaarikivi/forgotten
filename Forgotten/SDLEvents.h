@@ -25,7 +25,7 @@ struct SDLEvents : GameProcess
                               break;
             }
             case SDL_QUIT:
-                fatal_error("Exit through SDL_QUIT event", "Message");
+                fatalError("Exit through SDL_QUIT event", "Message");
                 break;
             default:
                 break;
