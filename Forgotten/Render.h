@@ -35,15 +35,16 @@ struct Render : GameProcess
             debugMsg("VSync not supported");
         }
         CHECK_SDL_ERROR;
-        box2d_debug_renderer = std::make_unique<Box2DGLDebugDraw>();
+        box2d_debug_renderer = std::make_unique<Box2DGLDebugDraw>(gl);
         world.SetDebugDraw(box2d_debug_renderer.get());
         box2d_debug_renderer->SetFlags(Box2DGLDebugDraw::e_shapeBit);
     }
 
     void tick() override
     {
-        glClearColor(0.580f, 0.929f, 0.392f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        gl.ClearColor(0.580f, 0.929f, 0.392f, 1.0f);
+        gl.Disable(gl::Capability::DepthTest);
+        gl.Clear().ColorBuffer().DepthBuffer();
         world.DrawDebugData();
         SDL_GL_SwapWindow(window);
     }
@@ -54,6 +55,6 @@ private:
     b2World& world;
     unique_ptr<Box2DGLDebugDraw> box2d_debug_renderer;
 
-    oglplus::Context gl;
+    gl::Context gl;
 };
 

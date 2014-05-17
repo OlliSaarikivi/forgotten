@@ -25,21 +25,23 @@
 #include "stdafx.h"
 #include "Box2DGLDebugDraw.h"
 
-Box2DGLDebugDraw::Box2DGLDebugDraw()
+Box2DGLDebugDraw::Box2DGLDebugDraw(gl::Context gl) : gl(gl)
 {
     vertex_shader.Source(
         "#version 140\n"
+        "uniform mat4 ProjectionMatrix, CameraMatrix;"
         "in vec2 Position;"
         "void main(void){"
-        "gl_Position = vec4(Position, 0.0, 1.0);"
+        "gl_Position = ProjectionMatrix * CameraMatrix * vec4(Position, 0.0, 1.0);"
         "}"
         );
     vertex_shader.Compile();
     fragment_shader.Source(
         "#version 140\n"
         "out vec4 fragColor;"
+        "uniform vec4 DrawColor;"
         "void main(void){"
-        "fragColor = vec4(1.0, 1.0, 1.0, 1.0);"
+        "fragColor = DrawColor;"
         "}"
         );
     fragment_shader.Compile();
@@ -53,10 +55,36 @@ void Box2DGLDebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, co
     //glColor4f(color.r, color.g, color.b, 1);
     //glVertexPointer(2, GL_FLOAT, 0, vertices);
     //glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+    DrawSolidPolygon(vertices, vertexCount, color);
 }
 
 void Box2DGLDebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 {
+    static_assert(std::is_same<float32, GLfloat>::value, "OpenGL float and Box2D float must match");
+    debug_draw_program.Use();
+    gl::VertexArray polygon;
+    polygon.Bind();
+    gl::Buffer vertices_buffer;
+    vertices_buffer.Bind(gl::Buffer::Target::Array);
+    gl::Buffer::Data(gl::Buffer::Target::Array, vertexCount * 2, (GLfloat*)vertices, gl::BufferUsage::StreamDraw);
+    auto attributes = gl::VertexAttribArray(debug_draw_program, "Position");
+    attributes.Setup<gl::Vec2f>();
+    attributes.Enable();
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, color.a);
+    gl::Uniform<gl::Mat4f>(debug_draw_program, "CameraMatrix").Set(
+        gl::CamMatrixf::LookingAt(
+        gl::Vec3f(2.0f, 2.0f, 2.0f),
+        gl::Vec3f()
+        )
+        );
+    gl::Uniform<gl::Mat4f>(debug_draw_program, "ProjectionMatrix").Set(
+        gl::CamMatrixf::PerspectiveX(
+        gl::Degrees(48),
+        GLfloat(800) / 600,
+        1, 100
+        )
+        );
+    gl.DrawArrays(gl::PrimitiveType::Points, 0, vertexCount);
     //glVertexPointer(2, GL_FLOAT, 0, vertices);
 
     //glColor4f(color.r, color.g, color.b, 0.5f);
