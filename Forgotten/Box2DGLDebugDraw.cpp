@@ -50,7 +50,6 @@ Box2DGLDebugDraw::Box2DGLDebugDraw()
 
 void Box2DGLDebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 {
-    oglplus::Buffer
     //glColor4f(color.r, color.g, color.b, 1);
     //glVertexPointer(2, GL_FLOAT, 0, vertices);
     //glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
