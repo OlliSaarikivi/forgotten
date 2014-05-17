@@ -17,3 +17,5 @@ using boost::container::flat_set;
 using boost::container::flat_multiset;
 
 using glm::vec2;
+
+namespace gl = oglplus;

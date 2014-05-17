@@ -15,8 +15,8 @@ struct Box2DGLDebugDraw : b2Draw
     void DrawString(int x, int y, const char* string, ...);
     void DrawAABB(b2AABB* aabb, const b2Color& color);
 private:
-    oglplus::VertexShader vertex_shader;
-    oglplus::FragmentShader fragment_shader;
-    oglplus::Program debug_draw_program;
+    gl::VertexShader vertex_shader;
+    gl::FragmentShader fragment_shader;
+    gl::Program debug_draw_program;
 };
 
