@@ -116,12 +116,20 @@ void close()
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-    init();
+#ifdef NDEBUG
+    try {
+#endif
+        init();
 
-    createGame()->run();
+        createGame()->run();
 
-    close();
-    return 0;
+        close();
+        return 0;
+#ifdef NDEBUG
+    } catch (oglplus::Error e) {
+        fatalError(e.what(), "Error");
+    }
+#endif
 }
 
 void fatalError(string message, string title)

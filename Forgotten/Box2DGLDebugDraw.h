@@ -4,6 +4,7 @@
 
 struct Box2DGLDebugDraw : b2Draw
 {
+    Box2DGLDebugDraw();
     void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
     void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
     void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color);
@@ -13,5 +14,9 @@ struct Box2DGLDebugDraw : b2Draw
     void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color);
     void DrawString(int x, int y, const char* string, ...);
     void DrawAABB(b2AABB* aabb, const b2Color& color);
+private:
+    oglplus::VertexShader vertex_shader;
+    oglplus::FragmentShader fragment_shader;
+    oglplus::Program debug_draw_program;
 };
 

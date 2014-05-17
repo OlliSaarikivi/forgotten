@@ -1,8 +1,5 @@
 #pragma once
 
-#include <SDL/SDL.h>
-#include <gl/GL.h>
-
 #include "GameProcess.h"
 #include "Forgotten.h"
 
@@ -26,12 +23,21 @@ struct Render : GameProcess
     {
         main_context = SDL_GL_CreateContext(window);
         CHECK_SDL_ERROR;
+        SDL_GL_MakeCurrent(window, main_context);
+        CHECK_SDL_ERROR;
+
+        GLenum err = glewInit();
+        if (GLEW_OK != err) {
+            fatalError(FORMAT("GLEW error: " << glewGetErrorString(err)));
+        }
+
         if (SDL_GL_SetSwapInterval(1) == -1) {
             debugMsg("VSync not supported");
         }
         CHECK_SDL_ERROR;
-        world.SetDebugDraw(&box2d_debug_renderer);
-        box2d_debug_renderer.SetFlags(Box2DGLDebugDraw::e_shapeBit);
+        box2d_debug_renderer = std::make_unique<Box2DGLDebugDraw>();
+        world.SetDebugDraw(box2d_debug_renderer.get());
+        box2d_debug_renderer->SetFlags(Box2DGLDebugDraw::e_shapeBit);
     }
 
     void tick() override
@@ -46,6 +52,8 @@ private:
     SDL_Window* window;
     SDL_GLContext main_context;
     b2World& world;
-    Box2DGLDebugDraw box2d_debug_renderer;
+    unique_ptr<Box2DGLDebugDraw> box2d_debug_renderer;
+
+    oglplus::Context gl;
 };
 

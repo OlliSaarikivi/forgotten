@@ -26,10 +26,11 @@
 #include <boost/thread/thread.hpp>
 
 #include <windows.h>
-#include <gl/gl.h>
-#include <gl/glu.h>
+#define GLEW_STATIC
+#include <gl/glew.h>
 #include <sdl/sdl.h>
 #include <glm/glm.hpp>
+#include <oglplus/all.hpp>
 #include <Box2D/Box2D.h>
 
 #include "Usings.h"
