@@ -6,7 +6,7 @@ template<typename TRow, typename TIndex = None>
 struct Table : Channel
 {
     using IndexType = TIndex;
-    using RowType = typename RowWithKey<TRow, typename IndexType::KeyType>::type;
+    using RowType = typename ConcatRows<typename IndexType::KeyType::AsRow, TRow>::type;
     using ContainerType = typename TIndex::template ContainerType<RowType>;
     using const_iterator = typename ContainerType::const_iterator;
 

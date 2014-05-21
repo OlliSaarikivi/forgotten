@@ -346,20 +346,6 @@ struct ConcatRows<TRow, TRows...>
     using type = typename ConcatTwoRows<TRow, typename ConcatRows<TRows...>::type>::type;
 };
 
-template<typename TRow, typename TKey>
-struct RowWithKey;
-template<typename TRow>
-struct RowWithKey<TRow, Key<>>
-{
-    using type = TRow;
-};
-template<typename... TColumns1, typename TColumn, typename... TColumns2>
-struct RowWithKey<Row<TColumns1...>, Key<TColumn, TColumns2...>>
-{
-    using type = typename RowWithKey<typename AddNew<Row<TColumns1...>, TColumn, std::is_base_of<TColumn, Row<TColumns1...>>::value>::type,
-    Key<TColumns2...>>::type;
-};
-
 // Row column removal
 
 template<typename TRow, typename TRemove, typename TResult>

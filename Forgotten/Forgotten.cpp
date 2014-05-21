@@ -39,8 +39,8 @@ unique_ptr<Game> createGame()
 {
     auto game = std::make_unique<Game>();
 
-    Eid::Type player = 1;
-    Eid::Type monster = 2;
+    Eid player = game->createEid();
+    Eid monster = game->createEid();
 
     game->race_max_speeds.put(Row<Race, MaxSpeed>({ 1 }, { 20.0f }));
     game->races.put(Row<Eid, Race>({ player }, { 1 }));
@@ -59,48 +59,28 @@ unique_ptr<Game> createGame()
     wallBox.SetAsBox(10, 50, b2Vec2(-(400.0f / 16) - 10, 0), 0);
     wallBody->CreateFixture(&wallBox, 0);
 
-    // Add one body
-    b2BodyDef bodyDef;
-    bodyDef.type = b2_dynamicBody;
-    bodyDef.position.Set(0.0f, 0.0f);
-    b2Body* body1 = game->world.CreateBody(&bodyDef);
-    auto& handle1 = game->positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
-    game->position_handles.put(Row<Eid, PositionHandle>({ player }, handle1));
-    game->bodies.put(Row<Eid, Body, PositionHandle>({ player }, { body1 }, { handle1 }));
-    bodyDef.position.Set(15.0f, 5.0f);
-    b2Body* body2 = game->world.CreateBody(&bodyDef);
-    auto& handle2 = game->positions.put(Row<Position>({ vec2(0.0f, 0.0f) }));
-    game->position_handles.put(Row<Eid, PositionHandle>({ monster }, handle2));
-    game->bodies.put(Row<Eid, Body, PositionHandle>({ monster }, { body2 }, { handle2 }));
-    b2PolygonShape playerShape;
-    playerShape.SetAsBox(1, 1);
-    b2FixtureDef playerFixtureDef;
-    playerFixtureDef.shape = &playerShape;
-    playerFixtureDef.density = 0.75f;
-    playerFixtureDef.friction = 0.01f;
-    body1->CreateFixture(&playerFixtureDef);
-    b2Fixture* enemy_fixture = body2->CreateFixture(&playerFixtureDef);
-    game->knockback_impulses.put(Row<FixtureA, KnockbackImpulse>({ enemy_fixture }, { 50.0f }));
+    MobileDef player_def;
+    player_def.true_name = "player";
+    player_def.position = vec2(0.0f, 0.0f);
+    b2PolygonShape player_shape;
+    player_shape.SetAsBox(1, 1);
+    player_def.shape = &player_shape;
+    game->createMobile(player, player_def);
 
-    b2FrictionJointDef playerFriction;
-    playerFriction.bodyB = wallBody;
-    playerFriction.collideConnected = true;
-    playerFriction.localAnchorA = b2Vec2(0, 0);
-    playerFriction.localAnchorB = b2Vec2(0, 0);
-    playerFriction.maxForce = 70;
-    playerFriction.maxTorque = 5000;
-    playerFriction.bodyA = body1;
-    game->world.CreateJoint(&playerFriction);
-    playerFriction.bodyA = body2;
-    game->world.CreateJoint(&playerFriction);
+    MobileDef monster_def;
+    monster_def.true_name = "bob";
+    monster_def.position = vec2(15.0f, 5.0f);
+    b2CircleShape monster_shape;
+    monster_shape.m_radius = 1;
+    monster_def.shape = &monster_shape;
+    monster_def.knockback = 50;
+    game->createMobile(monster, monster_def);
 
-    // Set it controllable
+    // Set player controllable
     game->controllables.put(Row<Eid>({ player }));
 
-    // Add monster target
-    game->targets.put(Row<Eid, TargetPositionHandle>({ monster }, { handle1 }));
-
-    game->true_names.put({ { "bob" }, { monster } });
+    // Add monster target (ugly hack)
+    game->targets.put(Row<Eid, TargetPositionHandle>({ monster }, { *game->position_handles.equalRange(Row<Eid>(player)).first }));
 
     return game;
 }

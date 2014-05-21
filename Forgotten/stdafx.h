@@ -30,7 +30,13 @@
 #include <gl/glew.h>
 #include <sdl/sdl.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+
 #include <oglplus/all.hpp>
+#include <oglplus/opt/smart_enums.hpp>
+#include <oglplus/bound/texture.hpp>
+#include <oglplus/images/png.hpp>
+
 #include <Box2D/Box2D.h>
 
 #include "Usings.h"

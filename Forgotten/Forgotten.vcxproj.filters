@@ -13,14 +13,20 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\Processes">
-      <UniqueIdentifier>{41e25a91-48fc-4767-bd96-533f4ec92a0b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Processes">
-      <UniqueIdentifier>{44099034-4846-4e8b-a3d6-7753e503cd8e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Channels">
       <UniqueIdentifier>{cd0de677-0cd0-45de-999b-5a168f3a3119}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Simulation">
+      <UniqueIdentifier>{41e25a91-48fc-4767-bd96-533f4ec92a0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Rendering">
+      <UniqueIdentifier>{e064015e-0681-49ae-849f-b1d5c13babb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Simulation">
+      <UniqueIdentifier>{44099034-4846-4e8b-a3d6-7753e503cd8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Rendering">
+      <UniqueIdentifier>{3a6a6a3a-140f-4687-acd9-d79d2958e553}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -37,7 +43,7 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Process.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="ProcessHost.h">
       <Filter>Header Files</Filter>
@@ -46,31 +52,22 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Box2DStep.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Debug.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="SDLRender.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="SDLEvents.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="ForgottenData.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Controls.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Actions.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="Row.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Channel.h">
       <Filter>Header Files\Channels</Filter>
@@ -85,10 +82,10 @@
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
     <ClInclude Include="Box2DReader.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Behaviors.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Transform.h">
       <Filter>Header Files\Channels</Filter>
@@ -97,10 +94,10 @@
       <Filter>Header Files\Channels</Filter>
     </ClInclude>
     <ClInclude Include="Regeneration.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="ContactEffects.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Subtract.h">
       <Filter>Header Files\Channels</Filter>
@@ -121,12 +118,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TrueSentenceInterpreter.h">
-      <Filter>Header Files\Processes</Filter>
-    </ClInclude>
-    <ClInclude Include="Render.h">
-      <Filter>Header Files\Processes</Filter>
+      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="Box2DGLDebugDraw.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="View.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Render.h">
+      <Filter>Header Files\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="WalkCycle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceStable.h">
+      <Filter>Header Files\Channels</Filter>
+    </ClInclude>
+    <ClInclude Include="Row.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityDefinition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -141,6 +159,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Box2DGLDebugDraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Render.cpp">
+      <Filter>Source Files\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="WalkCycle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

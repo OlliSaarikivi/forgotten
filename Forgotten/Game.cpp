@@ -6,7 +6,6 @@
 #include "Box2DStep.h"
 #include "Box2DReader.h"
 #include "Debug.h"
-#include "SDLRender.h"
 #include "SDLEvents.h"
 #include "Controls.h"
 #include "Actions.h"
@@ -23,6 +22,11 @@ min_sim_step(boost::chrono::milliseconds(2)),
 max_simulation_substeps(10),
 world(b2Vec2(0, 0)) // Set gravity to zero
 {
+    b2BodyDef world_anchor_def;
+    world_anchor_def.type = b2_staticBody;
+    world_anchor_def.position = b2Vec2_zero;
+    world_anchor = world.CreateBody(&world_anchor_def);
+
     simulation.makeProcess<Box2DReader>();
     simulation.makeProcess<Box2DStep>(8, 3);
     simulation.makeProcess<SDLEvents>();
@@ -34,6 +38,66 @@ world(b2Vec2(0, 0)) // Set gravity to zero
     simulation.makeProcess<TrueSentenceInterpreter>();
     output.makeProcess<Render>(main_window);
 }
+
+// FACTORIES
+
+Eid Game::createEid()
+{
+    static eid_t next = 0;
+    return Eid{ next++ };
+}
+
+Row<Body, PositionHandle, HeadingHandle, VelocityHandle> Game::createBody(Eid eid, const b2BodyDef& body_def)
+{
+    b2Body* body = world.CreateBody(&body_def);
+
+    auto position_handle = positions.put({ { toGLM(body_def.position) } });
+    position_handles.put({ eid, position_handle });
+    auto heading_handle = headings.put({ { body_def.angle } });
+    heading_handles.put({ eid, heading_handle });
+    auto velocity_handle = velocities.put({ { vec2() } });
+    velocity_handles.put({ eid, velocity_handle });
+
+    if (body_def.type == b2_dynamicBody) {
+        dynamic_bodies.put({ eid, { body }, position_handle, heading_handle, velocity_handle });
+    } else {
+        assert(false);
+    }
+
+    return{ { body }, position_handle, heading_handle, velocity_handle };
+}
+
+void Game::createMobile(Eid eid, const MobileDef& mobile_def)
+{
+    true_names.put({ { mobile_def.true_name }, { eid } });
+
+    b2BodyDef body_def;
+    body_def.type = b2_dynamicBody;
+    body_def.position = toB2(mobile_def.position);
+
+    auto body = createBody(eid, body_def);
+    
+    b2FixtureDef fixture_def;
+    fixture_def.shape = mobile_def.shape;
+    fixture_def.density = 0.75f;
+    fixture_def.friction = 0.01f;
+    b2Fixture* fixture = body.body->CreateFixture(&fixture_def);
+
+    b2FrictionJointDef friction;
+    friction.bodyA = body.body;
+    friction.bodyB = world_anchor;
+    friction.localAnchorA = b2Vec2(0, 0);
+    friction.localAnchorB = b2Vec2(0, 0);
+    friction.maxForce = 70;
+    friction.maxTorque = 50;
+    world.CreateJoint(&friction);
+
+    if (mobile_def.knockback != 0) {
+        knockback_impulses.put({ { fixture }, { mobile_def.knockback } });
+    }
+}
+
+// GAME LOOP
 
 void Game::preRun()
 {

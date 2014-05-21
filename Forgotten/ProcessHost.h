@@ -317,11 +317,11 @@ struct ProcessHost
     void tick(float step)
     {
         assert(execution_order.size() == processes.size());
-        for (const auto &ticker : channelTickers) {
-            ticker->tick();
-        }
         for (auto &process : execution_order) {
             process->doTick(step);
+        }
+        for (const auto &ticker : channelTickers) {
+            ticker->tick();
         }
     }
 private:

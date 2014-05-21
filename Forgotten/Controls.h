@@ -75,6 +75,21 @@ struct Controls : GameProcess
                     to_action_mode.emplace_back((Eid)sentence);
                 }
                 break;
+            case SDL_SCANCODE_F1:
+                debug_draw_commands.put({ { Box2DDebugDrawBit::ShapeBit } });
+                break;
+            case SDL_SCANCODE_F2:
+                debug_draw_commands.put({ { Box2DDebugDrawBit::AABBBit } });
+                break;
+            case SDL_SCANCODE_F3:
+                debug_draw_commands.put({ { Box2DDebugDrawBit::CenterOfMassBit } });
+                break;
+            case SDL_SCANCODE_F4:
+                debug_draw_commands.put({ { Box2DDebugDrawBit::JointBit } });
+                break;
+            case SDL_SCANCODE_F5:
+                debug_draw_commands.put({ { Box2DDebugDrawBit::PairBit } });
+                break;
             }
             // True speech
             auto s_current = controllable_sentences.begin();
@@ -103,5 +118,6 @@ private:
     SOURCE(controllables, controllables);
     SINK(move_actions, move_actions);
     SINK(speak_actions, speak_actions);
+    SINK(debug_draw_commands, debug_draw_commands);
     MUTABLE(sentences, current_sentences);
 };

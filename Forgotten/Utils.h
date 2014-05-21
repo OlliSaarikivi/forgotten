@@ -1,5 +1,10 @@
 #pragma once
 
+#define FORMAT(ITEMS) \
+    ((dynamic_cast<std::ostringstream &> (\
+    std::ostringstream().seekp(0, std::ios_base::cur) << ITEMS) \
+    ).str())
+
 // The same as boost::hash_combine except hasher agnostic
 inline void hash_combine(size_t& seed, size_t hash)
 {
@@ -35,4 +40,10 @@ inline vec2 toGLM(const b2Vec2& v)
 inline float clamp(float x, float min, float max)
 {
     return std::max(min, std::min(x, max));
+}
+
+template<typename E>
+auto toIntegral(E e) -> typename std::underlying_type<E>::type
+{
+    return static_cast<typename std::underlying_type<E>::type>(e);
 }

@@ -33,7 +33,4 @@
 #ifdef GL_VERSION_3_2
 #undef GL_VERSION_3_2
 #endif //GL_VERSION_3_2
-#ifdef GL_VERSION_3_1
-#undef GL_VERSION_3_1
-#endif //GL_VERSION_3_1
 #endif //include guard

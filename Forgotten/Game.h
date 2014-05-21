@@ -2,8 +2,10 @@
 
 #include "ProcessHost.h"
 #include "Channel.h"
-#include "ForgottenData.h"
+#include "Data.h"
 #include "DefaultValue.h"
+#include "ResourceStable.h"
+#include "EntityDefinition.h"
 
 // These are in a base class to ensure they are initialized first
 template<typename TGame>
@@ -26,12 +28,16 @@ struct Game : Hosts<Game>
         = simulation.persistent();
     Table<Row<PositionHandle>, OrderedUnique<Key<Eid>>>& position_handles
         = simulation.persistent();
-    Table<Row<Eid, Body, PositionHandle>, OrderedUnique<Key<Eid>>>& bodies
+    Stable<Row<Velocity>, VelocityHandle>& velocities
         = simulation.persistent();
-    Table<Row<Eid, Velocity>, OrderedUnique<Key<Eid>>>& velocities
-        = simulation.stream();
-    Table<Row<Eid, Heading>, OrderedUnique<Key<Eid>>>& headings
-        = simulation.stream();
+    Table<Row<VelocityHandle>, OrderedUnique<Key<Eid>>>& velocity_handles
+        = simulation.persistent();
+    Stable<Row<Heading>, HeadingHandle>& headings
+        = simulation.persistent();
+    Table<Row<HeadingHandle>, OrderedUnique<Key<Eid>>>& heading_handles
+        = simulation.persistent();
+    Table<Row<Eid, Body, PositionHandle, HeadingHandle, VelocityHandle>, OrderedUnique<Key<Eid>>>& dynamic_bodies
+        = simulation.persistent();
     Table<Row<Body, Force>>& forces
         = simulation.stream();
     Table<Row<Body, LinearImpulse>>& center_impulses
@@ -65,7 +71,7 @@ struct Game : Hosts<Game>
         = simulation.persistent();
     Table<Row<Eid, SentenceString>, OrderedUnique<Key<Eid>>>& speak_actions
         = simulation.stream();
-    Table<Row<TrueName,Eid>, OrderedUnique<Key<TrueName>>>& true_names
+    Table<Row<TrueName, Eid>, OrderedUnique<Key<TrueName>>>& true_names
         = simulation.persistent();
 
     // Movement
@@ -89,11 +95,24 @@ struct Game : Hosts<Game>
         = simulation.persistent(KnockbackEnergy{ 1.0f });
 
     // Render
-    Table<Row<PositionHandle, SDLTexture>>& textures
-        = simulation.persistent();
+    Table<Row<DebugDrawCommand>>& debug_draw_commands
+        = output.stream();
+    ResourceStable<Texture, TextureHandle>& textures
+        = output.persistent();
+    Table<Row<PositionHandle, HeadingHandle, TextureHandle>, HashedUnique<Key<Eid>>>& entity_textures
+        = output.persistent();
+    ResourceStable<Shader, ShaderHandle>& shaders
+        = output.persistent();
 
     Game();
 
+    Eid createEid();
+    Row<Body, PositionHandle, HeadingHandle, VelocityHandle> Game::createBody(Eid eid, const b2BodyDef& body_def);
+    void Game::createMobile(Eid eid, const MobileDef& mobile_def);
+private:
+    b2Body* world_anchor;
+
+public:
     void run();
 private:
     void preRun();

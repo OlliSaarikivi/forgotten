@@ -4,57 +4,24 @@
 #include "Forgotten.h"
 
 #include "Box2DGLDebugDraw.h"
+#include "View.h"
 
 struct Render : GameProcess
 {
-    Render(Game& game, ProcessHost<Game>& host, SDL_Window* window) : GameProcess(game, host),
-    window(window),
-    world(game.world)
-    {
-        init();
-    }
-
-    ~Render()
-    {
-        SDL_GL_DeleteContext(main_context);
-    }
-
-    void init()
-    {
-        main_context = SDL_GL_CreateContext(window);
-        CHECK_SDL_ERROR;
-        SDL_GL_MakeCurrent(window, main_context);
-        CHECK_SDL_ERROR;
-
-        GLenum err = glewInit();
-        if (GLEW_OK != err) {
-            fatalError(FORMAT("GLEW error: " << glewGetErrorString(err)));
-        }
-
-        if (SDL_GL_SetSwapInterval(1) == -1) {
-            debugMsg("VSync not supported");
-        }
-        CHECK_SDL_ERROR;
-        box2d_debug_renderer = std::make_unique<Box2DGLDebugDraw>(gl);
-        world.SetDebugDraw(box2d_debug_renderer.get());
-        box2d_debug_renderer->SetFlags(Box2DGLDebugDraw::e_shapeBit);
-    }
-
-    void tick() override
-    {
-        gl.ClearColor(0.580f, 0.929f, 0.392f, 1.0f);
-        gl.Disable(gl::Capability::DepthTest);
-        gl.Clear().ColorBuffer().DepthBuffer();
-        world.DrawDebugData();
-        SDL_GL_SwapWindow(window);
-    }
+    Render(Game& game, ProcessHost<Game>& host, SDL_Window* window);
+    ~Render();
+    void init();
+    void tick() override;
 private:
-    SOURCE(bodies, bodies);
+    SOURCE(debug_draw_commands, debug_draw_commands);
+
     SDL_Window* window;
     SDL_GLContext main_context;
-    b2World& world;
-    unique_ptr<Box2DGLDebugDraw> box2d_debug_renderer;
-
+    View view;
+    unique_ptr<Box2DGLDebugDraw> debug_overlay;
+    uint32 debug_draw_flags = 0;
     gl::Context gl;
+
+    TextureHandle lol_handle;
 };
 

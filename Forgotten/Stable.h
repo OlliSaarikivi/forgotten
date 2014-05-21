@@ -35,8 +35,7 @@ struct Stable : Channel
     {
         return valid_end;
     }
-    template<typename TRow>
-    RowType put(const TRow& row)
+    RowType put(const TData& row)
     {
         assert(valid_end != rows.end());
         HandleType handle = free;

@@ -8,20 +8,26 @@ struct Box2DReader : TimedGameProcess
 
     void tick(float step) override
     {
-        for (const auto &body : bodies) {
+        for (const auto &body : dynamic_bodies) {
             b2Body *b = body.body;
-            auto range = positions.equalRange(body);
-            if (range.first != range.second) {
-                positions.update(range.first, Row<Position>({ toGLM(b->GetPosition()) }));
+            auto position = positions.equalRange(body);
+            if (position.first != position.second) {
+                positions.update(position.first, Row<Position>({ toGLM(b->GetPosition()) }));
             }
-            velocities.put({ { body.eid }, { toGLM(b->GetLinearVelocity()) } });
-            headings.put({ { body.eid }, { b->GetAngle() } });
+            auto velocity = velocities.equalRange(body);
+            if (velocity.first != velocity.second) {
+                velocities.update(velocity.first, Row<Velocity>({ toGLM(b->GetLinearVelocity()) }));
+            }
+            auto heading = headings.equalRange(body);
+            if (heading.first != heading.second) {
+                headings.update(heading.first, Row<Heading>({ b->GetAngle() }));
+            }
         }
     }
 private:
-    SOURCE(bodies, bodies);
+    SOURCE(dynamic_bodies, dynamic_bodies);
     MUTABLE(positions, positions);
-    SINK(velocities, velocities);
-    SINK(headings, headings);
+    MUTABLE(velocities, velocities);
+    MUTABLE(headings, headings);
 };
 

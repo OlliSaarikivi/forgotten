@@ -25,7 +25,12 @@
 #include "stdafx.h"
 #include "Box2DGLDebugDraw.h"
 
-Box2DGLDebugDraw::Box2DGLDebugDraw(gl::Context gl) : gl(gl)
+Box2DGLDebugDraw::Box2DGLDebugDraw(b2World& world, View& view) : world(world), view(view)
+{
+    world.SetDebugDraw(this);
+}
+
+void Box2DGLDebugDraw::init()
 {
     vertex_shader.Source(
         "#version 140\n"
@@ -50,104 +55,99 @@ Box2DGLDebugDraw::Box2DGLDebugDraw(gl::Context gl) : gl(gl)
     debug_draw_program.Link();
 }
 
-void Box2DGLDebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
+void Box2DGLDebugDraw::DrawWorld()
 {
-    //glColor4f(color.r, color.g, color.b, 1);
-    //glVertexPointer(2, GL_FLOAT, 0, vertices);
-    //glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
-    DrawSolidPolygon(vertices, vertexCount, color);
+    gl.Disable(gl::Capability::DepthTest);
+    gl.Enable(oglplus::Capability::Multisample);
+    gl.Enable(oglplus::Capability::Blend);
+    gl.BlendFunc(oglplus::BlendFn::One, oglplus::BlendFn::OneMinusSrcAlpha);
+    debug_draw_program.Use();
+    gl::Uniform<gl::Mat4f>(debug_draw_program, "ProjectionMatrix").Set(view.projection);
+    gl::Uniform<gl::Mat4f>(debug_draw_program, "CameraMatrix").Set(view.camera);
+    world.DrawDebugData();
 }
 
-void Box2DGLDebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
+struct Box2DGLDebugDraw::BoundPolygon
+{
+    gl::VertexArray polygon;
+    gl::Buffer vertices_buffer;
+};
+
+gl::VertexAttribArray Box2DGLDebugDraw::BindPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color, Box2DGLDebugDraw::BoundPolygon& binding)
 {
     static_assert(std::is_same<float32, GLfloat>::value, "OpenGL float and Box2D float must match");
-    debug_draw_program.Use();
-    gl::VertexArray polygon;
-    polygon.Bind();
-    gl::Buffer vertices_buffer;
-    vertices_buffer.Bind(gl::Buffer::Target::Array);
+    binding.polygon.Bind();
+    binding.vertices_buffer.Bind(gl::Buffer::Target::Array);
     gl::Buffer::Data(gl::Buffer::Target::Array, vertexCount * 2, (GLfloat*)vertices, gl::BufferUsage::StreamDraw);
     auto attributes = gl::VertexAttribArray(debug_draw_program, "Position");
     attributes.Setup<gl::Vec2f>();
     attributes.Enable();
-    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, color.a);
-    gl::Uniform<gl::Mat4f>(debug_draw_program, "CameraMatrix").Set(
-        gl::CamMatrixf::LookingAt(
-        gl::Vec3f(2.0f, 2.0f, 2.0f),
-        gl::Vec3f()
-        )
-        );
-    gl::Uniform<gl::Mat4f>(debug_draw_program, "ProjectionMatrix").Set(
-        gl::CamMatrixf::PerspectiveX(
-        gl::Degrees(48),
-        GLfloat(800) / 600,
-        1, 100
-        )
-        );
-    gl.DrawArrays(gl::PrimitiveType::Points, 0, vertexCount);
-    //glVertexPointer(2, GL_FLOAT, 0, vertices);
+    return attributes;
+}
+void Box2DGLDebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
+{
+    Box2DGLDebugDraw::BoundPolygon binding;
+    auto attributes = BindPolygon(vertices, vertexCount, color, binding);
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, 1.0f);
+    gl.DrawArrays(gl::PrimitiveType::LineLoop, 0, vertexCount);
+}
 
-    //glColor4f(color.r, color.g, color.b, 0.5f);
-    //glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+void Box2DGLDebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
+{
+    Box2DGLDebugDraw::BoundPolygon binding;
+    auto attributes = BindPolygon(vertices, vertexCount, color, binding);
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r/2, color.g/2, color.b/2, 0.5f);
+    gl.DrawArrays(gl::PrimitiveType::TriangleFan, 0, vertexCount);
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, 1.0f);
+    gl.DrawArrays(gl::PrimitiveType::LineLoop, 0, vertexCount);
+}
 
-    //glColor4f(color.r, color.g, color.b, 1);
-    //glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
+struct CirclePolygon
+{
+    static const int vertex_count = 16;
+    b2Vec2 vertices[vertex_count];
+};
+
+CirclePolygon CreateCirclePolygon(const b2Vec2& center, float32 radius)
+{
+    const float k_increment = 2.0f * glm::pi<float>() / CirclePolygon::vertex_count;
+    float theta = 0.0f;
+    CirclePolygon polygon;
+    for (int32 i = 0; i < CirclePolygon::vertex_count; ++i) {
+        polygon.vertices[i] = center + radius * b2Vec2(cosf(theta), sinf(theta));
+        theta += k_increment;
+    }
+    return polygon;
 }
 
 void Box2DGLDebugDraw::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color)
 {
-    //const float32 k_segments = 16.0f;
-    //const int vertexCount = 16;
-    //const float32 k_increment = 2.0f * b2_pi / k_segments;
-    //float32 theta = 0.0f;
-
-    //GLfloat glVertices[vertexCount * 2];
-    //for (int32 i = 0; i < k_segments; ++i) {
-    //    b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
-    //    glVertices[i * 2] = v.x;
-    //    glVertices[i * 2 + 1] = v.y;
-    //    theta += k_increment;
-    //}
-
-    //glColor4f(color.r, color.g, color.b, 1);
-    //glVertexPointer(2, GL_FLOAT, 0, glVertices);
-
-    //glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+    static_assert(std::is_same<float32, GLfloat>::value, "OpenGL float and Box2D float must match");
+    DrawPolygon(CreateCirclePolygon(center, radius).vertices, CirclePolygon::vertex_count, color);
 }
 
 void Box2DGLDebugDraw::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color)
 {
-    //const float32 k_segments = 16.0f;
-    //const int vertexCount = 16;
-    //const float32 k_increment = 2.0f * b2_pi / k_segments;
-    //float32 theta = 0.0f;
-
-    //GLfloat glVertices[vertexCount * 2];
-    //for (int32 i = 0; i < k_segments; ++i) {
-    //    b2Vec2 v = center + radius * b2Vec2(cosf(theta), sinf(theta));
-    //    glVertices[i * 2] = v.x;
-    //    glVertices[i * 2 + 1] = v.y;
-    //    theta += k_increment;
-    //}
-
-    //glColor4f(color.r, color.g, color.b, 0.5f);
-    //glVertexPointer(2, GL_FLOAT, 0, glVertices);
-    //glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
-    //glColor4f(color.r, color.g, color.b, 1);
-    //glDrawArrays(GL_LINE_LOOP, 0, vertexCount);
-
-    //// Draw the axis line
-    //DrawSegment(center, center + radius*axis, color);
+    static_assert(std::is_same<float32, GLfloat>::value, "OpenGL float and Box2D float must match");
+    DrawSolidPolygon(CreateCirclePolygon(center, radius).vertices, CirclePolygon::vertex_count, color);
+    DrawSegment(center, center + radius*axis, color);
 }
 
 void Box2DGLDebugDraw::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color)
 {
-    //glColor4f(color.r, color.g, color.b, 1);
-    //GLfloat glVertices[] = {
-    //    p1.x, p1.y, p2.x, p2.y
-    //};
-    //glVertexPointer(2, GL_FLOAT, 0, glVertices);
-    //glDrawArrays(GL_LINES, 0, 2);
+    gl::VertexArray polygon;
+    polygon.Bind();
+    gl::Buffer vertices_buffer;
+    vertices_buffer.Bind(gl::Buffer::Target::Array);
+    GLfloat vertices[] = {
+        p1.x, p1.y, p2.x, p2.y
+    };
+    gl::Buffer::Data(gl::Buffer::Target::Array, 4, (GLfloat*)vertices, gl::BufferUsage::StreamDraw);
+    auto attributes = gl::VertexAttribArray(debug_draw_program, "Position");
+    attributes.Setup<gl::Vec2f>();
+    attributes.Enable();
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, 1.0f);
+    gl.DrawArrays(gl::PrimitiveType::Lines, 0, 2);
 }
 
 void Box2DGLDebugDraw::DrawTransform(const b2Transform& xf)
@@ -164,14 +164,21 @@ void Box2DGLDebugDraw::DrawTransform(const b2Transform& xf)
 
 void Box2DGLDebugDraw::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)
 {
-    //glColor4f(color.r, color.g, color.b, 1);
-    //glPointSize(size);
-    //GLfloat glVertices[] = {
-    //    p.x, p.y
-    //};
-    //glVertexPointer(2, GL_FLOAT, 0, glVertices);
-    //glDrawArrays(GL_POINTS, 0, 1);
-    //glPointSize(1.0f);
+    gl::VertexArray polygon;
+    polygon.Bind();
+    gl::Buffer vertices_buffer;
+    vertices_buffer.Bind(gl::Buffer::Target::Array);
+    GLfloat vertices[] = {
+        p.x, p.y
+    };
+    gl::Buffer::Data(gl::Buffer::Target::Array, 2, (GLfloat*)vertices, gl::BufferUsage::StreamDraw);
+    auto attributes = gl::VertexAttribArray(debug_draw_program, "Position");
+    attributes.Setup<gl::Vec2f>();
+    attributes.Enable();
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, 1.0f);
+    gl.PointSize(size);
+    gl.DrawArrays(gl::PrimitiveType::Points, 0, 1);
+    gl.PointSize(1.0f);
 }
 
 void Box2DGLDebugDraw::DrawString(int x, int y, const char *string, ...)
@@ -179,16 +186,22 @@ void Box2DGLDebugDraw::DrawString(int x, int y, const char *string, ...)
     /* Unsupported as yet. Could replace with bitmap font renderer at a later date */
 }
 
-void Box2DGLDebugDraw::DrawAABB(b2AABB* aabb, const b2Color& c)
+void Box2DGLDebugDraw::DrawAABB(b2AABB* aabb, const b2Color& color)
 {
-    //glColor4f(c.r, c.g, c.b, 1);
-
-    //GLfloat glVertices[] = {
-    //    aabb->lowerBound.x, aabb->lowerBound.y,
-    //    aabb->upperBound.x, aabb->lowerBound.y,
-    //    aabb->upperBound.x, aabb->upperBound.y,
-    //    aabb->lowerBound.x, aabb->upperBound.y
-    //};
-    //glVertexPointer(2, GL_FLOAT, 0, glVertices);
-    //glDrawArrays(GL_LINE_LOOP, 0, 8);
+    gl::VertexArray polygon;
+    polygon.Bind();
+    gl::Buffer vertices_buffer;
+    vertices_buffer.Bind(gl::Buffer::Target::Array);
+    GLfloat vertices[] = {
+        aabb->lowerBound.x, aabb->lowerBound.y,
+        aabb->upperBound.x, aabb->lowerBound.y,
+        aabb->upperBound.x, aabb->upperBound.y,
+        aabb->lowerBound.x, aabb->upperBound.y
+    };
+    gl::Buffer::Data(gl::Buffer::Target::Array, 8, (GLfloat*)vertices, gl::BufferUsage::StreamDraw);
+    auto attributes = gl::VertexAttribArray(debug_draw_program, "Position");
+    attributes.Setup<gl::Vec2f>();
+    attributes.Enable();
+    gl::Uniform<gl::Vec4f>(debug_draw_program, "DrawColor").Set(color.r, color.g, color.b, 1.0f);
+    gl.DrawArrays(gl::PrimitiveType::LineLoop, 0, 4);
 }

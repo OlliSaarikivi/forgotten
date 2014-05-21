@@ -8,7 +8,7 @@ struct MoveActionApplier : GameProcess
 
     void tick() override
     {
-        static auto& body_moves = host.from(move_actions).join(bodies).join(velocities).join(headings)
+        static auto& body_moves = host.from(move_actions).join(dynamic_bodies).join(velocities).join(headings)
             .join(default_race).amend(races)
             .join(default_max_speed).amend(race_max_speeds).amend(max_speeds).select();
 
@@ -21,7 +21,7 @@ struct MoveActionApplier : GameProcess
     }
 private:
     SOURCE(move_actions, move_actions);
-    SOURCE(bodies, bodies);
+    SOURCE(dynamic_bodies, dynamic_bodies);
     SOURCE(velocities, velocities);
     SOURCE(headings, headings);
     SOURCE(default_race, default_race);
