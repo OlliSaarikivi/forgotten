@@ -17,7 +17,6 @@ unique_ptr<gl::Program> ReadAndCompile(string name)
     } catch (gl::CompileError e) {
         fatalError(FORMAT("Could not compile shader " << name << ".vs.glsl: " << e.what()));
     }
-    shader->AttachShader(vs);
     gl::FragmentShader fs;
     fs.Source(getFileContents(getDataPath() / "shaders" / FORMAT(name << ".fs.glsl")));
     try {
@@ -25,6 +24,7 @@ unique_ptr<gl::Program> ReadAndCompile(string name)
     } catch (gl::CompileError e) {
         fatalError(FORMAT("Could not compile shader " << name << ".fs.glsl: " << e.what()));
     }
+    shader->AttachShader(vs);
     shader->AttachShader(fs);
     shader->Link();
     return shader;

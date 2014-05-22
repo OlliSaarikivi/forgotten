@@ -18,7 +18,9 @@ void Render::tick()
     gl.ClearColor(0.580f, 0.929f, 0.392f, 1.0f);
     gl.Clear().ColorBuffer().DepthBuffer();
 
-    single_sprite_shader.projection = view.projection;
+    auto a = gl::Uniform<gl::Mat4f>(*single_sprite_shader.getObject(), "Projection");
+    a.Set(view.projection);
+    //single_sprite_shader.projection = view.projection;
 
     // Debug draw
     auto old_flags = debug_draw_flags;
