@@ -9,6 +9,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <cerrno>
 #include <string>
 #include <memory>
 #include <vector>
@@ -24,6 +26,7 @@
 #include <boost/container/flat_set.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/filesystem.hpp>
 
 #include <windows.h>
 #define GLEW_STATIC

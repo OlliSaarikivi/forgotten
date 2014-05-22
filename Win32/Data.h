@@ -2,6 +2,7 @@
 
 #include "Row.h"
 #include "Utils.h"
+#include "Process.h"
 
 namespace std
 {
@@ -61,14 +62,8 @@ enum class Box2DDebugDrawBit
 COLUMN(DebugDrawCommand, Box2DDebugDrawBit, debug_view_bit)
 COLUMN(Texture, gl::Texture*, texture)
 HANDLE(TextureHandle, texture_handle, 1000)
-struct ShaderProgram
-{
-    unique_ptr<gl::VertexShader> vs;
-    unique_ptr<gl::FragmentShader> fs;
-    unique_ptr<gl::Program> prog;
-};
-COLUMN(Shader, ShaderProgram*, shader)
-HANDLE(ShaderHandle, shader_handle, 255)
+COLUMN(ShaderObject, gl::Program*, shader_object)
+HANDLE(ShaderObjectHandle, shader_object_handle, 255)
 
 
 // Collisions

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "TextureLoader.h"
+#include "Resources.h"
 
 TextureLoader::TextureLoader(Game& game) : game(game)
 {
@@ -7,7 +8,8 @@ TextureLoader::TextureLoader(Game& game) : game(game)
 
 gl::images::PNGImage TextureLoader::LoadPNG(string category, string name)
 {
-    return gl::images::PNGImage(FORMAT(SDL_GetBasePath() << category << "/" << name << ".png").c_str());
+    std::ifstream in((getDataPath() / category / FORMAT(name << ".png")).string(), std::ios::in | std::ios::binary);
+    return gl::images::PNGImage(in);
 }
 
 TextureHandle TextureLoader::LoadStaticSprite(string category, string name)

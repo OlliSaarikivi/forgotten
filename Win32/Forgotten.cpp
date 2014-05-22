@@ -10,6 +10,7 @@ const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 
 SDL_Window* main_window;
+SDL_GLContext main_context;
 
 void init()
 {
@@ -32,7 +33,27 @@ void init()
         fatalSDLError("Could not create SDL window");
     }
 
-    CHECK_SDL_ERROR;
+    main_context = SDL_GL_CreateContext(main_window);
+    if (!main_context) {
+        fatalSDLError("Could not create OpenGL context");
+    }
+    if (SDL_GL_MakeCurrent(main_window, main_context)) {
+        fatalSDLError("Could not initialize OpenGL");
+    }
+
+    GLenum err = glewInit();
+    if (GLEW_OK != err) {
+        fatalError(FORMAT("GLEW error: " << glewGetErrorString(err)));
+    }
+
+    if (SDL_GL_SetSwapInterval(1) == -1) {
+        debugMsg("VSync not supported");
+    }
+}
+
+void swapGameWindow()
+{
+    SDL_GL_SwapWindow(main_window);
 }
 
 unique_ptr<Game> createGame()
@@ -87,6 +108,10 @@ unique_ptr<Game> createGame()
 
 void close()
 {
+    if (main_context) {
+        SDL_GL_DeleteContext(main_context);
+        main_context = nullptr;
+    }
     if (main_window) {
         SDL_DestroyWindow(main_window);
         main_window = nullptr;
@@ -112,27 +137,13 @@ int _tmain(int argc, _TCHAR* argv[])
 #endif
 }
 
-void fatalError(string message, string title)
+NORETURN void fatalError(string message, string title)
 {
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), main_window);
     close();
     exit(-1);
 }
-void fatalSDLError(string message)
+NORETURN void fatalSDLError(string message)
 {
     fatalError(FORMAT(message << ": " << SDL_GetError()));
-}
-void checkSDLError(int line)
-{
-#ifndef NDEBUG
-    const char *error = SDL_GetError();
-    if (*error != '\0') {
-        if (line != -1) {
-            std::cerr << "SDL Error (on line " << line << "): " << error << "\n";
-        } else {
-            std::cerr << "SDL Error: " << error << "\n";
-        }
-        SDL_ClearError();
-    }
-#endif
 }

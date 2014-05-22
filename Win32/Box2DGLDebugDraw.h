@@ -6,7 +6,6 @@
 struct Box2DGLDebugDraw : b2Draw
 {
     Box2DGLDebugDraw(b2World& world, View& view);
-    void init();
     void DrawWorld();
     void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
     void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);

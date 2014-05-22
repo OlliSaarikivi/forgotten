@@ -11,9 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{EA4E5C9A-8061-4E22-AE15-772C958E3670}</ProjectGuid>
+    <ProjectGuid>{F4BCEF8A-4E6F-439D-9EAA-EBE717802993}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Forgotten</RootNamespace>
+    <ProjectName>Win32</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -64,8 +65,7 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib;OpenGL32.lib;glew32s.lib;libpng16.lib;zdll.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"
-xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
+      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -86,8 +86,7 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib;OpenGL32.lib;glew32s.lib;libpng16.lib;zdll.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"
-xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
+      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -110,8 +109,11 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClInclude Include="GameProcess.h" />
     <ClInclude Include="Proxies.h" />
     <ClInclude Include="Regeneration.h" />
+    <ClInclude Include="Resources.h" />
     <ClInclude Include="ResourceStable.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderLoader.h" />
+    <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="Stable.h" />
     <ClInclude Include="SDLEvents.h" />
     <ClInclude Include="Join.h" />
@@ -137,6 +139,8 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     <ClCompile Include="Forgotten.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Render.cpp" />
+    <ClCompile Include="Resources.cpp" />
+    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShaderLoader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -144,6 +148,24 @@ xcopy /y /s "$(SolutionDir)content" "$(OutDir)"</Command>
     </ClCompile>
     <ClCompile Include="TextureLoader.cpp" />
     <ClCompile Include="WalkCycle.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="data\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\shaders\SingleSprite.fs.glsl" />
+    <None Include="data\shaders\SingleSprite.vs.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="data\animations\player_walk_0.png" />
+    <Image Include="data\animations\player_walk_1.png" />
+    <Image Include="data\animations\player_walk_2.png" />
+    <Image Include="data\animations\player_walk_3.png" />
+    <Image Include="data\animations\player_walk_4.png" />
+    <Image Include="data\animations\player_walk_5.png" />
+    <Image Include="data\sprite_default.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

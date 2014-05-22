@@ -28,10 +28,7 @@
 Box2DGLDebugDraw::Box2DGLDebugDraw(b2World& world, View& view) : world(world), view(view)
 {
     world.SetDebugDraw(this);
-}
 
-void Box2DGLDebugDraw::init()
-{
     vertex_shader.Source(
         "#version 140\n"
         "uniform mat4 ProjectionMatrix, CameraMatrix;"

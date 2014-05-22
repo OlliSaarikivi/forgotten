@@ -1,5 +1,15 @@
 #pragma once
 
+#ifdef __GNUC__
+#define NORETURN __attribute__((noreturn))
+#else
+#ifdef _MSC_VER
+#define NORETURN __declspec(noreturn)
+#else
+#define NORETURN
+#endif
+#endif
+
 #define FORMAT(ITEMS) \
     ((dynamic_cast<std::ostringstream &> (\
     std::ostringstream().seekp(0, std::ios_base::cur) << ITEMS) \

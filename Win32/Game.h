@@ -101,7 +101,7 @@ struct Game : Hosts<Game>
         = output.persistent();
     Table<Row<PositionHandle, HeadingHandle, TextureHandle>, HashedUnique<Key<Eid>>>& entity_textures
         = output.persistent();
-    ResourceStable<Shader, ShaderHandle>& shaders
+    ResourceStable<ShaderObject, ShaderObjectHandle>& shaders
         = output.persistent();
 
     Game();

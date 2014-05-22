@@ -36,7 +36,7 @@ world(b2Vec2(0, 0)) // Set gravity to zero
     simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 1000>>(knockback_energies);
     simulation.makeProcess<KnockbackEffect>();
     simulation.makeProcess<TrueSentenceInterpreter>();
-    output.makeProcess<Render>(main_window);
+    output.makeProcess<Render>();
 }
 
 // FACTORIES

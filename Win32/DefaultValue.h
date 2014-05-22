@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Channel.h"
+#include "Join.h"
 
 template<typename TRow>
 struct SingleValueIterator
@@ -15,6 +16,10 @@ struct SingleValueIterator
     const TRow& operator*() const
     {
         return row;
+    }
+    FauxRowPointer<TRow> operator->() const
+    {
+        return FauxRowPointer<TRow>(this->operator*());
     }
     bool operator==(const SingleValueIterator<TRow>& other) const
     {

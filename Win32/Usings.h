@@ -19,3 +19,4 @@ using boost::container::flat_multiset;
 using glm::vec2;
 
 namespace gl = oglplus;
+namespace fs = boost::filesystem;

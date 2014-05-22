@@ -34,14 +34,22 @@ struct ResourceStable : Channel
     {
         assert(valid_end != rows.end());
         HandleType handle = free;
+        auto result = RowType({ handle }, { resource.get() });
         auto& reference = references[handle.get()];
         free = reference.next_free;
         reference.actual = valid_end - rows.begin();
         valid_end->first = handle;
         valid_end->second = std::move(resource);
-        auto result = RowType({ handle }, { resource.get() });
         valid_end++;
         return result;
+    }
+    void updateResource(const_iterator position, unique_ptr<ValueType> resource)
+    {
+        auto& reference = references[static_cast<const HandleType&>(*position).get()];
+        if (reference.actual != HandleType::NullHandle()) {
+            auto iter = rows.begin() + reference.actual;
+            iter->second = std::move(resource);
+        }
     }
     typename ContainerType::size_type erase(const HandleType& handle)
     {
@@ -71,16 +79,6 @@ struct ResourceStable : Channel
             return std::make_pair(const_iterator(RowType({ handle }, { iter->second.get() })), const_iterator());
         } else {
             return std::make_pair(const_iterator(), const_iterator());
-        }
-    }
-    template<typename TRow2>
-    void update(const_iterator position, const TRow2& row)
-    {
-        static_assert(!Intersects<TRow2, typename Row<HandleType>>::value, "can not update handle column");
-        auto& reference = references[static_cast<HandleType&>(*position).get()];
-        if (reference.actual != HandleType::NullHandle()) {
-            auto iter = rows.begin() + reference.actual;
-            iter->second.reset(static_cast<const ResourceType&>(row).get());
         }
     }
 private:
