@@ -20,5 +20,6 @@ private:
 
     // Shaders
     SingleSpriteShader single_sprite_shader;
+    TextureHandle default_sprite;
 };
 

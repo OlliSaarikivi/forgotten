@@ -9,6 +9,8 @@ struct Shader
 {
     Shader(Game& game, string name);
     void reload();
+    void Use();
+//protected:
     gl::Program* getObject();
 private:
     Game& game;

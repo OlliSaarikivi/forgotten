@@ -39,6 +39,7 @@
 #include <oglplus/opt/smart_enums.hpp>
 #include <oglplus/bound/texture.hpp>
 #include <oglplus/images/png.hpp>
+#include <oglplus/interop/glm.hpp>
 
 #include <Box2D/Box2D.h>
 

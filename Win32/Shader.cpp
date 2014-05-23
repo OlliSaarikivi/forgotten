@@ -11,6 +11,11 @@ void Shader::reload()
     ShaderLoader(game).Reload(object_handle, name);
 }
 
+void Shader::Use()
+{
+    getObject()->Use();
+}
+
 gl::Program* Shader::getObject()
 {
     auto object = game.shaders.equalRange(object_handle);
