@@ -36,6 +36,7 @@ world(b2Vec2(0, 0)) // Set gravity to zero
     simulation.makeProcess<LinearRegeneration<std::remove_reference<decltype(knockback_energies)>::type, KnockbackEnergy, 100, 1000>>(knockback_energies);
     simulation.makeProcess<KnockbackEffect>();
     simulation.makeProcess<TrueSentenceInterpreter>();
+    output.makeProcess<Box2DReader>();
     output.makeProcess<Render>();
 }
 
@@ -79,7 +80,7 @@ void Game::createMobile(Eid eid, const MobileDef& mobile_def)
     
     b2FixtureDef fixture_def;
     fixture_def.shape = mobile_def.shape;
-    fixture_def.density = 0.75f;
+    fixture_def.density = 10.0f;
     fixture_def.friction = 0.01f;
     b2Fixture* fixture = body.body->CreateFixture(&fixture_def);
 
@@ -95,6 +96,10 @@ void Game::createMobile(Eid eid, const MobileDef& mobile_def)
     if (mobile_def.knockback != 0) {
         knockback_impulses.put({ { fixture }, { mobile_def.knockback } });
     }
+
+    // Set textures
+    auto sprite_texture = *sprite_textures.equalRange(Row<SpriteSize, SpriteType, SpriteName>({ 16 }, { "diffuse" }, { "default" })).first;
+    static_sprites.put({ eid, body, body, sprite_texture, sprite_texture });
 }
 
 // GAME LOOP

@@ -60,11 +60,14 @@ enum class Box2DDebugDrawBit
     CenterOfMassBit = b2Draw::e_centerOfMassBit
 };
 COLUMN(DebugDrawCommand, Box2DDebugDrawBit, debug_view_bit)
-COLUMN(Texture, gl::Texture*, texture)
-HANDLE(TextureHandle, texture_handle, 1000)
 COLUMN(ShaderObject, gl::Program*, shader_object)
 HANDLE(ShaderObjectHandle, shader_object_handle, 255)
-
+COLUMN(Texture, gl::Texture*, texture)
+HANDLE(TextureHandle, texture_handle, 1000)
+COLUMN(SpriteSize, uint16_t, sprite_size)
+COLUMN(SpriteType, string, sprite_type)
+COLUMN(SpriteName, string, sprite_name)
+COLUMN(TextureArrayIndex, uint16_t, texture_array_index)
 
 // Collisions
 COLUMN(Contact, b2Contact*, contact)

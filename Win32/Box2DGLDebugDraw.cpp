@@ -56,8 +56,6 @@ void Box2DGLDebugDraw::DrawWorld()
 {
     gl.Disable(gl::Capability::DepthTest);
     gl.Enable(oglplus::Capability::Multisample);
-    gl.Enable(oglplus::Capability::Blend);
-    gl.BlendFunc(oglplus::BlendFn::One, oglplus::BlendFn::OneMinusSrcAlpha);
     debug_draw_program.Use();
     gl::Uniform<gl::Mat4f>(debug_draw_program, "ProjectionMatrix").Set(view.projection);
     gl::Uniform<gl::Mat4f>(debug_draw_program, "CameraMatrix").Set(view.camera);

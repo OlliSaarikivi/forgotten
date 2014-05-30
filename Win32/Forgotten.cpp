@@ -3,11 +3,12 @@
 #include "ProcessHost.h"
 #include "Join.h"
 #include "Game.h"
+#include "TextureLoader.h"
 
 #include <tchar.h>
 
 const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
+const int SCREEN_HEIGHT = 800;
 
 SDL_Window* main_window;
 SDL_GLContext main_context;
@@ -60,6 +61,8 @@ unique_ptr<Game> createGame()
 {
     auto game = std::make_unique<Game>();
 
+    TextureLoader(*game).loadSpriteArrays();
+
     Eid player = game->createEid();
     Eid monster = game->createEid();
 
@@ -71,29 +74,28 @@ unique_ptr<Game> createGame()
     wallBodyDef.position.Set(0, 0);
     b2Body* wallBody = game->world.CreateBody(&wallBodyDef);
     b2PolygonShape wallBox;
-    wallBox.SetAsBox(50, 10, b2Vec2(0, (300.0f / 16) + 10), 0);
+    wallBox.SetAsBox(50, 10, b2Vec2(0, (400.0f / 16) + 10), 0);
     wallBody->CreateFixture(&wallBox, 0);
-    wallBox.SetAsBox(50, 10, b2Vec2(0, (-300.0f / 16) - 10), 0);
+    wallBox.SetAsBox(50, 10, b2Vec2(0, (-400.0f / 16) - 10), 0);
     wallBody->CreateFixture(&wallBox, 0);
     wallBox.SetAsBox(10, 50, b2Vec2((400.0f / 16) + 10, 0), 0);
     wallBody->CreateFixture(&wallBox, 0);
     wallBox.SetAsBox(10, 50, b2Vec2(-(400.0f / 16) - 10, 0), 0);
     wallBody->CreateFixture(&wallBox, 0);
 
+    b2CircleShape humanoid_shape;
+    humanoid_shape.m_radius = 0.25;
+
     MobileDef player_def;
     player_def.true_name = "player";
     player_def.position = vec2(0.0f, 0.0f);
-    b2PolygonShape player_shape;
-    player_shape.SetAsBox(1, 1);
-    player_def.shape = &player_shape;
+    player_def.shape = &humanoid_shape;
     game->createMobile(player, player_def);
 
     MobileDef monster_def;
     monster_def.true_name = "bob";
     monster_def.position = vec2(15.0f, 5.0f);
-    b2CircleShape monster_shape;
-    monster_shape.m_radius = 1;
-    monster_def.shape = &monster_shape;
+    monster_def.shape = &humanoid_shape;
     monster_def.knockback = 50;
     game->createMobile(monster, monster_def);
 
@@ -132,7 +134,9 @@ int _tmain(int argc, _TCHAR* argv[])
         return 0;
 #ifdef NDEBUG
     } catch (oglplus::Error e) {
-        fatalError(e.what(), "Error");
+        fatalError(e.what());
+    } catch (std::runtime_error e) {
+        fatalError(e.what());
     }
 #endif
 }

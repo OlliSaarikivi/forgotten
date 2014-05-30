@@ -2,6 +2,6 @@
 
 struct View
 {
-    gl::Mat4f projection;
-    gl::Mat4f camera;
+    glm::mat4 projection;
+    glm::mat4 camera;
 };

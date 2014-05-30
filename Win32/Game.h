@@ -99,7 +99,9 @@ struct Game : Hosts<Game>
         = output.stream();
     ResourceStable<Texture, TextureHandle>& textures
         = output.persistent();
-    Table<Row<PositionHandle, HeadingHandle, TextureHandle>, HashedUnique<Key<Eid>>>& entity_textures
+    Table<Row<TextureHandle, TextureArrayIndex>, HashedUnique<Key<SpriteSize, SpriteType, SpriteName>>>& sprite_textures
+        = output.persistent();
+    Table<Row<PositionHandle, HeadingHandle, TextureHandle, TextureArrayIndex>, HashedUnique<Key<Eid>>>& static_sprites
         = output.persistent();
     ResourceStable<ShaderObject, ShaderObjectHandle>& shaders
         = output.persistent();

@@ -24,11 +24,12 @@ struct ResourceStable : Channel
     }
     const_iterator begin() const
     {
-        return rows.begin()
+        auto begin = rows.begin();
+        return const_iterator(RowType({ begin->first }, { begin->second.get() }));
     }
     const_iterator end() const
     {
-        return valid_end;
+        return const_iterator(RowType({ valid_end->first }, { valid_end->second.get() }));
     }
     RowType putResource(unique_ptr<ValueType> resource)
     {

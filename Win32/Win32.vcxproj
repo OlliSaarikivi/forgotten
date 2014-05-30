@@ -100,6 +100,7 @@
     <ClInclude Include="Box2DStep.h" />
     <ClInclude Include="Channel.h" />
     <ClInclude Include="ContactEffects.h" />
+    <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="EntityDefinition.h" />
     <ClInclude Include="Render.h" />
@@ -158,15 +159,18 @@
   <ItemGroup>
     <None Include="data\shaders\SingleSprite.fs.glsl" />
     <None Include="data\shaders\SingleSprite.vs.glsl" />
+    <None Include="data\shaders\ElementSprite.fs.glsl" />
+    <None Include="data\shaders\ElementSprite.vs.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="data\animations\player_walk_0.png" />
-    <Image Include="data\animations\player_walk_1.png" />
-    <Image Include="data\animations\player_walk_2.png" />
-    <Image Include="data\animations\player_walk_3.png" />
-    <Image Include="data\animations\player_walk_4.png" />
-    <Image Include="data\animations\player_walk_5.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_0.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_1.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_2.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_3.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_4.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_5.png" />
     <Image Include="data\sprite_default.bmp" />
+    <Image Include="data\textures\diffuse\player_walk_0.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

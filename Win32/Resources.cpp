@@ -21,7 +21,7 @@ std::string getFileContents(fs::path file_path)
     }
 }
 
-fs::path getDataPath()
+fs::path getDataDir()
 {
     return fs::path(SDL_GetBasePath()) / "data";
 }

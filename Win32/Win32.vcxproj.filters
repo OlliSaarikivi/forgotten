@@ -152,6 +152,9 @@
     <ClInclude Include="Render.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ElementSpriteShader.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -192,27 +195,34 @@
     <None Include="data\shaders\SingleSprite.vs.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="data\shaders\ElementSprite.fs.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="data\shaders\ElementSprite.vs.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\sprite_default.bmp">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_0.png">
+    <Image Include="data\textures\diffuse\player_walk_0.png" />
+    <Image Include="data\textures\16\diffuse\player_walk_0.png">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_1.png">
+    <Image Include="data\textures\16\diffuse\player_walk_1.png">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_2.png">
+    <Image Include="data\textures\16\diffuse\player_walk_2.png">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_3.png">
+    <Image Include="data\textures\16\diffuse\player_walk_3.png">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_4.png">
+    <Image Include="data\textures\16\diffuse\player_walk_4.png">
       <Filter>Content</Filter>
     </Image>
-    <Image Include="data\animations\player_walk_5.png">
+    <Image Include="data\textures\16\diffuse\player_walk_5.png">
       <Filter>Content</Filter>
     </Image>
   </ItemGroup>

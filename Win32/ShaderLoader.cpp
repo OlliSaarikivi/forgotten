@@ -11,19 +11,27 @@ unique_ptr<gl::Program> ReadAndCompile(string name)
 {
     auto shader = std::make_unique<gl::Program>();
     gl::VertexShader vs;
-    vs.Source(getFileContents(getDataPath() / "shaders" / FORMAT(name << ".vs.glsl")));
+    vs.Source(getFileContents(getDataDir() / "shaders" / FORMAT(name << ".vs.glsl")));
+#ifdef NDEBUG
     try {
+#endif
         vs.Compile();
+#ifdef NDEBUG
     } catch (gl::CompileError e) {
         fatalError(FORMAT("Could not compile shader " << name << ".vs.glsl: " << e.what()));
     }
+#endif
     gl::FragmentShader fs;
-    fs.Source(getFileContents(getDataPath() / "shaders" / FORMAT(name << ".fs.glsl")));
+    fs.Source(getFileContents(getDataDir() / "shaders" / FORMAT(name << ".fs.glsl")));
+#ifdef NDEBUG
     try {
+#endif
         fs.Compile();
+#ifdef NDEBUG
     } catch (gl::CompileError e) {
         fatalError(FORMAT("Could not compile shader " << name << ".fs.glsl: " << e.what()));
     }
+#endif
     shader->AttachShader(vs);
     shader->AttachShader(fs);
     shader->Link();

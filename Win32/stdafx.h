@@ -34,6 +34,7 @@
 #include <sdl/sdl.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <oglplus/all.hpp>
 #include <oglplus/opt/smart_enums.hpp>
