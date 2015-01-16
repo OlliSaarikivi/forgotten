@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:tns="http://schemas.datacontract.org/2004/07/ToolingService" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/ToolingService" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="TickTimings">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Phase" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="ProcessTimings" nillable="true" type="tns:ArrayOfProcessTiming" />
+      <xs:element minOccurs="0" name="Step" type="xs:float" />
+      <xs:element minOccurs="0" name="TotalDurationNanos" type="xs:unsignedInt" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="TickTimings" nillable="true" type="tns:TickTimings" />
+  <xs:complexType name="ArrayOfProcessTiming">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ProcessTiming" nillable="true" type="tns:ProcessTiming" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfProcessTiming" nillable="true" type="tns:ArrayOfProcessTiming" />
+  <xs:complexType name="ProcessTiming">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="DurationNanos" type="xs:unsignedInt" />
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" />
+      <xs:element minOccurs="0" name="OffsetNanos" type="xs:unsignedInt" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ProcessTiming" nillable="true" type="tns:ProcessTiming" />
+</xs:schema>

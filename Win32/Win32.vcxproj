@@ -43,7 +43,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)include;$(Boost_Includes)</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)libdebug;$(Boost_Libraries)</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)ToolingConnection\bin\x86\Debug;$(SolutionDir)libdebug;$(Boost_Libraries)</LibraryPath>
     <TargetName>Forgotten</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -63,10 +63,11 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib;OpenGL32.lib;glew32s.lib;libpng16.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib;OpenGL32.lib;glew32s.lib;libpng16.lib;zdll.lib;ToolingConnection.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"</Command>
+      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"
+xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -103,6 +104,7 @@
     <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Debug.h" />
     <ClInclude Include="EntityDefinition.h" />
+    <ClInclude Include="MetricsService.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="DefaultValue.h" />
     <ClInclude Include="Data.h" />
@@ -140,6 +142,7 @@
     <ClCompile Include="Box2DGLDebugDraw.cpp" />
     <ClCompile Include="Forgotten.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="MetricsService.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="Shader.cpp" />

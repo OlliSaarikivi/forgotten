@@ -14,6 +14,7 @@
 #include "ContactEffects.h"
 #include "TrueSentenceInterpreter.h"
 #include "Render.h"
+#include "MetricsService.h"
 
 Game::Game() :
 Hosts(*this),
@@ -177,11 +178,18 @@ void Game::run()
             now = Clock::now();
         }
 
+#ifdef DEBUG
+        beginLogTick("output", timeless_step);
+#endif
         auto begin_update = now;
         output.tick(timeless_step);
         now = Clock::now();
         output_time = now;
-        output_predictor.update(now - begin_update);
+        auto output_actual = now - begin_update;
+        output_predictor.update(output_actual);
+#ifdef DEBUG
+        endLogTick(output_actual);
+#endif
 
         int simulation_substeps = 0;
         Clock::duration ideal_step, clamped_step;
@@ -200,13 +208,20 @@ void Game::run()
 
             clamped_step = std::max(min_sim_step, std::min(max_sim_step, ideal_step));
 
+            float tick = boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count() / 1e9f;
+#ifdef DEBUG
+            beginLogTick("simulation", tick);
+#endif
             auto begin_simulation = now;
-            simulation.tick(((float)boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count()) / 1e9f);
+            simulation.tick(tick);
             now = Clock::now();
             simulation_time += clamped_step;
             auto simulation_actual = now - begin_simulation;
             simulation_predictor.update(simulation_actual);
             ++simulation_substeps;
+#ifdef DEBUG
+            endLogTick(simulation_actual);
+#endif
         }
 
         if (simulation_time < now && now - simulation_time > max_sim_step) {

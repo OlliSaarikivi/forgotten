@@ -11,7 +11,10 @@ struct Process
         tick();
     }
     virtual void tick() = 0;
-
+    virtual string name()
+    {
+        return typeid(this).name();
+    }
     void forEachInput(function<void(const Channel&)> f) const
     {
         for (auto input : inputs) {

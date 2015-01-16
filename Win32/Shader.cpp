@@ -3,12 +3,12 @@
 
 Shader::Shader(Game& game, string name) : game(game), name(name)
 {
-    object_handle = ShaderLoader(game).Load(name);
+    object_handle = ShaderLoader(game).load(name);
 }
 
 void Shader::reload()
 {
-    ShaderLoader(game).Reload(object_handle, name);
+    ShaderLoader(game).reload(object_handle, name);
 }
 
 void Shader::Use()

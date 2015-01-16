@@ -5,10 +5,12 @@
 #include "Game.h"
 #include "TextureLoader.h"
 
+#include "MetricsService.h"
+
 #include <tchar.h>
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 800;
+const int SCREEN_WIDTH = 600;
+const int SCREEN_HEIGHT = 600;
 
 SDL_Window* main_window;
 SDL_GLContext main_context;
@@ -50,6 +52,10 @@ void init()
     if (SDL_GL_SetSwapInterval(1) == -1) {
         debugMsg("VSync not supported");
     }
+
+#ifdef DEBUG
+    startMetricsService();
+#endif
 }
 
 void swapGameWindow()
@@ -110,6 +116,9 @@ unique_ptr<Game> createGame()
 
 void close()
 {
+#ifdef DEBUG
+    stopMetricsService();
+#endif
     if (main_context) {
         SDL_GL_DeleteContext(main_context);
         main_context = nullptr;

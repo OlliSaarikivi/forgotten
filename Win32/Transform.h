@@ -97,14 +97,11 @@ template<typename TFrom, typename TTo>
 struct RenameHelper<TFrom, TTo, true>
 {
     template<typename TIn>
-    using OutType = typename ConcatRows<typename RemoveExisting<TIn, TFrom, Row<>>::type, Row<TTo>>::type;
-    template<typename TIn>
-    static OutType<TIn> doRename(const TIn& in)
+    static typename ConcatRows<typename RemoveExisting<TIn, TFrom, Row<>>::type, Row<TTo>>::type doRename(const TIn& in)
     {
         Row<TTo> renamed;
         static_cast<TTo&>(renamed).set(static_cast<const TFrom&>(in));
-        auto result = OutType<TIn>(in, renamed);
-        return result;
+        return typename ConcatRows<typename RemoveExisting<TIn, TFrom, Row<>>::type, Row<TTo>>::type(in, renamed);
     }
 };
 template<typename TFrom, typename TTo>

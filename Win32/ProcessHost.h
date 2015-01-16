@@ -7,6 +7,7 @@
 #include "Amend.h"
 #include "Subtract.h"
 #include "Transform.h"
+#include "MetricsService.h"
 
 template<typename TGame>
 struct ProcessHost;
@@ -275,7 +276,6 @@ struct ProcessHost
     }
 
 
-
     void addProcess(unique_ptr<Process> process)
     {
         processes.emplace_back(std::move(process));
@@ -318,7 +318,14 @@ struct ProcessHost
     {
         assert(execution_order.size() == processes.size());
         for (auto &process : execution_order) {
+#ifdef DEBUG
+            auto start = Game::Clock::now();
+#endif
             process->doTick(step);
+#ifdef DEBUG
+            logProcess(process->name(), Game::Clock::now() - start);
+#endif
+
         }
         for (const auto &ticker : channelTickers) {
             ticker->tick();

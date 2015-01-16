@@ -7,7 +7,7 @@ ShaderLoader::ShaderLoader(Game& game) : game(game)
 {
 }
 
-unique_ptr<gl::Program> ReadAndCompile(string name)
+unique_ptr<gl::Program> readAndCompile(string name)
 {
     auto shader = std::make_unique<gl::Program>();
     gl::VertexShader vs;
@@ -38,14 +38,14 @@ unique_ptr<gl::Program> ReadAndCompile(string name)
     return shader;
 }
 
-ShaderObjectHandle ShaderLoader::Load(string name)
+ShaderObjectHandle ShaderLoader::load(string name)
 {
-    return game.shaders.putResource(ReadAndCompile(name));
+    return game.shaders.putResource(readAndCompile(name));
 }
 
-void ShaderLoader::Reload(ShaderObjectHandle handle, string name)
+void ShaderLoader::reload(ShaderObjectHandle handle, string name)
 {
-    auto shader_object = ReadAndCompile(name);
+    auto shader_object = readAndCompile(name);
     auto shader = game.shaders.equalRange(handle);
     if (shader.first != shader.second) {
         game.shaders.updateResource(shader.first, std::move(shader_object));
