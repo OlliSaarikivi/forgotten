@@ -85,6 +85,15 @@ struct PutHelper
         }
     }
 };
+template<typename TRow, typename TComparison>
+struct PutHelper<TRow, flat_multiset<TRow, TComparison>>
+{
+    template<typename TRow2>
+    static void tPut(flat_multiset<TRow, TComparison>& buffer, TRow2&& row)
+    {
+        buffer.emplace(std::forward<TRow2>(row));
+    }
+};
 template<typename TRow>
 struct PutHelper<TRow, vector<TRow>>
 {

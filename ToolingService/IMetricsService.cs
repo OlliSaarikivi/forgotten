@@ -16,12 +16,12 @@ namespace ToolingService
         void OnTick(TickTimings tick);
     }
 
-    [ServiceContract(CallbackContract = typeof(IMetricsEvents))]
+    [ServiceContract(SessionMode = SessionMode.Required, CallbackContract = typeof(IMetricsEvents))]
     interface IMetricsSubscribeService
     {
-        [OperationContract]
+        [OperationContract(IsOneWay = false, IsInitiating = true)]
         void Subscribe();
-        [OperationContract]
+        [OperationContract(IsOneWay = false, IsTerminating = true)]
         void Unsubscribe();
     }
 
@@ -42,9 +42,7 @@ namespace ToolingService
         [DataMember]
         public uint TotalDurationNanos { get; set; }
         [DataMember]
-        public List<ProcessTiming> ProcessTimings { get { return _processTimings; } }
-        [IgnoreDataMember]
-        private List<ProcessTiming> _processTimings = new List<ProcessTiming>();
+        public List<ProcessTiming> ProcessTimings { get; set; }
     }
 
     [DataContract]

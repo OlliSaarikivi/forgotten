@@ -8,7 +8,7 @@ using System.ServiceModel;
 
 namespace ToolingService
 {
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.PerSession)]
+    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     class ToolingService : IMetricsPublishService, IMetricsSubscribeService
     {
         public event TickEvent _tickHandlers;

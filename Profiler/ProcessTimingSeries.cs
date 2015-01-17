@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -7,26 +8,35 @@ using System.Threading.Tasks;
 
 namespace Profiler
 {
+    class ProcessDataPoint
+    {
+        public int Tick { get; set; }
+        public float Duration { get; set; }
+    }
+
     class ProcessTimingSeries : INotifyPropertyChanged
     {
-        const uint window_size = 50;
+        const int window_size = 10;
 
-        public Queue<float> Data
+        public ObservableCollection<ProcessDataPoint> Data
         {
             get
             {
                 return data;
             }
         }
-        private Queue<float> data = new Queue<float>();
+        private ObservableCollection<ProcessDataPoint> data = new ObservableCollection<ProcessDataPoint>();
 
-        public void Add(uint timingNanos)
+        public void Add(int tick, uint timingNanos)
         {
-            while (data.Count >= 50)
+            while (data.Count >= window_size)
             {
-                data.Dequeue();
+                data.RemoveAt(0);
             }
-            data.Enqueue(timingNanos/1000000f);
+            data.Add(new ProcessDataPoint {
+                Tick = tick,
+                Duration = timingNanos/1000000f,
+            });
             OnPropertyChanged("Data");
         }
 

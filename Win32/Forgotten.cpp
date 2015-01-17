@@ -53,7 +53,7 @@ void init()
         debugMsg("VSync not supported");
     }
 
-#ifdef DEBUG
+#ifdef METRICS
     startMetricsService();
 #endif
 }
@@ -70,7 +70,6 @@ unique_ptr<Game> createGame()
     TextureLoader(*game).loadSpriteArrays();
 
     Eid player = game->createEid();
-    Eid monster = game->createEid();
 
     game->race_max_speeds.put(Row<Race, MaxSpeed>({ 1 }, { 20.0f }));
     game->races.put(Row<Eid, Race>({ player }, { 1 }));
@@ -99,24 +98,28 @@ unique_ptr<Game> createGame()
     game->createMobile(player, player_def);
 
     MobileDef monster_def;
-    monster_def.true_name = "bob";
-    monster_def.position = vec2(15.0f, 5.0f);
-    monster_def.shape = &humanoid_shape;
-    monster_def.knockback = 50;
-    game->createMobile(monster, monster_def);
+    Eid target = player;
+    for (int i = 0; i < 100; ++i) {
+        Eid monster = game->createEid();
+        monster_def.true_name = "bob";
+        monster_def.position = vec2(-15.0f+(i%20)*0.5f, 5.0f+(i/20)*0.5f);
+        monster_def.shape = &humanoid_shape;
+        monster_def.knockback = 50;
+        game->createMobile(monster, monster_def);
+        // Add monster target (ugly hack)
+        game->targets.put(Row<Eid, TargetPositionHandle>({ monster }, { *game->position_handles.equalRange(Row<Eid>(target)).first }));
+        target = monster;
+    }
 
     // Set player controllable
     game->controllables.put(Row<Eid>({ player }));
-
-    // Add monster target (ugly hack)
-    game->targets.put(Row<Eid, TargetPositionHandle>({ monster }, { *game->position_handles.equalRange(Row<Eid>(player)).first }));
 
     return game;
 }
 
 void close()
 {
-#ifdef DEBUG
+#ifdef METRICS
     stopMetricsService();
 #endif
     if (main_context) {

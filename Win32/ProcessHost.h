@@ -318,12 +318,12 @@ struct ProcessHost
     {
         assert(execution_order.size() == processes.size());
         for (auto &process : execution_order) {
-#ifdef DEBUG
+#ifdef METRICS
             auto start = Game::Clock::now();
 #endif
             process->doTick(step);
-#ifdef DEBUG
-            logProcess(process->name(), Game::Clock::now() - start);
+#ifdef METRICS
+            logProcess(typeid(*process).name(), Game::Clock::now() - start);
 #endif
 
         }

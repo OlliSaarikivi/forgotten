@@ -104,11 +104,9 @@ struct Controls : GameProcess
             for (const Eid& eid : to_speech_mode) {
                 sentences.put({ eid, { "" } });
             }
-            to_speech_mode.clear();
             for (const Eid& eid : to_action_mode) {
                 sentences.erase(Row<Eid>(eid));
             }
-            to_action_mode.clear();
         }
     }
 private:

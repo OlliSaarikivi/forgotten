@@ -193,6 +193,9 @@
     <ClCompile Include="MetricsService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TrueSentenceInterpreter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="data\shaders\SingleSprite.fs.glsl">

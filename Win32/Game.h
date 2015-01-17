@@ -71,7 +71,7 @@ struct Game : Hosts<Game>
         = simulation.persistent();
     Table<Row<Eid, SentenceString>, OrderedUnique<Key<Eid>>>& speak_actions
         = simulation.stream();
-    Table<Row<TrueName, Eid>, OrderedUnique<Key<TrueName>>>& true_names
+    Table<Row<TrueName, Eid>, OrderedNonUnique<Key<TrueName>>>& true_names
         = simulation.persistent();
 
     // Movement

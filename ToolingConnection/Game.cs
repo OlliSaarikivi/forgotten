@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using RGiesecke.DllExport;
 using ToolingConnection.ToolingService;
+using System.ServiceModel;
 
 namespace ToolingConnection
 {
-    class Game
+    public class Game
     {
         static bool _started = false;
         static MetricsPublishServiceClient _client;
@@ -18,7 +19,9 @@ namespace ToolingConnection
         [DllExport("metrics_start", CallingConvention.Cdecl)]
         public static bool Start()
         {
-            _client = new MetricsPublishServiceClient();
+            var binding = new NetNamedPipeBinding();
+            var endpoint = new EndpointAddress("net.pipe://localhost/Forgotten/MetricsPublish");
+            _client = new MetricsPublishServiceClient(binding, endpoint);
             _client.Open();
             return true;
         }
@@ -55,6 +58,7 @@ namespace ToolingConnection
             {
                 Phase = phase,
                 Step = step,
+                ProcessTimings = new List<ProcessTiming>(),
             };
         }
 

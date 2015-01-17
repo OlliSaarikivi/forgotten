@@ -121,9 +121,6 @@ namespace ToolingConnection.ToolingService {
         [System.Runtime.Serialization.OptionalFieldAttribute()]
         private string NameField;
         
-        [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private uint OffsetNanosField;
-        
         [global::System.ComponentModel.BrowsableAttribute(false)]
         public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
             get {
@@ -156,19 +153,6 @@ namespace ToolingConnection.ToolingService {
                 if ((object.ReferenceEquals(this.NameField, value) != true)) {
                     this.NameField = value;
                     this.RaisePropertyChanged("Name");
-                }
-            }
-        }
-        
-        [System.Runtime.Serialization.DataMemberAttribute()]
-        public uint OffsetNanos {
-            get {
-                return this.OffsetNanosField;
-            }
-            set {
-                if ((this.OffsetNanosField.Equals(value) != true)) {
-                    this.OffsetNanosField = value;
-                    this.RaisePropertyChanged("OffsetNanos");
                 }
             }
         }

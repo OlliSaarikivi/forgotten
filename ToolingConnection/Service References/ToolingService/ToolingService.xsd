@@ -19,7 +19,6 @@
     <xs:sequence>
       <xs:element minOccurs="0" name="DurationNanos" type="xs:unsignedInt" />
       <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string" />
-      <xs:element minOccurs="0" name="OffsetNanos" type="xs:unsignedInt" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ProcessTiming" nillable="true" type="tns:ProcessTiming" />

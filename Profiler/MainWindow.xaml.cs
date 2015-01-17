@@ -29,11 +29,12 @@ namespace Profiler
         {
             MainWindow main;
 
-            public MetricsEventsHandler(MainWindow main) : base()
+            public MetricsEventsHandler(MainWindow main)
+                : base()
             {
                 this.main = main;
             }
-            
+
             public void OnTick(TickTimings tick)
             {
                 main.AddTick(tick);
@@ -58,14 +59,22 @@ namespace Profiler
         class Phase
         {
             Dictionary<string, ProcessTimingSeries> timingSeries = new Dictionary<string, ProcessTimingSeries>();
-            StackedAreaSeries seriesControl;
+            Chart chart;
+            ProcessTimingSeries phaseSeries;
+            DateTime lastUpdated = DateTime.MinValue;
+            int currentTick = 1;
 
-            public Phase(TabControl chartTabs, string phaseName)
+            public Phase(TabControl chartTabs, Style chartStyle, string phaseName)
             {
                 var grid = new Grid();
-                var chart = new Chart
+                var item = new TabItem
+                {
+                    Header = phaseName,
+                };
+                chart = new Chart
                 {
                     Title = phaseName,
+                    Style = chartStyle,
                 };
                 chart.Axes.Add(new LinearAxis
                 {
@@ -73,33 +82,49 @@ namespace Profiler
                 });
                 chart.Axes.Add(new LinearAxis
                 {
-                    Orientation = AxisOrientation.Y
+                    Orientation = AxisOrientation.Y,
+                    Minimum = 0,
+                    Maximum = 16,
                 });
-                seriesControl = new StackedAreaSeries();
-                chart.Series.Add(seriesControl);
+                phaseSeries = new ProcessTimingSeries();
+                var phaseLineSeries = new LineSeries
+                {
+                    Title = "Total",
+                    ItemsSource = phaseSeries.Data,
+                    IndependentValuePath = "Tick",
+                    DependentValuePath = "Duration",
+                };
+                chart.Series.Add(phaseLineSeries);
                 grid.Children.Add(chart);
-                chartTabs.Items.Add(grid);
+                item.Content = grid;
+                chartTabs.Items.Add(item);
             }
 
             public void AddTick(TickTimings tick)
             {
-                foreach (var process in tick.ProcessTimings)
+                if (DateTime.Now - lastUpdated > TimeSpan.FromSeconds(0.5))
                 {
-                    ProcessTimingSeries series;
-                    if (!timingSeries.TryGetValue(process.Name, out series))
+                    lastUpdated = DateTime.Now;
+                    foreach (var process in tick.ProcessTimings)
                     {
-                        series = new ProcessTimingSeries();
-                        var binding = new Binding("Data");
-                        binding.Source = series;
-                        var definition = new SeriesDefinition
+                        ProcessTimingSeries series;
+                        if (!timingSeries.TryGetValue(process.Name, out series))
                         {
-                            DataContext = series,
-                            DependentValueBinding = binding
-                        };
-                        seriesControl.SeriesDefinitions.Add(definition);
-                        timingSeries.Add(process.Name, series);
+                            series = new ProcessTimingSeries();
+                            var lineSeries = new LineSeries
+                            {
+                                Title = process.Name,
+                                ItemsSource = series.Data,
+                                IndependentValuePath = "Tick",
+                                DependentValuePath = "Duration",
+                            };
+                            chart.Series.Add(lineSeries);
+                            timingSeries.Add(process.Name, series);
+                        }
+                        series.Add(currentTick, process.DurationNanos);
                     }
-                    series.Add(process.DurationNanos);
+                    phaseSeries.Add(currentTick, tick.TotalDurationNanos);
+                    currentTick += 1;
                 }
             }
         }
@@ -111,7 +136,7 @@ namespace Profiler
             Phase phase;
             if (!phases.TryGetValue(tick.Phase, out phase))
             {
-                phase = new Phase(ChartTabs, tick.Phase);
+                phase = new Phase(ChartTabs, (Style)Resources["MyChartStyle"], tick.Phase);
                 phases.Add(tick.Phase, phase);
             }
             phase.AddTick(tick);
@@ -128,7 +153,11 @@ namespace Profiler
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            _client.Unsubscribe();
+            try
+            {
+                _client.Unsubscribe();
+            }
+            catch { }
         }
     }
 }

@@ -178,8 +178,8 @@ void Game::run()
             now = Clock::now();
         }
 
-#ifdef DEBUG
-        beginLogTick("output", timeless_step);
+#ifdef METRICS
+        beginLogTick("Output", timeless_step);
 #endif
         auto begin_update = now;
         output.tick(timeless_step);
@@ -187,7 +187,7 @@ void Game::run()
         output_time = now;
         auto output_actual = now - begin_update;
         output_predictor.update(output_actual);
-#ifdef DEBUG
+#ifdef METRICS
         endLogTick(output_actual);
 #endif
 
@@ -209,8 +209,8 @@ void Game::run()
             clamped_step = std::max(min_sim_step, std::min(max_sim_step, ideal_step));
 
             float tick = boost::chrono::duration_cast<boost::chrono::nanoseconds>(clamped_step).count() / 1e9f;
-#ifdef DEBUG
-            beginLogTick("simulation", tick);
+#ifdef METRICS
+            beginLogTick("Simulation", tick);
 #endif
             auto begin_simulation = now;
             simulation.tick(tick);
@@ -219,7 +219,7 @@ void Game::run()
             auto simulation_actual = now - begin_simulation;
             simulation_predictor.update(simulation_actual);
             ++simulation_substeps;
-#ifdef DEBUG
+#ifdef METRICS
             endLogTick(simulation_actual);
 #endif
         }

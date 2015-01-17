@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "MetricsService.h"
+#include <iostream>
+
+#ifdef METRICS
 
 // Symbols from ProfilerConnection
 extern "C" {
@@ -20,9 +23,9 @@ void stopMetricsService()
     metrics_stop();
 }
 
-void logProcess(const string& name, boost::chrono::milliseconds runtime)
+void logProcess(const string& name, boost::chrono::nanoseconds runtime)
 {
-    metrics_processTiming(name.c_str(), static_cast<boost::chrono::nanoseconds>(runtime).count());
+    metrics_processTiming(name.c_str(), runtime.count());
 }
 
 void beginLogTick(const string& phase, float step)
@@ -30,7 +33,9 @@ void beginLogTick(const string& phase, float step)
     metrics_beginTick(phase.c_str(), step);
 }
 
-void endLogTick(boost::chrono::milliseconds runtime)
+void endLogTick(boost::chrono::nanoseconds runtime)
 {
-    metrics_endTick(static_cast<boost::chrono::nanoseconds>(runtime).count());
+    metrics_endTick(runtime.count());
 }
+
+#endif
