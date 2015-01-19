@@ -22,6 +22,7 @@
 #include <iomanip>
 #include <limits>
 #include <unordered_set>
+#include <unordered_map>
 
 #include <boost/container/flat_set.hpp>
 #include <boost/container/flat_map.hpp>
@@ -29,6 +30,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
+#include <boost/multi_array.hpp>
 
 #include <windows.h>
 #define GLEW_STATIC

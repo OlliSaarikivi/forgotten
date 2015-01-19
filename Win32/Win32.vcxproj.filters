@@ -158,6 +158,9 @@
     <ClInclude Include="MetricsService.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TrueLanguage.h">
+      <Filter>Header Files\Simulation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -193,7 +196,7 @@
     <ClCompile Include="MetricsService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TrueSentenceInterpreter.cpp">
+    <ClCompile Include="TrueLanguage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

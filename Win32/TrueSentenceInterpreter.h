@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TrueLanguage.h"
 #include "GameProcess.h"
 
 struct TrueSentenceInterpreter : GameProcess

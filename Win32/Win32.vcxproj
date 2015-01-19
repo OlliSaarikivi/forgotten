@@ -185,6 +185,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="TrueLanguage.h" />
     <ClInclude Include="TrueSentenceInterpreter.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
@@ -206,7 +207,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profiling|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TextureLoader.cpp" />
-    <ClCompile Include="TrueSentenceInterpreter.cpp" />
+    <ClCompile Include="TrueLanguage.cpp" />
     <ClCompile Include="WalkCycle.cpp" />
   </ItemGroup>
   <ItemGroup>
