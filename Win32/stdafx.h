@@ -24,9 +24,11 @@
 #include <unordered_set>
 
 #include <boost/container/flat_set.hpp>
+#include <boost/container/flat_map.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/variant.hpp>
 
 #include <windows.h>
 #define GLEW_STATIC
