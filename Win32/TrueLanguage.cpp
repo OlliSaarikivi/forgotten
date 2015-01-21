@@ -10,8 +10,16 @@
 
 using boost::multi_array;
 
-Grammar::Grammar()
+Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerminal>> original_non_terminals)
+    : terminals(terminals), original_non_terminals(original_non_terminals)
 {
+    for (const auto& original : *original_non_terminals) {
+        auto non_terminal = NonTerminal2{};
+        for (const auto& original_rule : original.rules) {
+
+        }
+    }
+
     flat_set<Symbol*> nullables;
     vector<Symbol*> todo;
     using NullabilityReq = vector<pair<Symbol*, vector<Symbol*>>>;
@@ -86,19 +94,22 @@ Grammar::Grammar()
     }
 }
 
-void Grammar::parse(const vector<flat_set<WeightedSymbol>>& sentence)
+void Grammar::parse(const vector<flat_multiset<WeightedSymbol>>& sentence)
 {
     auto n = sentence.size();
-    auto chart = multi_array<flat_set<WeightedSymbol>, 2>(boost::extents[n][n]);
+    auto chart = multi_array<flat_multiset<WeightedSymbol>, 2>(boost::extents[n][n]);
     for (auto i = 0*n; i < n; ++i) {
         chart[i][i] = sentence[i];
     }
     for (auto first = 0 * n; first < n - 1; ++first) {
         for (auto last = first + 1; last < n; ++last) {
             for (const auto& non_terminal : non_terminals) {
-                std::function<void()> split = [&]() {
-                    split(); // TODO
+                std::function<void(const vector<Symbol*>&, size_t)> min_split = [&](const vector<Symbol*>& rule, size_t num_satisfied) {
+                    
                 };
+                for (const auto& rule : non_terminal.rules) {
+                    min_split(rule, 0);
+                }
             }
         }
     }
