@@ -16,7 +16,7 @@ Grammar::Grammar()
     vector<Symbol*> todo;
     using NullabilityReq = vector<pair<Symbol*, vector<Symbol*>>>;
     unordered_map<Symbol*, NullabilityReq> occurs;
-    for (const auto& A : non_terminals) {
+    for (auto& A : non_terminals) {
         // Populate the requirements for this non-terminal being nullable
         for (const auto& rule : A.rules) {
             for (auto B = rule.begin(), rule_end = rule.end(); B != rule_end; ++B) {
@@ -55,31 +55,31 @@ Grammar::Grammar()
                 };
                 bool others_nullable = std::accumulate(rule.begin(), rule.end(), true, and_nullable_or_B);
                 if (others_nullable) {
-                    B->unit_from.emplace(A);
+                    B->unit_from.emplace(&A);
                 }
             }
         }
     }
     // Transitively close the inverse unit relation. The trivial implementation below may need
     // a number of iterations equal to the depth of the grammar to terminate.
-    vector<Symbol&> symbols;
+    vector<Symbol*> symbols;
     for (auto& symbol : non_terminals) {
-        symbols.emplace_back(symbol);
+        symbols.emplace_back(&symbol);
     }
     for (auto& symbol : terminals) {
-        symbols.emplace_back(symbol);
+        symbols.emplace_back(&symbol);
     }
     bool done = false;
     while (!done) {
         done = true;
         for (auto& symbol : symbols) {
-            auto size_before = symbol.unit_from.size();
-            for (const auto& source : symbol.unit_from) {
+            auto size_before = symbol->unit_from.size();
+            for (const auto& source : symbol->unit_from) {
                 for (const auto& source_unit_source : source->unit_from) {
-                    symbol.unit_from.emplace(source_unit_source);
+                    symbol->unit_from.emplace(source_unit_source);
                 }
             }
-            if (size_before != symbol.unit_from.size()) {
+            if (size_before != symbol->unit_from.size()) {
                 done = false;
             }
         }

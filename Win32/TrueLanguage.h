@@ -6,6 +6,8 @@ struct Symbol
 {
     string name;
     flat_set<NonTerminal*> unit_from;
+    Symbol(const Symbol&) = delete;
+    Symbol& operator=(const Symbol&) = delete;
 };
 
 namespace impl
