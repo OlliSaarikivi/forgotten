@@ -1,6 +1,6 @@
 #pragma once
 
-struct NonTerminal;
+struct NonTerminal2NF;
 
 struct Symbol
 {
@@ -9,7 +9,7 @@ struct Symbol
     Symbol& operator=(const Symbol&) = delete;
 
     string name;
-    flat_set<NonTerminal*> unit_from;
+    flat_set<NonTerminal2NF*> unit_from;
 };
 
 namespace impl
@@ -32,30 +32,24 @@ namespace impl
 
 struct NonTerminal : public Symbol
 {
+    NonTerminal(string name) : Symbol(name) {}
+
     flat_multiset<vector<Symbol*>, impl::RuleSizeLess> rules;
 };
 
-struct NonTerminal2 : public Symbol
+struct NonTerminal2NF : public Symbol
 {
-    flat_multiset<pair<Symbol*, Symbol*>, impl::Rule2SizeLess> rules;
-};
+    NonTerminal2NF(string name) : Symbol(name) {}
 
-struct WeightedSymbol
-{
-    int weight;
-    Symbol* symbol;
-    inline bool operator<(const WeightedSymbol& right) const
-    {
-        return weight < right.weight;
-    }
+    flat_multiset<pair<Symbol*, Symbol*>, impl::Rule2SizeLess> rules;
 };
 
 struct Grammar
 {
-    Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerminal>> non_terminals);
-    void parse(const vector<flat_multiset<WeightedSymbol>>& sentence);
+    Grammar(vector<Symbol*> terminals, vector<NonTerminal*> non_terminals);
+    void parse(const vector<flat_map<Symbol*, int>>& sentence);
 private:
-    unique_ptr<vector<Symbol>> terminals;
-    unique_ptr<vector<NonTerminal>> original_non_terminals;
-    vector<NonTerminal2> non_terminals;
+    vector<Symbol*> terminals;
+    vector<NonTerminal*> original_non_terminals;
+    vector<unique_ptr<NonTerminal2NF>> non_terminals;
 };

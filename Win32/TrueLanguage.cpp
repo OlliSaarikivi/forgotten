@@ -5,37 +5,79 @@
 #include <numeric>
 
 // CYK algorithm adapted from Lange & Leiss (2009) "To CNF or not to CNF?
-// An Efficient Yet Presentable Version of the CYK Algorithm". The 2NF requirement
-// has been dropped.
+// An Efficient Yet Presentable Version of the CYK Algorithm".
 
 using boost::multi_array;
 
-Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerminal>> original_non_terminals)
+Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_terminals)
     : terminals(terminals), original_non_terminals(original_non_terminals)
 {
-    for (const auto& original : *original_non_terminals) {
-        auto non_terminal = NonTerminal2{};
-        for (const auto& original_rule : original.rules) {
-
+    flat_set<Symbol*> terminals_set;
+    unordered_map<Symbol*, Symbol*> replacements;
+    for (const auto& terminal : terminals) {
+        terminals_set.emplace(terminal);
+        replacements.emplace(terminal, terminal);
+        terminal->unit_from.clear();
+    }
+    // Create a 2NF non terminal for each original non terminal
+    unordered_map<NonTerminal*, NonTerminal2NF*> nt_replacements;
+    for (const auto& original : original_non_terminals) {
+        auto root_replacement = std::make_unique<NonTerminal2NF>(original->name);
+        replacements.emplace(original, root_replacement.get());
+        nt_replacements.emplace(original, root_replacement.get());
+        non_terminals.emplace_back(std::move(root_replacement));
+    }
+    // Create new 2NF non terminals to implement rules longer than 2
+    unordered_map<pair<Symbol*, Symbol*>, Symbol*> suffix_abbreviations;
+    for (const auto& original : original_non_terminals) {
+        auto nt_replacement = nt_replacements[original];
+        for (auto& rule : original->rules) {
+            auto size = rule.size();
+            if (size < 2) {
+                nt_replacement->rules.emplace(
+                    size >= 1 ? replacements[rule[0]] : nullptr,
+                    size >= 2 ? replacements[rule[1]] : nullptr);
+            } else {
+                auto tail = replacements[rule[size - 1]];
+                for (auto i = size - 2; i > 1; --i) {
+                    auto head = replacements[rule[i]];
+                    auto suffix_rule = std::make_pair(head, tail);
+                    auto search = suffix_abbreviations.find(suffix_rule);
+                    if (search != suffix_abbreviations.end()) {
+                        tail = search->second;
+                    } else {
+                        auto tail_symbol = std::make_unique<NonTerminal2NF>("<" + head->name + "," + tail->name + ">");
+                        tail_symbol->rules.emplace(suffix_rule);
+                        suffix_abbreviations.emplace(suffix_rule, tail_symbol);
+                        tail = tail_symbol.get();
+                        non_terminals.emplace_back(std::move(tail_symbol));
+                    }
+                }
+            }
         }
     }
 
     flat_set<Symbol*> nullables;
     vector<Symbol*> todo;
-    using NullabilityReq = vector<pair<Symbol*, vector<Symbol*>>>;
+    using NullabilityReq = vector<pair<Symbol*, Symbol*>>;
     unordered_map<Symbol*, NullabilityReq> occurs;
     for (auto& A : non_terminals) {
         // Populate the requirements for this non-terminal being nullable
-        for (const auto& rule : A.rules) {
-            for (auto B = rule.begin(), rule_end = rule.end(); B != rule_end; ++B) {
-                auto req = occurs.emplace(*B, NullabilityReq{});
-                auto req_nullable = vector<Symbol*>();
-                req_nullable.insert(req_nullable.end(), rule.begin(), B);
-                req_nullable.insert(req_nullable.end(), std::next(B), rule.end());
+        for (const auto& rule : A->rules) {
+            if (rule.first) {
+                if (rule.second) {
+                    auto req = occurs.emplace(rule.first, NullabilityReq{});
+                    req.first->second.emplace_back(A.get(), rule.second);
+                    auto req = occurs.emplace(rule.second, NullabilityReq{});
+                    req.first->second.emplace_back(A.get(), rule.first);
+                } else {
+                    auto req = occurs.emplace(rule.first, NullabilityReq{});
+                    req.first->second.emplace_back(A.get(), nullptr);
+                }
             }
         }
         // Mark trivially nullable non-terminals
-        if (!A.rules.empty() && A.rules.begin()->size() == 0) {
+        if (!A->rules.empty() && !(A->rules.begin()->first)) {
             nullables.emplace(&A);
             todo.emplace_back(&A);
         }
@@ -46,9 +88,10 @@ Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerm
         todo.pop_back();
         for (const auto& req : occurs[B]) {
             auto A = req.first;
-            auto and_nullable = [&](bool left, Symbol* right) { return left && nullables.find(right) != nullables.end(); };
-            bool all_nullable = std::accumulate(req.second.begin(), req.second.end(), true, and_nullable);
-            if (all_nullable && nullables.find(A) == nullables.end()) {
+            if (req.second && nullables.find(req.second) == nullables.end()) {
+                continue;
+            }
+            if (nullables.find(A) == nullables.end()) {
                 nullables.emplace(A);
                 todo.emplace_back(A);
             }
@@ -56,14 +99,17 @@ Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerm
     }
     // Add first step in the inverse unit relation
     for (auto& A : non_terminals) {
-        for (auto& rule : A.rules) {
-            for (auto& B : rule) {
-                auto and_nullable_or_B = [&](bool left, Symbol* right) {
-                    return left && (nullables.find(right) != nullables.end() || right == B);
-                };
-                bool others_nullable = std::accumulate(rule.begin(), rule.end(), true, and_nullable_or_B);
-                if (others_nullable) {
-                    B->unit_from.emplace(&A);
+        for (auto& rule : A->rules) {
+            if (rule.first) {
+                if (rule.second) {
+                    if (nullables.find(rule.second) != nullables.end()) {
+                        rule.first->unit_from.emplace(A);
+                    }
+                    if (nullables.find(rule.first) != nullables.end()) {
+                        rule.second->unit_from.emplace(A);
+                    }
+                } else {
+                    rule.first->unit_from.emplace(A);
                 }
             }
         }
@@ -71,10 +117,10 @@ Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerm
     // Transitively close the inverse unit relation. The trivial implementation below may need
     // a number of iterations equal to the depth of the grammar to terminate.
     vector<Symbol*> symbols;
-    for (auto& symbol : non_terminals) {
+    for (auto& symbol : terminals) {
         symbols.emplace_back(&symbol);
     }
-    for (auto& symbol : terminals) {
+    for (auto& symbol : non_terminals) {
         symbols.emplace_back(&symbol);
     }
     bool done = false;
@@ -94,21 +140,45 @@ Grammar::Grammar(unique_ptr<vector<Symbol>> terminals, unique_ptr<vector<NonTerm
     }
 }
 
-void Grammar::parse(const vector<flat_multiset<WeightedSymbol>>& sentence)
+void add_minimum(flat_map<Symbol*, int>& map, Symbol* symbol, int weight)
+{
+    auto search = map.find(symbol);
+    if (search == map.end() || weight < search->second) {
+        map.emplace(symbol, weight);
+    }
+}
+
+void add_unit_closure(flat_map<Symbol*, int>& map, Symbol* symbol, int weight)
+{
+    add_minimum(map, symbol, weight);
+    for (const auto& entry : symbol->unit_from) {
+        add_minimum(map, entry, weight);
+    }
+}
+
+void Grammar::parse(const vector<flat_map<Symbol*, int>>& sentence)
 {
     auto n = sentence.size();
-    auto chart = multi_array<flat_multiset<WeightedSymbol>, 2>(boost::extents[n][n]);
+    auto chart = multi_array<flat_map<Symbol*, int>, 2>(boost::extents[n][n]);
     for (auto i = 0*n; i < n; ++i) {
-        chart[i][i] = sentence[i];
+        auto map = chart[i][i];
+        for (const auto& entry : sentence[i]) {
+            add_unit_closure(map, entry.first, entry.second);
+        }
     }
-    for (auto first = 0 * n; first < n - 1; ++first) {
-        for (auto last = first + 1; last < n; ++last) {
-            for (const auto& non_terminal : non_terminals) {
-                std::function<void(const vector<Symbol*>&, size_t)> min_split = [&](const vector<Symbol*>& rule, size_t num_satisfied) {
-                    
-                };
-                for (const auto& rule : non_terminal.rules) {
-                    min_split(rule, 0);
+    for (auto j = 1 * n; j < n - 1; ++j) {
+        for (auto i = j - 1; j >= 0; --j) {
+            for (auto h = i; h < j; ++h) {
+                for (const auto& non_terminal : non_terminals) {
+                    for (const auto& rule : non_terminal->rules) {
+                        if (rule.first && rule.second) {
+                            auto first_entry = chart[i][h].find(rule.first);
+                            auto second_entry = chart[h + 1][j].find(rule.second);
+                            if (first_entry != chart[i][h].end() && second_entry != chart[h + 1][j].end()) {
+                                add_unit_closure(chart[i][j], non_terminal.get(), first_entry->second + second_entry->second);
+                            }
+                        }
+                    }
                 }
             }
         }
