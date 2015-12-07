@@ -31,6 +31,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/optional.hpp>
 
 #include <windows.h>
 #define GLEW_STATIC

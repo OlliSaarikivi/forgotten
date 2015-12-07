@@ -18,6 +18,7 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
         terminals_set.emplace(terminal);
         replacements.emplace(terminal, terminal);
         terminal->unit_from.clear();
+		terminal->unit_from_rules.clear();
     }
     // Create a 2NF non terminal for each original non terminal
     unordered_map<NonTerminal*, NonTerminal2NF*> nt_replacements;
@@ -80,6 +81,7 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
         if (!A->rules.empty() && !(A->rules.begin()->first)) {
             nullables.emplace(&A);
             todo.emplace_back(&A);
+			A->null_derivation = {A, {nullptr, nullptr}};
         }
     }
     // Using the requirements check which actually are nullable
@@ -104,12 +106,15 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
                 if (rule.second) {
                     if (nullables.find(rule.second) != nullables.end()) {
                         rule.first->unit_from.emplace(A);
+						rule.first->unit_from_rules.emplace(A, rule.first);
                     }
                     if (nullables.find(rule.first) != nullables.end()) {
                         rule.second->unit_from.emplace(A);
+						rule.second->unit_from_rules.emplace(A, rule.second);
                     }
                 } else {
                     rule.first->unit_from.emplace(A);
+					rule.first->unit_from_rules.emplace(A, rule.first);
                 }
             }
         }
@@ -126,48 +131,60 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
     bool done = false;
     while (!done) {
         done = true;
-        for (auto& symbol : symbols) {
-            auto size_before = symbol->unit_from.size();
-            for (const auto& source : symbol->unit_from) {
-                for (const auto& source_unit_source : source->unit_from) {
-                    symbol->unit_from.emplace(source_unit_source);
+        for (auto symbol : symbols) {
+            for (const auto source : symbol->unit_from) {
+                for (const auto source_unit_source : source->unit_from) {
+                    auto result = symbol->unit_from.emplace(source_unit_source);
+					if (result.second) {
+						auto combined = source->unit_from_rules.at(source_unit_source);
+						const auto& from_source = symbol->unit_from_rules.at(source);
+						combined.insert(end(combined), begin(from_source), end(from_source));
+						symbol->unit_from_rules.emplace(source_unit_source, combined);
+						done = false;
+					}
                 }
-            }
-            if (size_before != symbol->unit_from.size()) {
-                done = false;
             }
         }
     }
 }
 
-void add_minimum(flat_map<Symbol*, int>& map, Symbol* symbol, int weight)
+struct SymbolEntry
+{
+	int weight;
+	pair<Symbol*, Symbol*> rule;
+	int second_index;
+};
+
+void addMinimum(flat_map<Symbol*, SymbolEntry>& map, Symbol* symbol, SymbolEntry candidate)
 {
     auto search = map.find(symbol);
-    if (search == map.end() || weight < search->second) {
-        map.emplace(symbol, weight);
+    if (search == map.end() || candidate.weight < search->second.weight) {
+        auto result = map.emplace(symbol, candidate);
+		if (!result.second)
+			result.first->second = candidate;
     }
 }
 
-void add_unit_closure(flat_map<Symbol*, int>& map, Symbol* symbol, int weight)
+void addUnitClosure(flat_map<Symbol*, SymbolEntry>& map, Symbol* symbol, SymbolEntry candidate)
 {
-    add_minimum(map, symbol, weight);
+	addMinimum(map, symbol, candidate);
     for (const auto& entry : symbol->unit_from) {
-        add_minimum(map, entry, weight);
+		addMinimum(map, entry, );
     }
 }
 
 void Grammar::parse(const vector<flat_map<Symbol*, int>>& sentence)
 {
     auto n = sentence.size();
-    auto chart = multi_array<flat_map<Symbol*, int>, 2>(boost::extents[n][n]);
-    for (auto i = 0*n; i < n; ++i) {
+    auto chart = multi_array<flat_map<Symbol*, SymbolEntry>, 2>(boost::extents[n][n]);
+    for (auto i = decltype(n)(0); i < n; ++i) {
         auto map = chart[i][i];
         for (const auto& entry : sentence[i]) {
-            add_unit_closure(map, entry.first, entry.second);
+			addUnitClosure(map, entry.first, {entry.second, {nullptr, nullptr}, -1});
         }
     }
-    for (auto j = 1 * n; j < n - 1; ++j) {
-        for (auto i = j - 1; j >= 0; --j) {
+    for (auto j = decltype(n)(1); j < n - 1; ++j) {
+        for (auto i = j - 1; i >= 0; --i) {
             for (auto h = i; h < j; ++h) {
                 for (const auto& non_terminal : non_terminals) {
                     for (const auto& rule : non_terminal->rules) {
@@ -175,7 +192,8 @@ void Grammar::parse(const vector<flat_map<Symbol*, int>>& sentence)
                             auto first_entry = chart[i][h].find(rule.first);
                             auto second_entry = chart[h + 1][j].find(rule.second);
                             if (first_entry != chart[i][h].end() && second_entry != chart[h + 1][j].end()) {
-                                add_unit_closure(chart[i][j], non_terminal.get(), first_entry->second + second_entry->second);
+								int combined_weight = first_entry->second.weight + second_entry->second.weight;
+								addUnitClosure(chart[i][j], non_terminal.get(), {combined_weight, rule, h + 1});
                             }
                         }
                     }
@@ -183,4 +201,11 @@ void Grammar::parse(const vector<flat_map<Symbol*, int>>& sentence)
             }
         }
     }
+
+	if (chart[0][n - 1].empty()) {
+		// TODO: no result
+		return;
+	}
+
+
 }

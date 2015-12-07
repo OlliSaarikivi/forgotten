@@ -86,7 +86,7 @@ struct Game : Hosts<Game>
     Table<Row<Eid, TargetPositionHandle>, OrderedUnique<Key<Eid>>>& targets
         = simulation.persistent();
 
-    // Collsisions
+    // Collisions
     Table<Row<KnockbackImpulse>, HashedUnique<Key<FixtureA>>>& knockback_impulses
         = simulation.persistent();
     Table<Row<KnockbackEnergy>, HashedUnique<Key<FixtureA, FixtureB>>>& knockback_energies

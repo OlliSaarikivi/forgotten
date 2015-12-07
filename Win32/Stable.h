@@ -58,9 +58,8 @@ struct Stable : Channel
             references[handle.get()].actual = HandleType::NullHandle();
             free = handle;
             return 1;
-        } else {
+        } else
             return 0;
-        }
     }
     pair<const_iterator, const_iterator> equalRange(const HandleType& handle) const
     {

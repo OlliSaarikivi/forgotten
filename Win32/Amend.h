@@ -31,9 +31,8 @@ struct AmendIterator<TRow, TLeft, TRight, true>
             while (right != right_end && KeyType::less(*right, *left)) {
                 ++right;
             }
-        } else {
+        } else
             goToEnd();
-        }
     }
     AmendIterator<TRow, TLeft, TRight, true>& operator++()
     {
@@ -44,9 +43,8 @@ struct AmendIterator<TRow, TLeft, TRight, true>
     TRow operator*() const
     {
         auto amended_row = TRow(*left);
-        if (right != right_end && !KeyType::less(*left, *right)) {
+        if (right != right_end && !KeyType::less(*left, *right))
             amended_row.setAll(*right);
-        }
         return amended_row;
     }
     FauxRowPointer<TRow> operator->() const

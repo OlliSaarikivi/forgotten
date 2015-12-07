@@ -22,6 +22,7 @@ struct ResourceStable : Channel
             references[i].actual = HandleType::NullHandle();
         }
     }
+	/* Are these actually needed?
     const_iterator begin() const
     {
         auto begin = rows.begin();
@@ -30,7 +31,7 @@ struct ResourceStable : Channel
     const_iterator end() const
     {
         return const_iterator(RowType({ valid_end->first }, { valid_end->second.get() }));
-    }
+    } */
     RowType putResource(unique_ptr<ValueType> resource)
     {
         assert(valid_end != rows.end());
@@ -68,9 +69,8 @@ struct ResourceStable : Channel
             references[handle.get()].actual = HandleType::NullHandle();
             free = handle;
             return 1;
-        } else {
+        } else
             return 0;
-        }
     }
     pair<const_iterator, const_iterator> equalRange(const HandleType& handle) const
     {

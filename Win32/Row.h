@@ -52,7 +52,8 @@ struct Row : TColumns...
     template<typename TOther, typename... TOthers, typename sfinae = typename std::enable_if<IsRow<TOther>::value>::type>
     Row(const TOther& other, const TOthers&... others)
     {
-        static_assert(ColumnsCover<typename ConcatRows<TOther, TOthers...>::type, Row<TColumns...>>::value, "all columns must be set");
+        static_assert(ColumnsCover<typename ConcatRows<TOther, TOthers...>::type, Row<TColumns...>>::value,
+			"all columns must be set");
         SetRowsHelper<TOther, TOthers...>::tSetRows(*this, other, others...);
     }
 
