@@ -11,8 +11,8 @@ struct Symbol
 
     string name;
     flat_set<NonTerminal2NF*> unit_from;
-	flat_map<NonTerminal2NF*, ParseTree2NF> unit_from_derivations;
-	optional<ParseTree2NF> null_derivation;
+	flat_map<NonTerminal2NF*, shared_ptr<ParseTree2NF>> unit_from_derivations;
+	optional<shared_ptr<ParseTree2NF>> null_derivation;
 };
 
 namespace impl
@@ -56,7 +56,7 @@ struct ParseTree
 struct ParseTree2NF
 {
 	Symbol* symbol;
-	optional<pair<unique_ptr<ParseTree2NF>, unique_ptr<ParseTree2NF>>> derivation;
+	optional<pair<shared_ptr<ParseTree2NF>, shared_ptr<ParseTree2NF>>> derivation;
 };
 
 struct Grammar

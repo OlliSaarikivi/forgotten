@@ -51,30 +51,27 @@ long parseSize(const wchar_t* str)
 void TextureLoader::loadSpriteArrays()
 {
     auto textures_dir = getDataDir() / TEXTURES_DIR;
-    if (!fs::exists(textures_dir)) {
+    if (!fs::exists(textures_dir))
         fatalError(FORMAT("Missing directory: " << textures_dir));
-    }
-    if (!fs::is_directory(textures_dir)) {
+    if (!fs::is_directory(textures_dir))
         fatalError(FORMAT("Textures directory is a file: " << textures_dir));
-    }
     for (auto tex_dir_iter = fs::directory_iterator(textures_dir); tex_dir_iter != fs::directory_iterator(); ++tex_dir_iter) {
         auto size_dir_candidate = *tex_dir_iter;
-        if (!fs::is_directory(size_dir_candidate)) {
+        if (!fs::is_directory(size_dir_candidate))
             continue;
-        }
         long size = parseSize(size_dir_candidate.path().filename().c_str());
-        if (size <= 0) {
+        if (size <= 0)
             continue;
-        }
-        if ((size & (size - 1)) != 0) {
+        if ((size & (size - 1)) != 0)
             fatalError(FORMAT("Encountered non-power-of-two texture directory: " << size_dir_candidate));
-        }
+		if (size > std::numeric_limits<SpriteSize::Type>::max())
+			fatalError(FORMAT("Sprite size exeeds limits: " << size));
+
         // Now we have found a directory for textures of a particular size
         for (auto size_dir_iter = fs::directory_iterator(size_dir_candidate); size_dir_iter != fs::directory_iterator(); ++size_dir_iter) {
             auto type_dir_candidate = *size_dir_iter;
-            if (!fs::is_directory(type_dir_candidate)) {
+            if (!fs::is_directory(type_dir_candidate))
                 continue;
-            }
             string type = type_dir_candidate.path().filename().string();
 
             vector<string> names;
@@ -84,9 +81,11 @@ void TextureLoader::loadSpriteArrays()
             }
             TextureHandle handle = loadSpriteArray(size, type, names);
 
-            for (int i = 0; i < names.size(); ++i) {
-                game.sprite_textures.put({ { size }, { type }, { names[i] }, handle, { i } });
-            }
+			if ((names.size() - 1) > std::numeric_limits<TextureArrayIndex::Type>::max())
+				fatalError(FORMAT("Number of textures in " << type_dir_candidate << " exceeds limits of index type"));
+
+            for (int i = 0; i < names.size(); ++i)
+                game.sprite_textures.put({ { (SpriteSize::Type)size }, { type }, { names[i] }, handle, { (TextureArrayIndex::Type)i } });
         }
     }
 }

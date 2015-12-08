@@ -22,16 +22,14 @@ struct ResourceStable : Channel
             references[i].actual = HandleType::NullHandle();
         }
     }
-	/* Are these actually needed?
     const_iterator begin() const
     {
-        auto begin = rows.begin();
-        return const_iterator(RowType({ begin->first }, { begin->second.get() }));
+		fatalError("ResourceStable begin() not implemented");
     }
     const_iterator end() const
     {
-        return const_iterator(RowType({ valid_end->first }, { valid_end->second.get() }));
-    } */
+		fatalError("ResourceStable end() not implemented");
+    }
     RowType putResource(unique_ptr<ValueType> resource)
     {
         assert(valid_end != rows.end());

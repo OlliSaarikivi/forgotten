@@ -20,7 +20,7 @@ using boost::container::flat_multiset;
 using boost::container::flat_map;
 using boost::container::flat_multimap;
 using boost::optional;
-using boost::get;
+using boost::none;
 
 using glm::vec2;
 using glm::vec3;
