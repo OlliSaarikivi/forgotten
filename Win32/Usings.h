@@ -14,6 +14,8 @@ using std::unordered_map;
 using std::unordered_multimap;
 using std::pair;
 using std::tuple;
+using std::get;
+using std::stack;
 
 using boost::container::flat_set;
 using boost::container::flat_multiset;

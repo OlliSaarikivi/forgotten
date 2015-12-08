@@ -12,7 +12,8 @@ struct Symbol
     string name;
     flat_set<NonTerminal2NF*> unit_from;
 	flat_map<NonTerminal2NF*, shared_ptr<ParseTree2NF>> unit_from_derivations;
-	optional<shared_ptr<ParseTree2NF>> null_derivation;
+	shared_ptr<ParseTree2NF> null_derivation;
+	NonTerminal* original;
 };
 
 namespace impl
@@ -42,7 +43,7 @@ struct NonTerminal : Symbol
 
 struct NonTerminal2NF : Symbol
 {
-    NonTerminal2NF(string name) : Symbol(name) {}
+    NonTerminal2NF(string name, const NonTerminal* original) : Symbol(name) {}
 
     flat_multiset<pair<Symbol*, Symbol*>, impl::Rule2SizeLess> rules;
 };
@@ -56,15 +57,17 @@ struct ParseTree
 struct ParseTree2NF
 {
 	Symbol* symbol;
-	optional<pair<shared_ptr<ParseTree2NF>, shared_ptr<ParseTree2NF>>> derivation;
+	using DerivationType = pair<shared_ptr<ParseTree2NF>, shared_ptr<ParseTree2NF>>;
+	optional<DerivationType> derivation;
 };
 
 struct Grammar
 {
     Grammar(vector<Symbol*> terminals, vector<NonTerminal*> non_terminals);
-	unique_ptr<ParseTree> parse(const vector<flat_map<Symbol*, int>>& sentence);
+	pair<unique_ptr<ParseTree>, int> parse(const vector<flat_map<Symbol*, int>>& sentence, const NonTerminal* into);
 private:
     vector<Symbol*> terminals;
     vector<NonTerminal*> original_non_terminals;
     vector<unique_ptr<NonTerminal2NF>> non_terminals;
+	flat_map<const NonTerminal*, NonTerminal2NF*> non_terminal_mapping;
 };

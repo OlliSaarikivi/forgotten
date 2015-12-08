@@ -14,6 +14,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <stack>
 #include <algorithm>
 #include <array>
 #include <functional>
