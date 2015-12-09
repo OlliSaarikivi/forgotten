@@ -9,6 +9,8 @@
 
 #include <tchar.h>
 
+#include "RowProxy.h"
+
 const int SCREEN_WIDTH = 600;
 const int SCREEN_HEIGHT = 600;
 
@@ -73,6 +75,9 @@ unique_ptr<Game> createGame()
 
     game->race_max_speeds.put(Row<Race, MaxSpeed>({ 1 }, { 20.0f }));
     game->races.put(Row<Eid, Race>({ player }, { 1 }));
+
+	auto row = Row<Race, MaxSpeed>({ 1 }, { 20.0f });
+	ProxySelector<Race>::type<Race, MaxSpeed> proxy{ row, row };
 
     // Add walls
     b2BodyDef wallBodyDef;

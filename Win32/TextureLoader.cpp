@@ -84,7 +84,7 @@ void TextureLoader::loadSpriteArrays()
 			if ((names.size() - 1) > std::numeric_limits<TextureArrayIndex::Type>::max())
 				fatalError(FORMAT("Number of textures in " << type_dir_candidate << " exceeds limits of index type"));
 
-            for (int i = 0; i < names.size(); ++i)
+            for (size_t i = 0; i < names.size(); ++i)
                 game.sprite_textures.put({ { (SpriteSize::Type)size }, { type }, { names[i] }, handle, { (TextureArrayIndex::Type)i } });
         }
     }
@@ -98,7 +98,7 @@ TextureHandle TextureLoader::loadSpriteArray(unsigned int size, string type, con
     string relative_dir = FORMAT(size << "/" << type << "/");
     auto texture = std::make_unique<gl::Texture>();
     auto binding = gl.Bound(gl::Texture::Target::_2DArray, *texture);
-    for (int i = 0; i < names.size(); ++i) {
+    for (size_t i = 0; i < names.size(); ++i) {
         auto image = loadPNG(FORMAT(relative_dir << names[i]));
         if (i == 0) {
             binding.Image3D(0, gl::PixelDataInternalFormat::RGBA, size, size, names.size(), 0, image.Format(), image.Type(), nullptr);

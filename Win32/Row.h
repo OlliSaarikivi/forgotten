@@ -5,8 +5,19 @@
 #include <boost/integer.hpp>
 #include <limits>
 
-#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,ADDITIONAL_CODE) struct NAME { \
+#define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,ADDITIONAL_CODE) struct NAME##Proxy{ \
+	FIELD_TYPE & FIELD; \
+	template<typename TInit> NAME##Proxy(TInit& init) : FIELD(init.##FIELD) {} \
+}; \
+struct NAME##ConstProxy{ \
+	const FIELD_TYPE & FIELD; \
+	template<typename TInit> NAME##ConstProxy(const TInit& init) : FIELD(init.##FIELD) {} \
+}; \
+struct NAME { \
     using Type = FIELD_TYPE; \
+	using ProxyType = NAME##Proxy; \
+	template<bool IsConstant> struct ProxyTypeHelper { using type = NAME##Proxy; }; \
+	template<> struct ProxyTypeHelper<true> { using type = NAME##ConstProxy; }; \
     FIELD_TYPE FIELD; \
     FIELD_TYPE get() const { return FIELD; } \
     template<typename TOther> void set(const TOther& other) { FIELD = other.get(); } \

@@ -32,4 +32,3 @@ private:
     SOURCE(max_speeds, max_speeds);
     SINK(forces, forces);
 };
-

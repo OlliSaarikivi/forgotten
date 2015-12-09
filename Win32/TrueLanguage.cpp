@@ -9,6 +9,7 @@
 
 using boost::multi_array;
 
+// Substitute one leaf (the leftmost) with a matching production
 optional<shared_ptr<ParseTree2NF>> applyProductionOnce(const shared_ptr<ParseTree2NF>& unit, const shared_ptr<ParseTree2NF>& production)
 {
 	if (unit->derivation) {
@@ -19,22 +20,9 @@ optional<shared_ptr<ParseTree2NF>> applyProductionOnce(const shared_ptr<ParseTre
 			return std::make_shared<ParseTree2NF>(unit->symbol, ParseTree2NF::DerivationType{ unit->derivation->first, *expanded });
 	}
 	else if (unit->symbol == production->symbol) {
-		return production;
+		return production; // Match
 	}
-	return none;
-}
-
-shared_ptr<ParseTree2NF> saturateApplyProduction(const shared_ptr<ParseTree2NF>& unit, const shared_ptr<ParseTree2NF>& production)
-{
-	shared_ptr<ParseTree2NF> current = unit;
-	optional<shared_ptr<ParseTree2NF>> maybeNext = none;
-	while (true) {
-		maybeNext = applyProductionOnce(current, production);
-		if (maybeNext)
-			current = *maybeNext;
-		else
-			return current;
-	}
+	return none; // Indicates no rewrite in this subtree
 }
 
 Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_terminals)
@@ -45,20 +33,23 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
 	for (const auto& terminal : terminals) {
 		terminals_set.emplace(terminal);
 		replacements.emplace(terminal, terminal);
+		// Clear internal values of the terminals
 		terminal->unit_from.clear();
 		terminal->unit_from_derivations.clear();
 		terminal->null_derivation = nullptr;
+		terminal->original = nullptr;
 	}
 	// Create a 2NF non terminal for each original non terminal
 	unordered_map<NonTerminal*, NonTerminal2NF*> nt_replacements;
 	for (const auto& original : original_non_terminals) {
 		auto root_replacement = std::make_unique<NonTerminal2NF>(original->name);
+		root_replacement->original = original;
 		replacements.emplace(original, root_replacement.get());
 		nt_replacements.emplace(original, root_replacement.get());
 		non_terminals.emplace_back(std::move(root_replacement));
 	}
 	// Create new 2NF non terminals to implement rules longer than 2
-	unordered_map<pair<Symbol*, Symbol*>, Symbol*> suffix_abbreviations;
+	unordered_map<pair<Symbol*, Symbol*>, Symbol*, impl::Rule2Hash> suffix_abbreviations;
 	for (const auto& original : original_non_terminals) {
 		auto nt_replacement = nt_replacements[original];
 		for (auto& rule : original->rules) {
@@ -80,7 +71,7 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
 					else {
 						auto tail_symbol = std::make_unique<NonTerminal2NF>("<" + head->name + "," + tail->name + ">");
 						tail_symbol->rules.emplace(suffix_rule);
-						suffix_abbreviations.emplace(suffix_rule, tail_symbol);
+						suffix_abbreviations.emplace(suffix_rule, tail_symbol.get());
 						tail = tail_symbol.get();
 						non_terminals.emplace_back(std::move(tail_symbol));
 					}
@@ -101,24 +92,24 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
 				if (rule.second) {
 					auto second_parse = std::make_shared<ParseTree2NF>(rule.second, none);
 					auto req1 = occurs.emplace(rule.first, NullabilityReq{});
-					req1.first->second.emplace_back(A, rule.second,
-						std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ first_parse, second_parse }));
+					req1.first->second.emplace_back(A.get(), rule.second,
+						std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ first_parse, second_parse }));
 					auto req2 = occurs.emplace(rule.second, NullabilityReq{});
-					req2.first->second.emplace_back(A, rule.first,
-						std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ first_parse, second_parse }));
+					req2.first->second.emplace_back(A.get(), rule.first,
+						std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ first_parse, second_parse }));
 				}
 				else {
 					auto req = occurs.emplace(rule.first, NullabilityReq{});
-					req.first->second.emplace_back(A, nullptr,
-						std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ first_parse, nullptr }));
+					req.first->second.emplace_back(A.get(), nullptr,
+						std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ first_parse, nullptr }));
 				}
 			}
 		}
 		// Mark trivially nullable non-terminals
 		if (!A->rules.empty() && !(A->rules.begin()->first)) {
-			nullables.emplace(A);
-			todo.emplace_back(A);
-			A->null_derivation = std::make_shared<ParseTree2NF>(A,
+			nullables.emplace(A.get());
+			todo.emplace_back(A.get());
+			A->null_derivation = std::make_shared<ParseTree2NF>(A.get(),
 				ParseTree2NF::DerivationType{ nullptr, nullptr });
 		}
 	}
@@ -156,23 +147,23 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
 				if (rule.second) {
 					auto second_parse = std::make_shared<ParseTree2NF>(rule.second, none);
 					if (nullables.find(rule.second) != nullables.end()) {
-						rule.first->unit_from.emplace(A);
+						rule.first->unit_from.emplace(A.get());
 						assert(rule.second->null_derivation);
-						rule.first->unit_from_derivations.emplace(A,
-							std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ first_parse, rule.second->null_derivation }));
+						rule.first->unit_from_derivations.emplace(A.get(),
+							std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ first_parse, rule.second->null_derivation }));
 					}
 					if (nullables.find(rule.first) != nullables.end()) {
-						rule.second->unit_from.emplace(A);
+						rule.second->unit_from.emplace(A.get());
 
 						assert(rule.first->null_derivation);
-						rule.first->unit_from_derivations.emplace(A,
-							std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ rule.first->null_derivation, second_parse }));
+						rule.first->unit_from_derivations.emplace(A.get(),
+							std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ rule.first->null_derivation, second_parse }));
 					}
 				}
 				else {
-					rule.first->unit_from.emplace(A);
-					rule.first->unit_from_derivations.emplace(A,
-						std::make_shared<ParseTree2NF>(A, ParseTree2NF::DerivationType{ first_parse, nullptr }));
+					rule.first->unit_from.emplace(A.get());
+					rule.first->unit_from_derivations.emplace(A.get(),
+						std::make_shared<ParseTree2NF>(A.get(), ParseTree2NF::DerivationType{ first_parse, nullptr }));
 				}
 			}
 		}
@@ -184,7 +175,7 @@ Grammar::Grammar(vector<Symbol*> terminals, vector<NonTerminal*> original_non_te
 		symbols.emplace_back(symbol);
 	}
 	for (auto& symbol : non_terminals) {
-		symbols.emplace_back(symbol);
+		symbols.emplace_back(symbol.get());
 	}
 	bool done = false;
 	while (!done) {
@@ -218,6 +209,7 @@ void addMinimum(flat_map<Symbol*, DerivationEntry>& map, Symbol* symbol, int cos
 {
 	auto search = map.find(symbol);
 	if (search == map.end() || cost < search->second.cost) {
+		// Better derivation found
 		DerivationEntry entry{ cost, make_derivation() };
 		auto result = map.emplace(symbol, entry);
 		if (!result.second)
@@ -243,6 +235,7 @@ enum class RewriteCmd {
 	EXPAND, POP
 };
 
+// Stack based rewriter that removes the 2NF representation
 unique_ptr<ParseTree> toOriginals(const shared_ptr<ParseTree2NF>& root_2nf)
 {
 	stack<RewriteCmd> cmds;
@@ -257,7 +250,7 @@ unique_ptr<ParseTree> toOriginals(const shared_ptr<ParseTree2NF>& root_2nf)
 			auto popped = std::move(rewritten.top());
 			rewritten.pop();
 			if (!rewritten.empty())
-				rewritten.top()->derivation->push_back(std::move(popped));
+				rewritten.top()->derivation.push_back(std::move(popped));
 			else
 				return popped;
 		}
@@ -280,8 +273,7 @@ unique_ptr<ParseTree> toOriginals(const shared_ptr<ParseTree2NF>& root_2nf)
 			}
 			else {
 				assert(!current->symbol->original);
-				rewritten.top()->derivation->push_back(
-					std::make_unique<ParseTree>(current->symbol, none));
+				rewritten.top()->derivation.push_back(std::make_unique<ParseTree>(current->symbol, none));
 			}
 		}
 	}
@@ -292,6 +284,7 @@ pair<unique_ptr<ParseTree>, int> Grammar::parse(const vector<flat_map<Symbol*, i
 {
 	auto n = sentence.size();
 	auto chart = multi_array<flat_map<Symbol*, DerivationEntry>, 2>(boost::extents[n][n]);
+	// Initialize the terminals
 	for (auto i = decltype(n)(0); i < n; ++i) {
 		auto map = chart[i][i];
 		for (const auto& entry : sentence[i]) {
@@ -300,6 +293,7 @@ pair<unique_ptr<ParseTree>, int> Grammar::parse(const vector<flat_map<Symbol*, i
 			});
 		}
 	}
+	// Apply rules to successively larger ranges ("the CYK algorithm")
 	for (auto j = decltype(n)(1); j < n - 1; ++j) {
 		for (auto i = j - 1; i >= 0; --i) {
 			for (auto h = i; h < j; ++h) {
