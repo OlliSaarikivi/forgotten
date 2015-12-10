@@ -1,6 +1,26 @@
 #pragma once
 
 #include "Channel.h"
+#include "RowProxy.h"
+
+template<typename TIterator, typename TProxy>
+struct ProxyIterator
+{
+	ProxyIterator(TIterator iter) : iter(iter) {}
+
+	ProxyIterator<TIterator>& operator++()
+	{
+		++iter;
+		return *this;
+	}
+
+	TProxy& operator*() const
+	{
+
+	}
+private:
+	IteratorType iter;
+};
 
 template<typename TRow, typename TIndex = None>
 struct Table : Channel
@@ -8,6 +28,7 @@ struct Table : Channel
     using IndexType = TIndex;
     using RowType = typename ConcatRows<typename IndexType::KeyType::AsRow, TRow>::type;
     using ContainerType = typename TIndex::template ContainerType<RowType>;
+	using ProxyType = typename ProxySelector<RowProxy<>, typename IndexType::KeyType::AsRow, RowType>::type;
     using const_iterator = typename ContainerType::const_iterator;
 
     virtual void registerProducer(Process *process) override

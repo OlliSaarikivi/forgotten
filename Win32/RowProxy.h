@@ -7,8 +7,26 @@ struct RowProxy : TColumnProxies...
 {
 	template<typename... TInitializers>
 	RowProxy(TInitializers&... inits) : TColumnProxies(inits)... {}
-};
 
+	template<typename T, typename R>
+	R& ExpandPackIgnore(R& r) { return r; }
+
+	template<typename TInitializer>
+	static RowProxy ConstructFromOne(TInitializer& init)
+	{
+		return RowProxy{ExpandPackIgnore<TColumnProxies, TInitializer>(init)...};
+	}
+
+	/*template<typtypename... TColumnProxies>
+	struct ConstructProxyFromOneHelper
+	{
+		template<typename THead, typename... TTail>
+		static RowProxy Construct(THead& head, TTail&... tail)
+		{
+			return ConstructProxyFromOneHelper::
+		}
+	};*/
+};
 
 template<typename T, typename... TList>
 struct Contains;
@@ -21,15 +39,24 @@ struct Contains<T, THead, TRest...>
 };
 
 template<typename... TList>
-struct ContainsHelper {
+struct ContainsHelper
+{
 	template<typename T>
 	using Actual = Contains<T, TList...>;
 };
 
-template<typename... TConstColumns>
-struct ProxySelector
+template<typename TProxy, typename TConst, typename TRow>
+struct ProxySelector;
+template<typename... TConstColumns, typename TCol, typename... TPCols>
+struct ProxySelector<RowProxy<TPCols...>, Row<TConstColumns...>, Row<TCol>>
 {
 	using ConstsHelper = ContainsHelper<TConstColumns...>;
-	template<typename... TColumns>
-	using type = RowProxy<typename TColumns::template ProxyTypeHelper<ConstsHelper::template Actual<TColumns>::value>::type...>;
+	using type = RowProxy<TPCols..., typename TCol::template ProxyTypeHelper<ConstsHelper::template Actual<TCol>::value>::type>;
+};
+template<typename... TConstColumns, typename TCol, typename... TCols, typename... TPCols>
+struct ProxySelector<RowProxy<TPCols...>, Row<TConstColumns...>, Row<TCol, TCols...>>
+{
+	using ConstsHelper = ContainsHelper<TConstColumns...>;
+	using type = typename ProxySelector < RowProxy<TPCols..., typename TCol::template ProxyTypeHelper<ConstsHelper::template Actual<TCol>::value>::type>,
+		Row<TConstColumns...>, Row < TCols... >> ::type;
 };

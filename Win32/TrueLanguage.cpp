@@ -278,6 +278,7 @@ unique_ptr<ParseTree> toOriginals(const shared_ptr<ParseTree2NF>& root_2nf)
 		}
 	}
 	assert(false); // Ran out of commands
+	return nullptr;
 }
 
 pair<unique_ptr<ParseTree>, int> Grammar::parse(const vector<flat_map<Symbol*, int>>& sentence, const NonTerminal* into)

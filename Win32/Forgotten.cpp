@@ -76,9 +76,6 @@ unique_ptr<Game> createGame()
     game->race_max_speeds.put(Row<Race, MaxSpeed>({ 1 }, { 20.0f }));
     game->races.put(Row<Eid, Race>({ player }, { 1 }));
 
-	auto row = Row<Race, MaxSpeed>({ 1 }, { 20.0f });
-	ProxySelector<Race>::type<Race, MaxSpeed> proxy{ row, row };
-
     // Add walls
     b2BodyDef wallBodyDef;
     wallBodyDef.position.Set(0, 0);
