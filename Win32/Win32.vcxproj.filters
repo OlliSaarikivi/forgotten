@@ -9,12 +9,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Header Files\Channels">
-      <UniqueIdentifier>{cd0de677-0cd0-45de-999b-5a168f3a3119}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Simulation">
-      <UniqueIdentifier>{41e25a91-48fc-4767-bd96-533f4ec92a0b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{99d09a0b-1284-4e3d-9847-4351daf500ee}</UniqueIdentifier>
     </Filter>
@@ -29,139 +23,19 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Forgotten.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Process.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="ProcessHost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Usings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Box2DStep.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Game.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Debug.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="SDLEvents.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Controls.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Actions.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Channel.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Join.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Table.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Amend.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Box2DReader.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Behaviors.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Transform.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Stable.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Regeneration.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="ContactEffects.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Subtract.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Proxies.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="DefaultValue.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Apply.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="State.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GameProcess.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TrueSentenceInterpreter.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="Box2DGLDebugDraw.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="View.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WalkCycle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ResourceStable.h">
-      <Filter>Header Files\Channels</Filter>
-    </ClInclude>
-    <ClInclude Include="Row.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EntityDefinition.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ShaderLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Resources.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Shader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SingleSpriteShader.h">
       <Filter>Shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="Render.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ElementSpriteShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="MetricsService.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TrueLanguage.h">
-      <Filter>Header Files\Simulation</Filter>
-    </ClInclude>
-    <ClInclude Include="RowProxy.h">
+    <ClInclude Include="Table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -170,36 +44,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Forgotten.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Box2DGLDebugDraw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WalkCycle.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShaderLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Resources.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Shader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Render.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MetricsService.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TrueLanguage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -2,7 +2,6 @@
 
 #include "Row.h"
 #include "Utils.h"
-#include "Process.h"
 
 namespace std
 {
@@ -30,7 +29,7 @@ NO_HASH(SDL_Keysym)
 COLUMN(SDLKeysym, SDL_Keysym, sdl_keysym)
 NO_HASH(SDL_Scancode)
 COLUMN(SDLScancode, SDL_Scancode, sdl_scancode)
-COLUMN(ProcessPointer, Process*, process)
+//COLUMN(ProcessPointer, Process*, process)
 
 COLUMN(Position, vec2, position)
 HANDLE(PositionHandle, position_handle, max_simultaneous_entities)

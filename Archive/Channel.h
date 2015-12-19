@@ -2,18 +2,9 @@
 
 #include "Row.h"
 
-struct Process;
-
 struct Channel
 {
-    Channel() = default;
-
-    // No copies
-    Channel(const Channel&) = delete;
-    Channel& operator=(const Channel&) = delete;
-
-    virtual void registerProducer(Process*) {};
-    virtual void forEachProducer(function<void(Process&)>) const {};
+	virtual ~Channel() = default;
 };
 
 template<typename TKey>

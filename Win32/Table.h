@@ -1,148 +1,166 @@
 #pragma once
 
-#include "Channel.h"
-#include "RowProxy.h"
+#include "Utils.h"
 
-template<typename TIterator, typename TProxy>
-struct ProxyIterator
-{
-	ProxyIterator(TIterator iter) : iter(iter) {}
+namespace impl {
+	template<class T> struct alignment_of_ {
+		using type = mpl::int_<std::alignment_of<T>::value>;
+	};
+}
 
-	ProxyIterator<TIterator>& operator++()
-	{
-		++iter;
+template<class T, class TRow> T& col(TRow row) { return row.col<T>(); }
+
+template<class... TValues> class Row {
+	tuple<TValues&...> refs;
+public:
+	Row(TValues&... values) : refs(values...) {}
+
+	template<class T>
+	operator const T&() const { return col<T>(); }
+	template<class T>
+	operator T&() { return col<T>(); }
+	template<class T>
+	Row& operator |=(T x) { col<T>() = x; return *this; }
+
+	template<class T> T& col() const {
+		return get<T&>(refs);
+	}
+};
+
+template<template<typename> class TIter, class... TValues> class RowIterator {
+	using Values = typename mpl::vector<TValues...>::type;
+	using Distinct = typename mpl::unique<Values, std::is_same<mpl::_1, mpl::_2>>::type;
+	BOOST_MPL_ASSERT((mpl::equal<Values, Distinct>));
+
+	using FirstIter = TIter<typename Values::begin::type>;
+
+	template<class T> int increment() { ++get<T>(iters); return 0; }
+	template<class T> int increment(size_t n) { get<T>(iters) += n; return 0; }
+	template<class T> int decrement() { --get<T>(iters); return 0; }
+	template<class T> int decrement(size_t n) { get<T>(iters) -= n; return 0; }
+	template<class T> static int swap(RowIterator& left, RowIterator& right) {
+		using std::swap;
+		swap(get<T>(left.iters), get<T>(right.iters));
+		return 0;
+	}
+	template<class T> static int equals(const RowIterator& left, const RowIterator& right, bool& result) {
+		result |= (get<T>(left.iters) == get<T>(right.iters));
+		return 0;
+	}
+
+	tuple<TIter<TValues>...> iters;
+
+public:
+	using difference_type = typename std::iterator_traits<FirstIter>::difference_type;
+	//using value_type = ; // Not really there
+	using reference = Row<TValues...>;
+	using pointer = FauxPointer<reference>;
+	using iterator_category = std::random_access_iterator_tag;
+
+	RowIterator(TIter<TValues>... iters) : iters(std::make_tuple(iters...)) {}
+
+	RowIterator& operator++() {
+		ignore(increment<TValues*>()...);
 		return *this;
 	}
-
-	TProxy& operator*() const
-	{
-
+	RowIterator operator++(int) {
+		RowIterator old = *this;
+		ignore(increment<TValues*>()...);
+		return old;
 	}
-private:
-	IteratorType iter;
+	RowIterator& operator--() {
+		ignore(decrement<TValues*>()...);
+		return *this;
+	}
+	RowIterator operator--(int) {
+		RowIterator old = *this;
+		ignore(decrement<TValues*>()...);
+		return old;
+	}
+	RowIterator& operator+=(size_t n) {
+		ignore(increment<TValues*>(n)...);
+		return *this;
+	}
+	friend RowIterator operator+(const RowIterator& iter, size_t n) {
+		RowIterator copy = iter;
+		copy += n;
+		return copy;
+	}
+	friend RowIterator operator+(size_t n, const RowIterator& iter) {
+		return iter + n;
+	}
+	RowIterator& operator-=(size_t n) {
+		ignore(decrement<TValues*>(n)...);
+		return *this;
+	}
+	friend RowIterator operator-(const RowIterator& iter, size_t n) {
+		RowIterator copy = iter;
+		copy -= n;
+		return copy;
+	}
+	friend RowIterator operator-(size_t n, const RowIterator& iter) {
+		return iter - n;
+	}
+
+	reference operator*() const {
+		return reference{ *std::get<TValues*>(iters)... };
+	}
+	pointer operator->() const {
+		return pointer{ this->operator*() };
+	}
+	reference operator[](size_t n) const {
+		return *(*this + n);
+	}
+
+	friend bool operator==(const RowIterator& left, const RowIterator& right) {
+		bool result;
+		ignore(equals<TIter<TValues>>(left, right, result)...);
+		return result;
+	}
+	friend bool operator!=(const RowIterator& left, const RowIterator& right) {
+		return !(left == right);
+	}
+	friend bool operator<(const RowIterator& left, const RowIterator& right) {
+		return get<FirstIter>(left.iters) < get<FirstIter>(right.iters);
+	}
+	friend bool operator>(const RowIterator& left, const RowIterator& right) {
+		return get<FirstIter>(left.iters) > get<FirstIter>(right.iters);
+	}
+	friend bool operator<=(const RowIterator& left, const RowIterator& right) {
+		return get<FirstIter>(left.iters) <= get<FirstIter>(right.iters);
+	}
+	friend bool operator>=(const RowIterator& left, const RowIterator& right) {
+		return get<FirstIter>(left.iters) >= get<FirstIter>(right.iters);
+	}
+
+	friend void swap(RowIterator& left, RowIterator& right) {
+		ignore(swap<TIter<TValues>>(left, right)...);
+	}
 };
 
-template<typename TRow, typename TIndex = None>
-struct Table : Channel
-{
-    using IndexType = TIndex;
-    using RowType = typename ConcatRows<typename IndexType::KeyType::AsRow, TRow>::type;
-    using ContainerType = typename TIndex::template ContainerType<RowType>;
-	using ProxyType = typename ProxySelector<RowProxy<>, typename IndexType::KeyType::AsRow, RowType>::type;
-    using const_iterator = typename ContainerType::const_iterator;
+template<class... TValues> class Table {
 
-    virtual void registerProducer(Process *process) override
-    {
-        producers.emplace_back(process);
-    }
-    virtual void forEachProducer(function<void(Process&)> f) const override
-    {
-        for (auto& producer : producers) {
-            f(*producer);
-        }
-    }
-    const_iterator begin() const
-    {
-        return container.begin();
-    }
-    const_iterator end() const
-    {
-        return container.end();
-    }
-    void clear()
-    {
-        container.clear();
-    }
-    void put(const RowType& row)
-    {
-        PutHelper<RowType, ContainerType>
-            ::tPut(container, row);
-    }
-    template<typename TRow2>
-    typename ContainerType::size_type erase(const TRow2& row)
-    {
-        return EraseHelper<RowType, ContainerType>
-            ::tErase(container, MakeKeyRow<typename IndexType::KeyType, RowType>(row));
-    }
-    const_iterator erase(const_iterator first, const_iterator last)
-    {
-        return container.erase(first, last);
-    }
-    const_iterator erase(const_iterator position)
-    {
-        return container.erase(position);
-    }
-    template<typename TRow2>
-    void update(const_iterator position, const TRow2& row)
-    {
-        static_assert(!Intersects<TRow2, typename IndexType::KeyType::AsRow>::value, "can not update key columns in place");
-        const_cast<RowType&>(*position).setAll(row);
-    }
-    template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
-    {
-        return container.equal_range(MakeKeyRow<typename IndexType::KeyType, RowType>(std::forward<TRow2>(row)));
-    }
-    void copyRowsFrom(const Table<TRow, TIndex>& other)
-    {
-        container = other.container;
-    }
-private:
-    ContainerType container;
-    vector<Process*> producers;
-};
+	using ValueTypes = typename mpl::vector<TValues...>::type;
 
-template<typename TRow, typename TContainer>
-struct PutHelper
-{
-    template<typename TRow2>
-    static void tPut(TContainer& buffer, TRow2&& row)
-    {
-        auto result = buffer.emplace(row);
-        if (!result.second) {
-            /* This is safe because result.first is guaranteed to be equal (in the ordering)
-            * to the row to insert. */
-            const_cast<TRow&>(*(result.first)) = std::forward<TRow2>(row);
-        }
-    }
-};
-template<typename TRow, typename TComparison>
-struct PutHelper<TRow, flat_multiset<TRow, TComparison>>
-{
-    template<typename TRow2>
-    static void tPut(flat_multiset<TRow, TComparison>& buffer, TRow2&& row)
-    {
-        buffer.emplace(std::forward<TRow2>(row));
-    }
-};
-template<typename TRow>
-struct PutHelper<TRow, vector<TRow>>
-{
-    template<typename TRow2>
-    static void tPut(vector<TRow>& buffer, TRow2&& row)
-    {
-        buffer.emplace_back(std::forward<TRow2>(row));
-    }
-};
+	template<class TValue> using iterator = TValue*;
 
-template<typename TRow, typename TContainer>
-struct EraseHelper
-{
-    static typename TContainer::size_type tErase(TContainer& buffer, const TRow& row)
-    {
-        return buffer.erase(row);
-    }
-};
-template<typename TRow>
-struct EraseHelper<TRow, vector<TRow>>
-{
-    template<typename TRow2>
-    static typename vector<TRow>::size_type tErase(vector<TRow>& buffer, TRow2&& row)
-    {
-        auto original_size = buffer.size();
-        buffer.erase(std::remove_if(buffer.begin(), buffer.end(), [&](const TRow& other) {
-            return row == other;
-        }), buffer.end());
-        return original_size - buffer.size();
-    }
+	size_t size = 0;
+	size_t capacity = 0;
+	char* data = nullptr;
+
+public:
+	static const int alignment = mpl::max_element<
+		typename mpl::transform<ValueTypes, impl::alignment_of_<mpl::_1>>::type>::type::type::value;
+
+	template<class T> iterator<T> begin() {
+		using namespace mpl;
+		using End = typename find<ValueTypes, T>::type;
+		using Preceding = typename iterator_range<typename ValueTypes::begin, End>::type;
+		using Sum = typename accumulate<Preceding, int_<0>, plus<mpl::_1, sizeof_<mpl::_2>>>::type;
+		return reinterpret_cast<iterator<T>>(data + (capacity * Sum::value));
+	}
+
+	template<class T1, class T2, class... Ts> RowIterator<iterator, T1, T2, Ts...> begin() {
+		return RowIterator<iterator, T1, T2, Ts...>{ begin<T1>(), begin<T2>(), begin<Ts>()... };
+	}
 };

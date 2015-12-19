@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Join.h"
+#include "RowProxy.h"
 
 template<typename TLeft, typename TRight, bool CanMerge>
 struct SubtractIterator;
@@ -12,8 +13,9 @@ struct SubtractIterator<TLeft, TRight, true>
     using RowType = typename TLeft::RowType;
     using KeyType = typename TLeft::IndexType::KeyType;
     static_assert(std::is_same<KeyType, typename TRight::IndexType::KeyType>::value, "must have same key to merge Subtract");
-    using left_iterator = typename TLeft::const_iterator;
-    using right_iterator = typename TRight::const_iterator;
+	using ProxyType = typename TLeft::ProxyType;
+    using left_iterator = typename TLeft::iterator;
+    using right_iterator = typename TRight::iterator;
 
     SubtractIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
         left(left), left_end(left_end),
@@ -44,25 +46,25 @@ struct SubtractIterator<TLeft, TRight, true>
             goToEnd();
         }
     }
-    SubtractIterator<TLeft, TRight, true>& operator++()
+    SubtractIterator& operator++()
     {
         ++left;
         findNoMatch();
         return *this;
     }
-    RowType operator*() const
+	ProxyType operator*() const
     {
         return *left;
     }
-    FauxRowPointer<RowType> operator->() const
+    FauxPointer<ProxyType> operator->() const
     {
-        return FauxRowPointer<RowType>(this->operator*());
+        return FauxPointer<ProxyType>(this->operator*());
     }
-    bool operator==(const SubtractIterator<TLeft, TRight, true>& other) const
+    bool operator==(const SubtractIterator& other) const
     {
         return left == other.left && right == other.right && left_end == other.left_end && right_end == other.right_end;
     }
-    bool operator!=(const SubtractIterator<TLeft, TRight, true>& other) const
+    bool operator!=(const SubtractIterator& other) const
     {
         return !operator==(other);
     }
@@ -79,8 +81,9 @@ struct SubtractIterator<TLeft, TRight, false>
     static const bool Ordered = TLeft::IndexType::Ordered;
     using RowType = typename TLeft::RowType;
     using KeyType = typename TLeft::IndexType::KeyType;
-    using left_iterator = typename TLeft::const_iterator;
-    using right_iterator = typename TRight::const_iterator;
+	using ProxyType = typename TLeft::ProxyType;
+    using left_iterator = typename TLeft::iterator;
+    using right_iterator = typename TRight::iterator;
 
     SubtractIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
         left(left), left_end(left_end), right_chan(&right_chan)
@@ -102,25 +105,25 @@ struct SubtractIterator<TLeft, TRight, false>
             }
         }
     }
-    SubtractIterator<TLeft, TRight, false>& operator++()
+    SubtractIterator& operator++()
     {
         ++left;
         findNoMatch();
         return *this;
     }
-    RowType operator*() const
+	ProxyType operator*() const
     {
         return *left;
     }
-    FauxRowPointer<RowType> operator->() const
+    FauxPointer<ProxyType> operator->() const
     {
-        return FauxRowPointer<RowType>(this->operator*());
+        return FauxPointer<ProxyType>(this->operator*());
     }
-    bool operator==(const SubtractIterator<TLeft, TRight, false>& other) const
+    bool operator==(const SubtractIterator& other) const
     {
         return left == other.left && left_end == other.left_end && right_chan == other.right_chan;
     }
-    bool operator!=(const SubtractIterator<TLeft, TRight, false>& other) const
+    bool operator!=(const SubtractIterator& other) const
     {
         return !operator==(other);
     }
@@ -139,37 +142,26 @@ struct SubtractStream : Channel
 {
     using RowType = typename TLeft::RowType;
     using IndexType = SubtractIterator<TLeft, TRight, CanMerge<TLeft, TRight>::value>;
-    using const_iterator = IndexType;
+    using iterator = IndexType;
 
     SubtractStream(TLeft& left, TRight& right) : left(left), right(right) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+	iterator begin() const
     {
-        left.forEachProducer(f);
-        right.forEachProducer(f);
+        return iterator(left.begin(), left.end(), right);
     }
-    const_iterator begin() const
+	iterator end() const
     {
-        return const_iterator(left.begin(), left.end(), right);
-    }
-    const_iterator end() const
-    {
-        const_iterator end_iterator(left.end(), left.end(), right);
+		iterator end_iterator(left.end(), left.end(), right);
         end_iterator.goToEnd();
         return end_iterator;
     }
     template<typename TRow2>
-    void update(const_iterator position, const TRow2& row)
-    {
-        static_assert(!Intersects<TRow2, typename TRight::IndexType::KeyType::AsRow>::value, "can not update a subtract's right key columns");
-        left.update(position.left, row);
-    }
-    template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
+    pair<iterator, iterator> equalRange(TRow2&& row) const
     {
         auto left_range = left.equalRange(row);
-        const_iterator range_begin(left_range.first, left_range.second, right);
-        const_iterator range_end = range_begin;
+		iterator range_begin(left_range.first, left_range.second, right);
+		iterator range_end = range_begin;
         range_end.goToEnd();
         return std::make_pair(range_begin, range_end);
     }

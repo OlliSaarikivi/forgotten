@@ -17,7 +17,6 @@
 #include "MetricsService.h"
 
 Game::Game() :
-Hosts(*this),
 max_sim_step(boost::chrono::milliseconds(10)),
 min_sim_step(boost::chrono::milliseconds(2)),
 max_simulation_substeps(10),
@@ -40,6 +39,23 @@ world(b2Vec2(0, 0)) // Set gravity to zero
     simulation.makeProcess<TrueSentenceInterpreter>();
     output.makeProcess<Box2DReader>();
     output.makeProcess<Render>();
+}
+
+void Game::simulate(float step)
+{
+#ifdef METRICS
+	auto start = Game::Clock::now();
+#endif
+
+
+#ifdef METRICS
+	logProcess(typeid(*process).name(), Game::Clock::now() - start);
+#endif
+}
+
+void Game::output()
+{
+
 }
 
 // FACTORIES
@@ -105,12 +121,6 @@ void Game::createMobile(Eid eid, const MobileDef& mobile_def)
 }
 
 // GAME LOOP
-
-void Game::preRun()
-{
-    simulation.sortProcesses();
-    output.sortProcesses();
-}
 
 template<int WINDOW_SIZE>
 struct FilteredMovingAveragePredictor

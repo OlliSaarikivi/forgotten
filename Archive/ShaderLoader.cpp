@@ -43,7 +43,7 @@ ShaderObjectHandle ShaderLoader::load(string name)
     return game.shaders.putResource(readAndCompile(name));
 }
 
-void ShaderLoader::reload(ShaderObjectHandle handle, string name)
+void ShaderLoader::reload(ShaderObjectHandle& handle, string name)
 {
     auto shader_object = readAndCompile(name);
     auto shader = game.shaders.equalRange(handle);

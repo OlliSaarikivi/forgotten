@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Row.h"
+#include "RowProxy.h"
 
 template<typename TLeft, typename TRight>
 struct CanMerge
@@ -36,8 +37,9 @@ struct JoinIterator<TRow, TLeft, TRight, true>
     static const bool Ordered = true;
     using KeyType = typename TLeft::IndexType::KeyType;
     static_assert(std::is_same<KeyType, typename TRight::IndexType::KeyType>::value, "must have same key to merge join");
-    using left_iterator = typename TLeft::const_iterator;
-    using right_iterator = typename TRight::const_iterator;
+	using ProxyType = RowProxy<TRow, typename KeyType::AsRow>;
+    using left_iterator = typename TLeft::iterator;
+    using right_iterator = typename TRight::iterator;
 
     JoinIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
         left(left), left_end(left_end),
@@ -65,7 +67,7 @@ struct JoinIterator<TRow, TLeft, TRight, true>
         }
         goToEnd();
     }
-    JoinIterator<TRow, TLeft, TRight, true>& operator++()
+    JoinIterator& operator++()
     {
         ++right_subscan;
         if (right_subscan == right_end || KeyType::less(*left, *right_subscan)) {
@@ -74,21 +76,22 @@ struct JoinIterator<TRow, TLeft, TRight, true>
         }
         return *this;
     }
-    TRow operator*() const
+	ProxyType operator*() const
     {
-        auto joined_row = TRow(*left, *right_subscan);
-        return joined_row;
+		static_assert(std::is_reference<decltype(*left)>::value, "Can only proxy iterators that return references");
+		static_assert(std::is_reference<decltype(*right_subscan)>::value, "Can only proxy iterators that return references");
+        return ProxyType::ConstructFromTwo(*left, *right_subscan);
     }
-    FauxRowPointer<TRow> operator->() const
+	FauxPointer<ProxyType> operator->() const
     {
-        return FauxRowPointer<TRow>(this->operator*());
+		return FauxPointer<ProxyType>{this->operator*()};
     }
-    bool operator==(const JoinIterator<TRow, TLeft, TRight, true>& other) const
+    bool operator==(const JoinIterator& other) const
     {
         return left == other.left && right == other.right && right_subscan == other.right_subscan &&
             left_end == other.left_end && right_end == other.right_end;
     }
-    bool operator!=(const JoinIterator<TRow, TLeft, TRight, true>& other) const
+    bool operator!=(const JoinIterator& other) const
     {
         return !operator==(other);
     }
@@ -113,8 +116,9 @@ struct JoinIterator<TRow, TLeft, TRight, false>
 {
     static const bool Ordered = TLeft::IndexType::Ordered;
     using KeyType = typename TLeft::IndexType::KeyType;
-    using left_iterator = typename TLeft::const_iterator;
-    using right_iterator = typename TRight::const_iterator;
+	using ProxyType = typename RowProxy<TRow, typename KeyType::AsRow>;
+	using left_iterator = typename TLeft::iterator;
+	using right_iterator = typename TRight::iterator;
 
     JoinIterator(left_iterator left, left_iterator left_end, const TRight& right_chan) :
         left(left), left_end(left_end), right_end(right_chan.end()), right(right_chan.end()), right_chan(&right_chan)
@@ -140,7 +144,7 @@ struct JoinIterator<TRow, TLeft, TRight, false>
         }
         goToEnd();
     }
-    JoinIterator<TRow, TLeft, TRight, false>& operator++()
+    JoinIterator& operator++()
     {
         ++right;
         if (right == right_end) {
@@ -149,21 +153,22 @@ struct JoinIterator<TRow, TLeft, TRight, false>
         }
         return *this;
     }
-    TRow operator*() const
+	ProxyType operator*() const
     {
-        auto joined_row = TRow(*left, *right);
-        return joined_row;
+		static_assert(std::is_reference<decltype(*left)>::value, "Can only proxy iterators that return references");
+		static_assert(std::is_reference<decltype(*right)>::value, "Can only proxy iterators that return references");
+		return ProxyType::ConstructFromTwo(*left, *right);
     }
-    FauxRowPointer<TRow> operator->() const
+    FauxPointer<ProxyType> operator->() const
     {
-        return FauxRowPointer<TRow>(this->operator*());
+		return FauxPointer<ProxyType>{this->operator*()};
     }
-    bool operator==(const JoinIterator<TRow, TLeft, TRight, false>& other) const
+    bool operator==(const JoinIterator& other) const
     {
         return left == other.left && left_end == other.left_end &&
             right == other.right && right_end == other.right_end && right_chan == other.right_chan;
     }
-    bool operator!=(const JoinIterator<TRow, TLeft, TRight, false>& other) const
+    bool operator!=(const JoinIterator& other) const
     {
         return !operator==(other);
     }
@@ -184,59 +189,31 @@ private:
     friend struct JoinStream;
 };
 
-template<typename TChannel, typename TIterator, typename TRow>
-struct ConditionalUpdateHelper
-{
-    static void tUpdate(TChannel& left, TIterator iterator, const TRow& row)
-    {
-        left.update(iterator, row);
-    }
-};
-template<typename TChannel, typename TIterator>
-struct ConditionalUpdateHelper<TChannel, TIterator, Row<>>
-{
-    static void tUpdate(TChannel& left, TIterator iterator, const Row<>& row)
-    {
-    }
-};
-
 template<typename TLeft, typename TRight>
 struct JoinStream : Channel
 {
     using RowType = typename ConcatRows<typename TLeft::RowType, typename TRight::RowType>::type;
     using IndexType = JoinIterator<RowType, TLeft, TRight, CanMerge<TLeft, TRight>::value>;
-    using const_iterator = IndexType;
+    using iterator = IndexType;
 
     JoinStream(TLeft& left, TRight& right) : left(left), right(right) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+	iterator begin() const
     {
-        left.forEachProducer(f);
-        right.forEachProducer(f);
+        return iterator(left.begin(), left.end(), right);
     }
-    const_iterator begin() const
+	iterator end() const
     {
-        return const_iterator(left.begin(), left.end(), right);
-    }
-    const_iterator end() const
-    {
-        const_iterator end_iterator(left.end(), left.end(), right);
+		iterator end_iterator(left.end(), left.end(), right);
         end_iterator.goToEnd();
         return end_iterator;
     }
     template<typename TRow2>
-    void update(const_iterator position, const TRow2& row)
-    {
-        right.update(position.getRightIterator(), row);
-        ConditionalUpdateHelper<TLeft, typename TLeft::const_iterator, typename SubtractColumns<TRow2, typename TRight::RowType>::type>::
-            tUpdate(left, position.left, row);
-    }
-    template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(TRow2&& row) const
+    pair<iterator, iterator> equalRange(TRow2&& row) const
     {
         auto left_range = left.equalRange(row);
-        const_iterator range_begin(left_range.first, left_range.second, right);
-        const_iterator range_end = range_begin;
+		iterator range_begin(left_range.first, left_range.second, right);
+		iterator range_end = range_begin;
         range_end.goToEnd();
         return std::make_pair(range_begin, range_end);
     }

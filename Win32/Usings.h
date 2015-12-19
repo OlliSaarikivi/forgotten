@@ -17,15 +17,13 @@ using std::tuple;
 using std::get;
 using std::stack;
 
-using boost::container::flat_set;
-using boost::container::flat_multiset;
-using boost::container::flat_map;
-using boost::container::flat_multimap;
 using boost::optional;
 using boost::none;
 
-using glm::vec2;
-using glm::vec3;
+namespace mpl = boost::mpl;
 
-namespace gl = oglplus;
+//using glm::vec2;
+//using glm::vec3;
+//
+//namespace gl = oglplus;
 namespace fs = boost::filesystem;

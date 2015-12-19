@@ -79,6 +79,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AssemblerOutput>NoListing</AssemblerOutput>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -102,7 +103,9 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,71 +149,21 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Actions.h" />
-    <ClInclude Include="Amend.h" />
-    <ClInclude Include="Apply.h" />
-    <ClInclude Include="Behaviors.h" />
-    <ClInclude Include="Box2DGLDebugDraw.h" />
-    <ClInclude Include="Box2DReader.h" />
-    <ClInclude Include="Box2DStep.h" />
-    <ClInclude Include="Channel.h" />
-    <ClInclude Include="ContactEffects.h" />
     <ClInclude Include="ElementSpriteShader.h" />
-    <ClInclude Include="Debug.h" />
-    <ClInclude Include="EntityDefinition.h" />
-    <ClInclude Include="RowProxy.h" />
-    <ClInclude Include="MetricsService.h" />
-    <ClInclude Include="Render.h" />
-    <ClInclude Include="DefaultValue.h" />
-    <ClInclude Include="Data.h" />
-    <ClInclude Include="Game.h" />
-    <ClInclude Include="Controls.h" />
-    <ClInclude Include="GameProcess.h" />
-    <ClInclude Include="Proxies.h" />
-    <ClInclude Include="Regeneration.h" />
-    <ClInclude Include="Resources.h" />
-    <ClInclude Include="ResourceStable.h" />
-    <ClInclude Include="Shader.h" />
-    <ClInclude Include="ShaderLoader.h" />
     <ClInclude Include="SingleSpriteShader.h" />
-    <ClInclude Include="Stable.h" />
-    <ClInclude Include="SDLEvents.h" />
-    <ClInclude Include="Join.h" />
-    <ClInclude Include="ProcessHost.h" />
-    <ClInclude Include="Process.h" />
-    <ClInclude Include="Row.h" />
-    <ClInclude Include="Forgotten.h" />
-    <ClInclude Include="State.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Subtract.h" />
     <ClInclude Include="Table.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TextureLoader.h" />
-    <ClInclude Include="Transform.h" />
-    <ClInclude Include="TrueLanguage.h" />
-    <ClInclude Include="TrueSentenceInterpreter.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="View.h" />
-    <ClInclude Include="WalkCycle.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Box2DGLDebugDraw.cpp" />
     <ClCompile Include="Forgotten.cpp" />
-    <ClCompile Include="Game.cpp" />
-    <ClCompile Include="MetricsService.cpp" />
-    <ClCompile Include="Render.cpp" />
-    <ClCompile Include="Resources.cpp" />
-    <ClCompile Include="Shader.cpp" />
-    <ClCompile Include="ShaderLoader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profiling|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="TextureLoader.cpp" />
-    <ClCompile Include="TrueLanguage.cpp" />
-    <ClCompile Include="WalkCycle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\**\*">

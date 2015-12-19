@@ -16,44 +16,63 @@
     ).str())
 
 // The same as boost::hash_combine except hasher agnostic
-inline void hash_combine(size_t& seed, size_t hash)
-{
+inline void hash_combine(size_t& seed, size_t hash) {
     seed ^= hash + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-namespace std
-{
-    template<>
-    struct hash<vec2>
-    {
-        size_t operator()(const vec2& v)
-        {
-            std::hash<float> hasher;
-            size_t seed = 0;
-            hash_combine(seed, hasher(v.x));
-            hash_combine(seed, hasher(v.y));
-            return seed;
-        }
-    };
-}
+template<class T> struct TypeWrapper {
+	using type = T;
+};
 
-inline b2Vec2 toB2(const vec2& v)
-{
-    return b2Vec2(v.x, v.y);
-}
+template<class T> struct TypeWrap {
+	using type = TypeWrapper<T>;
+};
 
-inline vec2 toGLM(const b2Vec2& v)
-{
-    return vec2(v.x, v.y);
-}
+template<class... T> void ignore(const T&... x) {}
 
-inline float clamp(float x, float min, float max)
-{
-    return std::max(min, std::min(x, max));
-}
+template<typename T>
+struct FauxPointer {
+	FauxPointer(const T& value) : value(value) {}
+	T* operator->() {
+		return &value;
+	}
+private:
+	T value;
+};
 
-template<typename E>
-auto toIntegral(E e) -> typename std::underlying_type<E>::type
-{
-    return static_cast<typename std::underlying_type<E>::type>(e);
-}
+//namespace std
+//{
+//    template<>
+//    struct hash<vec2>
+//    {
+//        size_t operator()(const vec2& v)
+//        {
+//            std::hash<float> hasher;
+//            size_t seed = 0;
+//            hash_combine(seed, hasher(v.x));
+//            hash_combine(seed, hasher(v.y));
+//            return seed;
+//        }
+//    };
+//}
+//
+//inline b2Vec2 toB2(const vec2& v)
+//{
+//    return b2Vec2(v.x, v.y);
+//}
+//
+//inline vec2 toGLM(const b2Vec2& v)
+//{
+//    return vec2(v.x, v.y);
+//}
+//
+//inline float clamp(float x, float min, float max)
+//{
+//    return std::max(min, std::min(x, max));
+//}
+//
+//template<typename E>
+//auto toIntegral(E e) -> typename std::underlying_type<E>::type
+//{
+//    return static_cast<typename std::underlying_type<E>::type>(e);
+//}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Channel.h"
+#include "RowProxy.h"
 
 template<typename... TTransforms>
 struct TransformHelper;
@@ -65,52 +66,49 @@ struct TransformStream : Channel
 {
     using RowType = decltype(TransformHelper<TTransforms...>::doTransform(TChannel::RowType()));
     using IndexType = typename TChannel::IndexType;
-    using const_iterator = TransformIterator<RowType, typename TChannel::const_iterator, TTransforms...>;
+    using iterator = TransformIterator<RowType, typename TChannel::const_iterator, TTransforms...>;
 
-    TransformStream(const TChannel& chan) : chan(chan) {}
+    TransformStream(TChannel& chan) : chan(chan) {}
 
-    virtual void forEachProducer(function<void(Process&)> f) const override
+	iterator begin() const
     {
-        chan.forEachProducer(f);
+        return iterator(chan.begin());
     }
-    const_iterator begin() const
+	iterator end() const
     {
-        return const_iterator(chan.begin());
-    }
-    const_iterator end() const
-    {
-        return const_iterator(chan.end());
+        return iterator(chan.end());
     }
     template<typename TRow2>
-    pair<const_iterator, const_iterator> equalRange(const TRow2& row) const
+    pair<iterator, iterator> equalRange(const TRow2& row) const
     {
         auto range = chan.equalRange(TransformHelper<TTransforms...>::doReverseTransform(row));
-        return std::make_pair(const_iterator(range.first), const_iterator(range.second));
+        return std::make_pair(iterator(range.first), iterator(range.second));
     }
 private:
-    const TChannel& chan;
+    TChannel& chan;
 };
 
-template<typename TFrom, typename TTo, bool HasFrom>
-struct RenameHelper;
-template<typename TFrom, typename TTo>
-struct RenameHelper<TFrom, TTo, true>
+template<typename TRow, typename TFrom, typename TTo, typename TResult>
+struct ReplaceCol;
+template<typename TFrom, typename TTo, typename... TSkipped>
+struct ReplaceCol<Row<>, TFrom, TTo, Row<TSkipped...>>
 {
-    template<typename TIn>
-    static typename ConcatRows<typename RemoveExisting<TIn, TFrom, Row<>>::type, Row<TTo>>::type doRename(const TIn& in)
-    {
-        Row<TTo> renamed;
-        static_cast<TTo&>(renamed).set(static_cast<const TFrom&>(in));
-        return typename ConcatRows<typename RemoveExisting<TIn, TFrom, Row<>>::type, Row<TTo>>::type(in, renamed);
-    }
+	using type = Row<TSkipped...>;
 };
+template<typename TCol, typename... TCols, typename TFrom, typename TTo, typename... TSkipped>
+struct ReplaceCol<Row<TCol, TCols...>, TFrom, TTo, Row<TSkipped...>>
+{
+	using type = typename std::conditional<std::is_same<TCol, TFrom>::value, Row<TSkipped..., TTo, TCols...>, typename ReplaceCol<Row<TCols...>, TFrom, TTo, Row<TSkipped..., TCol>>::type>::type;
+};
+
 template<typename TFrom, typename TTo>
-struct RenameHelper<TFrom, TTo, false>
+struct RenameHelper
 {
     template<typename TIn>
-    static TIn doRename(const TIn& in)
+    static typename RowProxy<typename ReplaceCol<typename TIn::RowType, TFrom, TTo, Row<>>::type, typename ReplaceCol<typename TIn::ConstsType, TFrom, TTo, Row<>>::type> doRename(TIn& in)
     {
-        return in;
+		using RenamedProxyType = RowProxy<ReplaceCol<TIn::RowType, TFrom, TTo, Row<>>::type, ReplaceCol<TIn::ConstsType, TFrom, TTo, Row<>>::type>;
+		return RenamedProxyType::ConstructFromTwo(RenamedProxyType::template ColProxyType<TTo>(static_cast<TFrom&>(in)), in);
     }
 };
 
@@ -118,13 +116,13 @@ template<typename TFrom, typename TTo>
 struct Rename
 {
     template<typename TIn>
-    static auto transform(const TIn& in) -> decltype(RenameHelper<TFrom, TTo, std::is_base_of<TFrom, TIn>::value>::doRename(in))
+    static auto transform(TIn& in) -> decltype(RenameHelper<TFrom, TTo>::doRename(in))
     {
-        return RenameHelper<TFrom, TTo, std::is_base_of<TFrom, TIn>::value>::doRename(in);
+        return RenameHelper<TFrom, TTo>::doRename(in);
     }
     template<typename TOut>
-    static auto reverseTransform(const TOut& out) -> decltype(RenameHelper<TTo, TFrom, std::is_base_of<TTo, TOut>::value>::doRename(out))
+    static auto reverseTransform(TOut& out) -> decltype(RenameHelper<TTo, TFrom>::doRename(out))
     {
-        return RenameHelper<TTo, TFrom, std::is_base_of<TTo, TOut>::value>::doRename(out);
+        return RenameHelper<TTo, TFrom>::doRename(out);
     }
 };

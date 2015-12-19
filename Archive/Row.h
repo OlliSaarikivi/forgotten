@@ -5,13 +5,32 @@
 #include <boost/integer.hpp>
 #include <limits>
 
+namespace impl
+{
+	template<typename> struct int_if_exists { typedef int type; };
+}
+
 #define BUILD_COLUMN(NAME,FIELD_TYPE,FIELD,ADDITIONAL_CODE) struct NAME##Proxy{ \
 	FIELD_TYPE & FIELD; \
-	template<typename TInit> NAME##Proxy(TInit& init) : FIELD(init.##FIELD) {} \
+	template<typename TInit> NAME##Proxy(TInit& init, typename impl::int_if_exists<decltype(TInit:: FIELD )>::type = 0) : FIELD(init.get()) {} \
+    FIELD_TYPE& get() const { return FIELD; } \
+    template<typename TOther> void set(const TOther& other) { FIELD = other.get(); } \
+	template<typename TLeft, typename TRight> \
+	FIELD_TYPE& selectInit(TLeft& left, TRight& right, int, typename impl::int_if_exists<decltype(TLeft:: FIELD )>::type = 0) { return left.##FIELD; } \
+	template<typename TLeft, typename TRight> \
+	FIELD_TYPE& selectInit(TLeft& left, TRight& right, long, typename impl::int_if_exists<decltype(TRight:: FIELD )>::type = 0) { return right.##FIELD; } \
+	template<typename TLeft, typename TRight> NAME##Proxy(TLeft& left, TRight& right) : FIELD(selectInit<TLeft, TRight>(left, right, 0)) {} \
 }; \
 struct NAME##ConstProxy{ \
 	const FIELD_TYPE & FIELD; \
 	template<typename TInit> NAME##ConstProxy(const TInit& init) : FIELD(init.##FIELD) {} \
+    const FIELD_TYPE& get() const { return FIELD; } \
+    template<typename TOther> void set(const TOther& other) { assert(FIELD == other.get()); } \
+	template<typename TLeft, typename TRight> \
+	const FIELD_TYPE& selectInit(const TLeft& left, const TRight& right, int, typename impl::int_if_exists<decltype(TLeft:: FIELD )>::type = 0) { return left.##FIELD; } \
+	template<typename TLeft, typename TRight> \
+	const FIELD_TYPE& selectInit(const TLeft& left, const TRight& right, long, typename impl::int_if_exists<decltype(TRight:: FIELD )>::type = 0) { return right.##FIELD; } \
+	template<typename TLeft, typename TRight> NAME##ConstProxy(const TLeft& left, const TRight& right) : FIELD(selectInit<TLeft, TRight>(left, right, 0)) {} \
 }; \
 struct NAME { \
     using Type = FIELD_TYPE; \
@@ -19,7 +38,11 @@ struct NAME { \
 	template<bool IsConstant> struct ProxyTypeHelper { using type = NAME##Proxy; }; \
 	template<> struct ProxyTypeHelper<true> { using type = NAME##ConstProxy; }; \
     FIELD_TYPE FIELD; \
-    FIELD_TYPE get() const { return FIELD; } \
+    FIELD_TYPE& get() { return FIELD; } \
+	NAME() = default; \
+	NAME(FIELD_TYPE value) : FIELD(value) {} \
+	NAME(NAME&& other) : FIELD(std::move(other.##FIELD)) {} \
+	NAME& operator=(NAME && other) { if (this != &other) FIELD = std::move(other.##FIELD); return *this; } \
     template<typename TOther> void set(const TOther& other) { FIELD = other.get(); } \
     void setField(FIELD_TYPE value) { FIELD = value; } \
     template<typename TRight> bool operator<(const TRight &right) const { return FIELD < right.##FIELD; } \
@@ -41,8 +64,7 @@ struct NAME { \
 #define HANDLE(NAME,FIELD,MAX_ROWS) BUILD_HANDLE(NAME,FIELD,MAX_ROWS,)
 
 #define HANDLE_ALIAS(ALIAS,FIELD,NAME) BUILD_HANDLE(ALIAS,FIELD,NAME##::MaxRows, \
-    ALIAS() = default; \
-    ALIAS(const NAME& other) { FIELD = other.get(); } \
+    ALIAS(NAME& other) { FIELD = other.get(); } \
 )
 
 #define NO_HASH(TYPE) namespace std { \
@@ -68,17 +90,27 @@ struct Row : TColumns...
         SetRowsHelper<TOther, TOthers...>::tSetRows(*this, other, others...);
     }
 
-    template<typename TColumn>
-    void set(const TColumn& c)
-    {
-        SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tSet(*this, c);
-    }
+	template<typename TColumn>
+	void set(const TColumn& c)
+	{
+		SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tSet(*this, c);
+	}
+	template<typename TColumn>
+	void move(TColumn&& c)
+	{
+		SetHelper<Row, std::is_base_of<TColumn, Row>::value>::tMove(*this, c);
+	}
 
-    template<typename TOther>
-    void setAll(const TOther& other)
-    {
-        SetAllHelper<TOther>::tSetAll(*this, other);
-    }
+	template<typename TOther>
+	void setAll(const TOther& other)
+	{
+		SetAllHelper<TOther>::tSetAll(*this, other);
+	}
+	template<typename TOther>
+	void moveAll(TOther&& other)
+	{
+		SetAllHelper<TOther>::tMoveAll(*this, other);
+	}
 
     bool operator==(const Row<TColumns...>& other) const
     {
@@ -89,17 +121,24 @@ struct Row : TColumns...
 template<typename TRow, bool do_set>
 struct SetHelper
 {
-    template<typename TColumn>
-    static void tSet(TRow& row, TColumn&& c) {}
+	template<typename TColumn>
+	static void tSet(TRow& row, TColumn&& c) {}
+	template<typename TColumn>
+	static void tMove(TRow& row, TColumn&& c) {}
 };
 template<typename TRow>
 struct SetHelper<TRow, true>
 {
-    template<typename TColumn>
-    static void tSet(TRow& row, const TColumn& c)
-    {
-        static_cast<TColumn&>(row).set(c);
-    }
+	template<typename TColumn>
+	static void tSet(TRow& row, const TColumn& c)
+	{
+		static_cast<TColumn&>(row).set(c);
+	}
+	template<typename TColumn>
+	static void tMove(TRow& row, TColumn&& c)
+	{
+		static_cast<TColumn&>(row).move(std::forward<TColumn>(c));
+	}
 };
 
 template<typename TRow>
@@ -107,18 +146,26 @@ struct SetAllHelper;
 template<>
 struct SetAllHelper<Row<>>
 {
-    template<typename TRow, typename TOther>
-    static void tSetAll(TRow&& row, TOther&& other) {}
+	template<typename TRow, typename TOther>
+	static void tSetAll(TRow&& row, TOther&& other) {}
+	template<typename TRow, typename TOther>
+	static void tMoveAll(TRow&& row, TOther&& other) {}
 };
 template<typename TColumn, typename... TColumns>
 struct SetAllHelper<Row<TColumn, TColumns...>>
 {
-    template<typename TRow, typename TOther>
-    static void tSetAll(TRow&& row, TOther&& other)
-    {
-        row.set(static_cast<TColumn>(other));
-        return SetAllHelper<Row<TColumns...>>::tSetAll(std::forward<TRow>(row), std::forward<TOther>(other));
-    }
+	template<typename TRow, typename TOther>
+	static void tSetAll(TRow&& row, TOther&& other)
+	{
+		row.set(static_cast<TColumn>(other));
+		return SetAllHelper<Row<TColumns...>>::tSetAll(std::forward<TRow>(row), std::forward<TOther>(other));
+	}
+	template<typename TRow, typename TOther>
+	static void tMoveAll(TRow&& row, TOther&& other)
+	{
+		row.move(static_cast<TColumn>(other));
+		return SetAllHelper<Row<TColumns...>>::tMoveAll(std::forward<TRow>(row), std::forward<TOther>(other));
+	}
 };
 
 template<typename... TOthers>

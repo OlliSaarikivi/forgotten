@@ -24,30 +24,40 @@
 #include <limits>
 #include <unordered_set>
 #include <unordered_map>
+#include <tuple>
 
-#include <boost/container/flat_set.hpp>
-#include <boost/container/flat_map.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/variant.hpp>
-#include <boost/multi_array.hpp>
 #include <boost/optional.hpp>
 
+#include <boost/mpl/vector.hpp>
+#include <boost/mpl/arithmetic.hpp>
+#include <boost/mpl/find.hpp>
+#include <boost/mpl/fold.hpp>
+#include <boost/mpl/sizeof.hpp>
+#include <boost/mpl/accumulate.hpp>
+#include <boost/mpl/for_each.hpp>
+#include <boost/mpl/range_c.hpp>
+#include <boost/mpl/unique.hpp>
+#include <boost/mpl/equal.hpp>
+#include <boost/mpl/max_element.hpp>
+#include <boost/mpl/transform.hpp>
+
 #include <windows.h>
-#define GLEW_STATIC
-#include <gl/glew.h>
-#include <sdl/sdl.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include <oglplus/all.hpp>
-#include <oglplus/opt/smart_enums.hpp>
-#include <oglplus/bound/texture.hpp>
-#include <oglplus/images/png.hpp>
-#include <oglplus/interop/glm.hpp>
-
-#include <Box2D/Box2D.h>
+//#define GLEW_STATIC
+//#include <gl/glew.h>
+//#include <sdl/sdl.h>
+//#include <glm/glm.hpp>
+//#include <glm/gtc/constants.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
+//
+//#include <oglplus/all.hpp>
+//#include <oglplus/opt/smart_enums.hpp>
+//#include <oglplus/bound/texture.hpp>
+//#include <oglplus/images/png.hpp>
+//#include <oglplus/interop/glm.hpp>
+//
+//#include <Box2D/Box2D.h>
 
 #include "Usings.h"

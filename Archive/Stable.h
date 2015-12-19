@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Channel.h"
+#include "RowProxy.h"
 
 template<typename THandle>
 struct Reference
@@ -9,15 +10,22 @@ struct Reference
     THandle next_free;
 };
 
+template<typename THandle>
+struct StableIndex
+{
+	static const bool Ordered = false;
+	using KeyType = Key<THandle>;
+};
+
 template<typename TData, typename THandle>
 struct Stable : Channel
 {
     using HandleType = THandle;
     using RowType = typename ConcatRows<Row<HandleType>, TData>::type;
-    using IndexType = None;
+    using IndexType = StableIndex<HandleType>;
     using ContainerType = array<RowType, HandleType::MaxRows>;
-    using const_iterator = typename ContainerType::const_iterator;
-    using iterator = typename ContainerType::iterator;
+	using ProxyType = RowProxy<RowType, Row<HandleType>>;
+	using iterator = ProxyIterator<typename ContainerType::iterator, ProxyType>;
 
     Stable() : rows(), valid_end(rows.begin())
     {
@@ -27,24 +35,24 @@ struct Stable : Channel
             references[i].actual = HandleType::NullHandle();
         }
     }
-    const_iterator begin() const
+	iterator begin() const
     {
-        return rows.begin()
+		return iterator{ rows.begin() };
     }
-    const_iterator end() const
+	iterator end() const
     {
-        return valid_end;
+		return iterator{ valid_end };
     }
-    RowType put(const TData& row)
+	iterator put(TData&& row)
     {
         assert(valid_end != rows.end());
         HandleType handle = free;
         auto& reference = references[handle.get()];
         free = reference.next_free;
         reference.actual = valid_end - rows.begin();
-        valid_end->setAll(row);
+        valid_end->moveAll(std::forward<TData>(row));
         valid_end->set(handle);
-        return *(valid_end++);
+		return iterator{ *(valid_end++) };
     }
     typename ContainerType::size_type erase(const HandleType& handle)
     {
@@ -52,7 +60,7 @@ struct Stable : Channel
         if (reference.actual != HandleType::NullHandle()) {
             iterator to_row = rows.begin() + reference.actual;
             --valid_end;
-            *to_row = *valid_end;
+            *to_row = std::move(*valid_end);
             references[static_cast<HandleType&>(*to_row).get()] = to_row - rows.begin();
             references[handle.get()].next_free = free;
             references[handle.get()].actual = HandleType::NullHandle();
@@ -61,25 +69,21 @@ struct Stable : Channel
         } else
             return 0;
     }
-    pair<const_iterator, const_iterator> equalRange(const HandleType& handle) const
+    pair<iterator, iterator> equalRange(const HandleType& handle) const
     {
         auto& reference = references[handle.get()];
         if (reference.actual != HandleType::NullHandle()) {
-            const_iterator iter = rows.begin() + reference.actual;
-            return std::make_pair(iter, iter + 1);
+			auto range_begin = iterator{ rows.begin() + reference.actual };
+			auto range_end = range_begin;
+			++range_end;
+            return std::make_pair(range_begin, range_end);
         } else {
-            return std::make_pair(rows.end(), rows.end());
+			return std::make_pair(end(), end());
         }
-    }
-    template<typename TRow2>
-    void update(const_iterator position, const TRow2& row)
-    {
-        static_assert(!Intersects<TRow2, typename Row<HandleType>>::value, "can not update handle column");
-        const_cast<RowType&>(*position).setAll(row);
     }
 private:
     array<Reference<HandleType>, HandleType::MaxRows> references;
     HandleType free;
     ContainerType rows;
-    iterator valid_end;
+	typename ContainerType::iterator valid_end;
 };

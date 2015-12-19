@@ -12,7 +12,8 @@ struct ResourceStable : Channel
     using IndexType = None;
     using ValueType = typename std::remove_pointer<typename ResourceType::Type>::type;
     using ContainerType = array<pair<HandleType, unique_ptr<ValueType>>, HandleType::MaxRows>;
-    using const_iterator = SingleValueIterator<RowType>;
+	using ProxyType = RowProxy<RowType, Row<HandleType>>;
+    using iterator = SingleValueIterator<RowType>;
 
     ResourceStable() : rows(), valid_end(rows.begin())
     {
@@ -22,11 +23,11 @@ struct ResourceStable : Channel
             references[i].actual = HandleType::NullHandle();
         }
     }
-    const_iterator begin() const
+	iterator begin() const
     {
 		fatalError("ResourceStable begin() not implemented");
     }
-    const_iterator end() const
+	iterator end() const
     {
 		fatalError("ResourceStable end() not implemented");
     }
@@ -43,7 +44,7 @@ struct ResourceStable : Channel
         valid_end++;
         return result;
     }
-    void updateResource(const_iterator position, unique_ptr<ValueType> resource)
+    void updateResource(iterator position, unique_ptr<ValueType> resource)
     {
         auto& reference = references[static_cast<const HandleType&>(*position).get()];
         if (reference.actual != HandleType::NullHandle()) {
@@ -70,14 +71,14 @@ struct ResourceStable : Channel
         } else
             return 0;
     }
-    pair<const_iterator, const_iterator> equalRange(const HandleType& handle) const
+    pair<iterator, iterator> equalRange(const HandleType& handle) const
     {
         auto& reference = references[handle.get()];
         if (reference.actual != HandleType::NullHandle()) {
             auto iter = rows.begin() + reference.actual;
-            return std::make_pair(const_iterator(RowType({ handle }, { iter->second.get() })), const_iterator());
+            return std::make_pair(iterator(RowType({ handle }, { iter->second.get() })), const_iterator());
         } else {
-            return std::make_pair(const_iterator(), const_iterator());
+            return std::make_pair(iterator(), iterator());
         }
     }
 private:
