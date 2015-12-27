@@ -1,31 +1,7 @@
 #pragma once
 
+#include "Row.h"
 #include "Utils.h"
-
-namespace impl {
-	template<class T> struct alignment_of_ {
-		using type = mpl::int_<std::alignment_of<T>::value>;
-	};
-}
-
-template<class T, class TRow> T& col(TRow row) { return row.col<T>(); }
-
-template<class... TValues> class Row {
-	tuple<TValues&...> refs;
-public:
-	Row(TValues&... values) : refs(values...) {}
-
-	template<class T>
-	operator const T&() const { return col<T>(); }
-	template<class T>
-	operator T&() { return col<T>(); }
-	template<class T>
-	Row& operator |=(T x) { col<T>() = x; return *this; }
-
-	template<class T> T& col() const {
-		return get<T&>(refs);
-	}
-};
 
 template<template<typename> class TIter, class... TValues> class RowIterator {
 	using Values = typename mpl::vector<TValues...>::type;
@@ -142,7 +118,19 @@ template<class... TValues> class Table {
 
 	using ValueTypes = typename mpl::vector<TValues...>::type;
 
+	template<class T> struct AlignmentOf {
+		using type = mpl::int_<std::alignment_of<T>::value>;
+	};
+
 	template<class TValue> using iterator = TValue*;
+
+	template<class T> struct SizeOfPreceding
+	{
+		using End = typename mpl::find<ValueTypes, T>::type;
+		using Preceding = typename mpl::iterator_range<typename ValueTypes::begin, End>::type;
+		using Sum = typename mpl::accumulate<Preceding, mpl::int_<0>, mpl::plus<mpl::_1, mpl::sizeof_<mpl::_2>>>::type;
+		static const ::size_t value = Sum::value;
+	};
 
 	size_t size = 0;
 	size_t capacity = 0;
@@ -150,17 +138,26 @@ template<class... TValues> class Table {
 
 public:
 	static const int alignment = mpl::max_element<
-		typename mpl::transform<ValueTypes, impl::alignment_of_<mpl::_1>>::type>::type::type::value;
+		typename mpl::transform<ValueTypes, AlignmentOf<mpl::_1>>::type>::type::type::value;
 
-	template<class T> iterator<T> begin() {
-		using namespace mpl;
-		using End = typename find<ValueTypes, T>::type;
-		using Preceding = typename iterator_range<typename ValueTypes::begin, End>::type;
-		using Sum = typename accumulate<Preceding, int_<0>, plus<mpl::_1, sizeof_<mpl::_2>>>::type;
-		return reinterpret_cast<iterator<T>>(data + (capacity * Sum::value));
+	template<class T> iterator<T> colBegin() const {
+		return reinterpret_cast<iterator<T>>(data + (capacity * SizeOfPreceding<T>::value));
+	}
+	template<class... Ts> RowIterator<iterator, Ts...> begin() {
+		return RowIterator<iterator, Ts...>{ colBegin<Ts>()... };
 	}
 
-	template<class T1, class T2, class... Ts> RowIterator<iterator, T1, T2, Ts...> begin() {
-		return RowIterator<iterator, T1, T2, Ts...>{ begin<T1>(), begin<T2>(), begin<Ts>()... };
+	template<class T> iterator<T> colEnd() const {
+		return colBegin<T>() + size;
+	}
+	template<class... Ts> RowIterator<iterator, Ts...> end() {
+		return RowIterator<iterator, Ts...>{ colEnd<Ts>()... };
+	}
+
+	template<class... TValueRefs> bool pushBack(TValueRefs&&.... values) {
+		if (size == capacity) {
+			// TODO: realloc
+		}
+		
 	}
 };

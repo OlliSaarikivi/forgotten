@@ -150,6 +150,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ElementSpriteShader.h" />
+    <ClInclude Include="Row.h" />
     <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Table.h" />
