@@ -43,6 +43,8 @@
 #include <boost/mpl/equal.hpp>
 #include <boost/mpl/max_element.hpp>
 #include <boost/mpl/transform.hpp>
+#include <boost/mpl/contains.hpp>
+#include <boost/mpl/remove_if.hpp>
 
 #include <windows.h>
 //#define GLEW_STATIC
@@ -61,3 +63,5 @@
 //#include <Box2D/Box2D.h>
 
 #include "Usings.h"
+#include "Utils.h"
+#include "Tuning.h"

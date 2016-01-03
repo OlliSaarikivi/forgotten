@@ -35,10 +35,16 @@
     <ClInclude Include="ElementSpriteShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="Table.h">
+    <ClInclude Include="Row.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Row.h">
+    <ClInclude Include="Columnar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tuning.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

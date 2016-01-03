@@ -149,12 +149,14 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BTree.h" />
+    <ClInclude Include="Columnar.h" />
     <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Row.h" />
     <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Table.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Tuning.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
