@@ -6,6 +6,8 @@
 
 struct ExtractIntCol {
 	using KeyType = int32_t;
+	using Less = std::less<KeyType>;
+	static const KeyType LeastKey = 0;
 	template<class TRow> KeyType operator()(const TRow& row) {
 		return row.col<int>();
 	}
@@ -17,22 +19,35 @@ struct IntColLess {
 	}
 };
 
+COL(int, Speed)
+COL(int, Acceleration)
+COL(int, Weight)
+COL(unique_ptr<int>, Resource)
+
 int _tmain(int argc, _TCHAR* argv[]) {
-	//int z = 5;
-	//auto y = makeRow(z, (short)10);
-	//auto a = Columnar<int, short>{};
-	//a.pushBack(y);
-	//auto b = a[0];
-	//b.set<short>(3);
-	//b.col<short>() = 3;
+	BTree<ExtractIntCol, IntColLess, int, long> table{};
+	Columnar<int, long> add{};
 
-	//auto t = BTree<ExtractIntCol, std::less<ExtractIntCol::KeyType>, IntColLess, int, long>{};
-	//auto h = t.begin();
-	//t.insert(makeRow((int)3, (long)4));
+	for (int i = 0; i < 10; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			add.pushBack(makeRow(j*10 + i, (long)i));
+		}
 
-	int a;
-	short b;
-	auto r = makeRow(a, b);
+		table.moveInsertSorted(begin(add), end(add));
+		add.clear();
+	}
 
-	(int&)r = 3;
+	auto iter = begin(table);
+	auto tableEnd = end(table);
+	while (iter != tableEnd) {
+		std::cout << int(*iter) << " " << long(*iter) << "\n";
+		++iter;
+	}
+
+	for (auto row : table) {
+		std::cout << int(row) << " " << long(row) << "\n";
+	}
+
+	string line;
+	std::cin >> line;
 }

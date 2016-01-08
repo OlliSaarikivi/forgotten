@@ -30,8 +30,12 @@
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
+#include <boost/pool/object_pool.hpp>
+
+#include <boost/serialization/strong_typedef.hpp>
 
 #include <boost/mpl/vector.hpp>
+#include <boost/mpl/set.hpp>
 #include <boost/mpl/arithmetic.hpp>
 #include <boost/mpl/find.hpp>
 #include <boost/mpl/fold.hpp>
@@ -45,6 +49,8 @@
 #include <boost/mpl/transform.hpp>
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/remove_if.hpp>
+
+#include <boost/integer/static_log2.hpp>
 
 #include <windows.h>
 //#define GLEW_STATIC
