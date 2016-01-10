@@ -41,10 +41,13 @@
     <ClInclude Include="Columnar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BTree.h">
+    <ClInclude Include="Tuning.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Tuning.h">
+    <ClInclude Include="KeyCompressionBTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

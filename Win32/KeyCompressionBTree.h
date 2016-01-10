@@ -3,10 +3,12 @@
 #include "Columnar.h"
 #include "Row.h"
 
-template<class TKey, class... TValues> class BTree {
-	using KeyType = typename TKey::KeyType;
-	using KeyLess = typename TKey::Less;
-	static const KeyType LeastKey = TKey::LeastKey;
+COL(uint16_t, PerKeyRecordCount) // Limits the number of records that have the same key
+
+template<class TGetKey, class TLess, class... TValues> class BTree {
+	using KeyType = typename TGetKey::KeyType;
+	using KeyLess = typename TGetKey::Less;
+	static const KeyType LeastKey = TGetKey::LeastKey;
 
 	using Records = Columnar<TValues...>;
 	using Counts = Columnar<KeyType, PerKeyRecordCount>;

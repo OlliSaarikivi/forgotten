@@ -50,8 +50,7 @@
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/remove_if.hpp>
 
-#include <boost/integer/static_log2.hpp>
-
+#define NOMINMAX
 #include <windows.h>
 //#define GLEW_STATIC
 //#include <gl/glew.h>

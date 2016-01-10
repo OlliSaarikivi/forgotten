@@ -4,6 +4,22 @@
 
 #include "BTree.h"
 
+class Timer
+{
+public:
+	Timer() : beg_(clock_::now()) {}
+	void reset() { beg_ = clock_::now(); }
+	double elapsed() const {
+		return boost::chrono::duration_cast<second_>
+			(clock_::now() - beg_).count();
+	}
+
+private:
+	typedef boost::chrono::high_resolution_clock clock_;
+	typedef boost::chrono::duration<double, boost::ratio<1> > second_;
+	boost::chrono::time_point<clock_> beg_;
+};
+
 struct ExtractIntCol {
 	using KeyType = int32_t;
 	using Less = std::less<KeyType>;
@@ -19,34 +35,49 @@ struct IntColLess {
 	}
 };
 
-COL(int, Speed)
-COL(int, Acceleration)
-COL(int, Weight)
-COL(unique_ptr<int>, Resource)
+struct Complainer {
+	~Complainer() {
+		std::cout << "Murder!\n";
+	}
+};
+
+COL(unique_ptr<Complainer>, Canary)
 
 int _tmain(int argc, _TCHAR* argv[]) {
-	BTree<ExtractIntCol, IntColLess, int, long> table{};
-	Columnar<int, long> add{};
+	Timer tmr;
 
-	for (int i = 0; i < 10; ++i) {
+	BTree<ExtractIntCol, IntColLess, int, Canary> table{};
+	Columnar<int, Canary> add{};
+
+	tmr.reset();
+	for (int i = 0; i < 100; ++i) {
 		for (int j = 0; j < 10; ++j) {
-			add.pushBack(makeRow(j*10 + i, (long)i));
+			add.pushBack(makeRow(j*100 + i, Canary(std::make_unique<Complainer>())));
 		}
-
 		table.moveInsertSorted(begin(add), end(add));
 		add.clear();
 	}
+	double t = tmr.elapsed();
+	std::cout << t << std::endl;
 
-	auto iter = begin(table);
-	auto tableEnd = end(table);
-	while (iter != tableEnd) {
-		std::cout << int(*iter) << " " << long(*iter) << "\n";
-		++iter;
+	std::map<int, Canary> map{};
+
+	tmr.reset();
+	for (int i = 0; i < 100; ++i) {
+		for (int j = 0; j < 10; ++j) {
+			map.emplace(j * 100 + i, Canary(std::make_unique<Complainer>()));
+		}
 	}
+	t = tmr.elapsed();
+	std::cout << t << std::endl;
 
+	int count = 0;
 	for (auto row : table) {
-		std::cout << int(row) << " " << long(row) << "\n";
+		++count;
 	}
+	std::cout << "Elements: " << count << "\n";
+
+	table.printCounts();
 
 	string line;
 	std::cin >> line;

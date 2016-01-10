@@ -194,10 +194,10 @@ private:
 	};
 
 	template<class TRow> struct MoveConstructRow {
-		Iterator<TValues...> pos;
+		iterator pos;
 		TRow&& row;
 
-		MoveConstructRow(Iterator<TValues...> pos, TRow&& row) : pos(pos), row(std::forward<TRow>(row)) {}
+		MoveConstructRow(iterator pos, TRow&& row) : pos(pos), row(std::forward<TRow>(row)) {}
 		MoveConstructRow(const MoveConstructRow& other) : pos(other.pos), row(std::move(other.row)) {}
 
 		template<class T> void operator()(const T& type) {
@@ -206,7 +206,7 @@ private:
 		}
 	};
 	template<class TRow> struct CopyConstructRow {
-		Iterator<TValues...> pos;
+		iterator pos;
 		const TRow& row;
 
 		template<class T> void operator()(const T& type) {
@@ -214,10 +214,10 @@ private:
 			new (&(pos->col<Type>())) Type(row.col<Type>());
 		}
 	};
-	template<class... Ts> auto getConstructRow(Iterator<TValues...> pos, Row<Ts...>&& row) {
+	template<class... Ts> auto getConstructRow(iterator pos, Row<Ts...>&& row) {
 		return MoveConstructRow<Row<Ts...>>{ pos, std::move(row) };
 	}
-	template<class... Ts> auto getConstructRow(Iterator<TValues...> pos, const Row<Ts...>& row) {
+	template<class... Ts> auto getConstructRow(iterator pos, const Row<Ts...>& row) {
 		return CopyConstructRow<Row<Ts...>>{ pos, row };
 	}
 
@@ -274,18 +274,17 @@ public:
 		unsafePushBack(std::forward<TRow>(row));
 	}
 
-	template<class TRow> void unsafeInsert(Iterator<TValues...> pos, TRow&& row) {
+	template<class TRow> void unsafeInsert(iterator pos, TRow&& row) {
 		auto to = end();
 		auto from = to - 1;
 		if (to != pos)
-			while (true) {
+			for (;;) {
 				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
 				to = from;
 				--from;
-				if (to == pos) {
-					mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *pos });
+				if (to == pos)
 					break;
-				}
 			}
 		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(pos, std::forward<TRow>(row)));
 		++size_;
@@ -293,7 +292,7 @@ public:
 	template<class TRow> void unsafeInsert(size_t index, TRow&& row) {
 		unsafeInsert(begin() + index, std::forward<TRow>(row));
 	}
-	template<class TRow> void insert(Iterator<TValues...> pos, TRow&& row) {
+	template<class TRow> void insert(iterator pos, TRow&& row) {
 		insert(pos - begin(), std::forward<TRow>(row));
 	}
 	template<class TRow> void insert(size_t index, TRow&& row) {
@@ -301,6 +300,61 @@ public:
 			grow(size_ + 1);
 		}
 		unsafeInsert(index, std::forward<TRow>(row));
+	}
+
+	template<class TIter> void unsafeMoveInsert(iterator pos, TIter rangeBegin, TIter rangeEnd) {
+		auto rangeSize = rangeEnd - rangeBegin;
+		auto to = end() + (rangeSize - 1);
+		auto from = to - rangeSize;
+		if (to != pos)
+			for (;;) {
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
+				--to;
+				--from;
+				if (to == pos)
+					break;
+			}
+
+		TIter iter = rangeBegin;
+		auto posIter = pos;
+		while (iter != rangeEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(posIter, std::move(*iter)));
+			++iter;
+			++posIter;
+		}
+		size_ += rangeSize;
+	}
+	template<class TIter> void unsafeMoveInsert(size_t index, TIter rangeBegin, TIter rangeEnd) {
+		unsafeMoveInsert(begin() + index, rangeBegin, rangeEnd);
+	}
+	template<class TIter> void moveInsert(iterator pos, TIter rangeBegin, TIter rangeEnd) {
+		moveInsert(pos - begin(), rangeBegin, rangeEnd);
+	}
+	template<class TIter> void moveInsert(size_t index, TIter rangeBegin, TIter rangeEnd) {
+		auto rangeSize = rangeEnd - rangeBegin;
+		if (size_ + rangeSize >= capacity_) {
+			grow(size_ + rangeSize);
+		}
+		unsafeMoveInsert(index, rangeBegin, rangeEnd);
+	}
+
+	void erase(iterator rangeBegin, iterator rangeEnd) {
+		iterator iter = rangeBegin;
+		while (iter != rangeEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *iter });
+			++iter;
+		}
+		iterator from = rangeEnd;
+		iterator fromEnd = end();
+		iterator to = rangeBegin;
+		while (from != fromEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
+			++from;
+			++to;
+		}
+		size_ -= (rangeEnd - rangeBegin);
 	}
 
 	void clear() {
@@ -328,3 +382,209 @@ public:
 
 template<class... Ts> inline auto begin(Columnar<Ts...>& c) { return c.begin(); }
 template<class... Ts> inline auto end(Columnar<Ts...>& c) { return c.end(); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+template<int N, class... TValues> class ColumnarArray {
+	using ValueTypes = typename mpl::vector<TValues...>::type;
+	template<class TValue> using AsPointer = TValue*;
+
+public:
+	static const int alignment = mpl::max_element<
+		typename mpl::transform<ValueTypes, impl::AlignmentOf<mpl::_1>>::type>::type::type::value;
+
+	template<class... Ts> using Iterator = RowIterator<AsPointer, Ts...>;
+	using iterator = Iterator<TValues...>;
+
+private:
+
+#ifndef ALLOW_COLS_OVER_HWPREFETCH_STREAMS
+	static_assert(sizeof...(TValues) <= 16, "Columns exceeds number of prefetch streams supported by Intel Core. "
+		"Iteration performance may be reduced. Define ALLOW_COLS_OVER_HWPREFETCH_STREAMS to disable this error.");
+#endif
+	char[(N + N % alignment) * impl::SizeOfAll<ValueTypes>::value] data;
+
+	template<class TRow> struct CopyRow {
+		iterator pos;
+		const TRow& row;
+
+		template<class T> void operator()(const T& type) {
+			using Type = T::type;
+			new (&(pos->col<Type>())) Type(row.col<Type>());
+		}
+	};
+	template<class... Ts> auto getConstructRow(iterator pos, Row<Ts...>&& row) {
+		return MoveConstructRow<Row<Ts...>>{ pos, std::move(row) };
+	}
+	template<class... Ts> auto getConstructRow(iterator pos, const Row<Ts...>& row) {
+		return CopyConstructRow<Row<Ts...>>{ pos, row };
+	}
+
+	Columnar(size_t size, size_t capacity, char* data) : size_(size), capacity_(capacity), data(data) {}
+
+public:
+	Columnar() : size_(0), capacity_(0), data(nullptr) {}
+	~Columnar() {
+		clear();
+		free(data);
+		data = nullptr;
+		capacity_ = 0;
+	}
+
+	template<class T> auto colBegin() const {
+		return reinterpret_cast<T*>(data + (capacity_ * impl::SizeOfPreceding<ValueTypes, T>::value));
+	}
+	template<class T, class... Ts> auto begin() {
+		return Iterator<T, Ts...>{ colBegin<T>(), colBegin<Ts>()... };
+	}
+	auto begin() {
+		return begin<TValues...>();
+	}
+
+	template<class T> auto colEnd() const {
+		return colBegin<T>() + size_;
+	}
+	template<class T, class... Ts> auto end() {
+		return Iterator<T, Ts...>{ colEnd<T>(), colEnd<Ts>()... };
+	}
+	auto end() {
+		return end<TValues...>();
+	}
+
+	Row<TValues&...> operator[](size_t pos) {
+		return begin()[pos];
+	}
+
+	void reserve(size_t n) {
+		if (n > capacity_) {
+			grow(n);
+		}
+	}
+
+	template<class TRow> void unsafePushBack(TRow&& row) {
+		assert(size_ < capacity_);
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(end(), std::forward<TRow>(row)));
+		++size_;
+	}
+	template<class TRow> void pushBack(TRow&& row) {
+		if (size_ == capacity_) {
+			grow(size_ + 1);
+		}
+		unsafePushBack(std::forward<TRow>(row));
+	}
+
+	template<class TRow> void unsafeInsert(iterator pos, TRow&& row) {
+		auto to = end();
+		auto from = to - 1;
+		if (to != pos)
+			for (;;) {
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
+				to = from;
+				--from;
+				if (to == pos)
+					break;
+			}
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(pos, std::forward<TRow>(row)));
+		++size_;
+	}
+	template<class TRow> void unsafeInsert(size_t index, TRow&& row) {
+		unsafeInsert(begin() + index, std::forward<TRow>(row));
+	}
+	template<class TRow> void insert(iterator pos, TRow&& row) {
+		insert(pos - begin(), std::forward<TRow>(row));
+	}
+	template<class TRow> void insert(size_t index, TRow&& row) {
+		if (size_ == capacity_) {
+			grow(size_ + 1);
+		}
+		unsafeInsert(index, std::forward<TRow>(row));
+	}
+
+	template<class TIter> void unsafeMoveInsert(iterator pos, TIter rangeBegin, TIter rangeEnd) {
+		auto rangeSize = rangeEnd - rangeBegin;
+		auto to = end() + (rangeSize - 1);
+		auto from = to - rangeSize;
+		if (to != pos)
+			for (;;) {
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+				mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
+				--to;
+				--from;
+				if (to == pos)
+					break;
+			}
+
+		TIter iter = rangeBegin;
+		auto posIter = pos;
+		while (iter != rangeEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(posIter, std::move(*iter)));
+			++iter;
+			++posIter;
+		}
+		size_ += rangeSize;
+	}
+	template<class TIter> void unsafeMoveInsert(size_t index, TIter rangeBegin, TIter rangeEnd) {
+		unsafeMoveInsert(begin() + index, rangeBegin, rangeEnd);
+	}
+	template<class TIter> void moveInsert(iterator pos, TIter rangeBegin, TIter rangeEnd) {
+		moveInsert(pos - begin(), rangeBegin, rangeEnd);
+	}
+	template<class TIter> void moveInsert(size_t index, TIter rangeBegin, TIter rangeEnd) {
+		auto rangeSize = rangeEnd - rangeBegin;
+		if (size_ + rangeSize >= capacity_) {
+			grow(size_ + rangeSize);
+		}
+		unsafeMoveInsert(index, rangeBegin, rangeEnd);
+	}
+
+	void erase(iterator rangeBegin, iterator rangeEnd) {
+		iterator iter = rangeBegin;
+		while (iter != rangeEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *iter });
+			++iter;
+		}
+		iterator from = rangeEnd;
+		iterator fromEnd = end();
+		iterator to = rangeBegin;
+		while (from != fromEnd) {
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(getConstructRow(to, std::move(*from)));
+			mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructRow{ *from });
+			++from;
+			++to;
+		}
+		size_ -= (rangeEnd - rangeBegin);
+	}
+
+	void clear() {
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(DestructColumn{ *this });
+		size_ = 0;
+	}
+
+	size_t size() {
+		return size_;
+	}
+	size_t capacity() {
+		return capacity_;
+	}
+	bool empty() {
+		return size_ == 0;
+	}
+
+	friend void swap(Columnar& left, Columnar& right) {
+		using std::swap;
+		swap(left.size_, right.size_);
+		swap(left.capacity_, right.capacity_);
+		swap(left.data, right.data);
+	}
+};

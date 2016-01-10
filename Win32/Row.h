@@ -7,6 +7,7 @@ struct D                                                        \
     , boost::totally_ordered2< D, T                             \
     > >                                                         \
 {                                                               \
+	using type = T;                                             \
     T t;                                                        \
     explicit D(T t_) : t(std::move(t_)) {};                     \
     D(): t() {};                                                \

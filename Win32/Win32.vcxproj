@@ -150,6 +150,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BTree.h" />
+    <ClInclude Include="KeyCompressionBTree.h" />
     <ClInclude Include="Columnar.h" />
     <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Row.h" />
