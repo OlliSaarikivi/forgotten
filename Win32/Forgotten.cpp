@@ -35,49 +35,22 @@ struct IntColLess {
 	}
 };
 
-struct Complainer {
-	~Complainer() {
-		std::cout << "Murder!\n";
-	}
-};
-
-COL(unique_ptr<Complainer>, Canary)
-
 int _tmain(int argc, _TCHAR* argv[]) {
 	Timer tmr;
 
-	BTree<ExtractIntCol, IntColLess, int, Canary> table{};
-	Columnar<int, Canary> add{};
+	BTree<ExtractIntCol, IntColLess, int> table{};
+	Columnar<int> add{};
 
 	tmr.reset();
 	for (int i = 0; i < 100; ++i) {
 		for (int j = 0; j < 10; ++j) {
-			add.pushBack(makeRow(j*100 + i, Canary(std::make_unique<Complainer>())));
+			add.pushBack(makeRow(j*100 + i));
 		}
 		table.moveInsertSorted(begin(add), end(add));
 		add.clear();
 	}
 	double t = tmr.elapsed();
 	std::cout << t << std::endl;
-
-	std::map<int, Canary> map{};
-
-	tmr.reset();
-	for (int i = 0; i < 100; ++i) {
-		for (int j = 0; j < 10; ++j) {
-			map.emplace(j * 100 + i, Canary(std::make_unique<Complainer>()));
-		}
-	}
-	t = tmr.elapsed();
-	std::cout << t << std::endl;
-
-	int count = 0;
-	for (auto row : table) {
-		++count;
-	}
-	std::cout << "Elements: " << count << "\n";
-
-	table.printCounts();
 
 	string line;
 	std::cin >> line;

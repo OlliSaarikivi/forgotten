@@ -1,26 +1,7 @@
 #pragma once
 
 // Adapted from BOOST_STRONG_TYPEDEF to support unique_ptr
-#define COL(T, D)                                               \
-struct D                                                        \
-    : boost::totally_ordered1< D                                \
-    , boost::totally_ordered2< D, T                             \
-    > >                                                         \
-{                                                               \
-	using type = T;                                             \
-    T t;                                                        \
-    explicit D(T t_) : t(std::move(t_)) {};                     \
-    D(): t() {};                                                \
-    D(D && t_) = default;                                       \
-    D(const D & t_) = default;                                  \
-    D & operator=(D && rhs) = default;                          \
-    D & operator=(const D & rhs) = default;                     \
-    D & operator=(T && rhs) { t = std::move(rhs); return *this;}\
-    operator const T & () const {return t; }                    \
-    operator T & () { return t; }                               \
-    bool operator==(const D & rhs) const { return t == rhs.t; } \
-    bool operator<(const D & rhs) const { return t < rhs.t; }   \
-};
+#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D)
 
 template<class... TValues> class Row {
 	using ValueTypes = typename mpl::vector<typename std::remove_reference<TValues>::type...>::type;
@@ -40,9 +21,6 @@ template<class... TValues> class Row {
 	template<class T> struct NumCompatibleCols {
 		static const int value = mpl::accumulate<ValueTypes, mpl::int_<0>, mpl::if_<IsConvertible<T, mpl::_2>, mpl::next<mpl::_1>, mpl::_1>>::type::value;
 	};
-	//template<class... Ts> struct AllColsContained {
-	//	static const int value = mpl::accumulate<typename mpl::vector<typename std::remove_reference<Ts>::type...>::type, mpl::true_, mpl::and_<mpl::_1, mpl::contains<ValueTypeSet, mpl::_2>>>::type::value;
-	//};
 
 	template<class... Ts> struct SetColumn {
 		const Row<Ts...>& from;
@@ -51,30 +29,16 @@ template<class... TValues> class Row {
 			to.col<T::type>() = from.col<T::type>();
 		}
 	};
-	template<class... Ts> struct MoveColumn {
-		Row<Ts...>& from;
-		Row& to;
-
-		template<class T> void operator()(const T& type) {
-			to.unsafeCol<T::type>() = std::move(from.unsafeCol<T::type>());
-		}
-	};
 
 public:
 	Row(TValues&&... values) : refs(std::forward<TValues>(values)...) {}
 
-	Row(Row&& other) = default;
 	Row(const Row& other) = default;
 
 	Row& operator=(const Row& other) = delete;
-	Row& operator=(Row&& other) = delete;
 
 	template<class T, typename std::enable_if<!std::is_reference<T>::value && mpl::contains<ValueTypes, T>::type::value, int>::type = 0>
 	explicit operator T() { return col<StoredType<T>>(); }
-
-	// Enable casting to other rows with specific cols by reference
-	//template<class... Ts, typename std::enable_if<AllColsContained<Ts...>::value, int>::type = 0>
-	//explicit operator Row<Ts...>() { return makeRow(static_cast<Ts>(this->col<Ts>())...); }
 
 	template<class T, typename std::enable_if<HasCompatibleCol<T>::value, int>::type = 0>
 	Row& operator |=(T x) {
@@ -86,13 +50,6 @@ public:
 		using OtherTypes = typename mpl::set<typename std::remove_reference<Ts>::type...>::type;
 		using Intersection = typename mpl::remove_if<ValueTypes, mpl::not_<mpl::contains<OtherTypes, mpl::_1>>>::type;
 		mpl::for_each<Intersection, TypeWrap<mpl::_1>>(SetColumn<Ts...>{ other, *this });
-		return *this;
-	}
-
-	template<class... Ts> Row& operator|=(Row<Ts...>&& other) {
-		using OtherTypes = typename mpl::set<typename std::remove_reference<Ts>::type...>::type;
-		using Intersection = typename mpl::remove_if<ValueTypes, mpl::not_<mpl::contains<OtherTypes, mpl::_1>>>::type;
-		mpl::for_each<Intersection, TypeWrap<mpl::_1>>(MoveColumn<Ts...>{ other, *this });
 		return *this;
 	}
 

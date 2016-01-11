@@ -6,17 +6,16 @@
 template<class TKey, class... TValues> class BTree {
 	using KeyType = typename TKey::KeyType;
 	using KeyLess = typename TKey::Less;
+	using GetKey = TKey;
 	static const KeyType LeastKey = TKey::LeastKey;
 
-	using Records = Columnar<TValues...>;
-	using Counts = Columnar<KeyType, PerKeyRecordCount>;
-
-	static const size_t KeysInCacheLine = CACHE_LINE_SIZE / sizeof(KeyType);
+	static const size_t KeysInCacheLine = (CACHE_LINE_SIZE - 1) / sizeof(KeyType);
 	static const size_t MaxKeys = KeysInCacheLine < 2 ? 2 : KeysInCacheLine;
 	static const size_t MaxInnerLevels = 32; // Gives at least 2^32
 
-	static const size_t MinRecords = 32;
-	static const size_t MaxRecords = 64;
+	static const size_t MaxRecords = MaxKeys - 1;
+
+	using Records = ColumnarArray<MaxRecords, TValues...>;
 
 	struct InnerNode;
 	struct LeafNode;
@@ -59,8 +58,9 @@ template<class TKey, class... TValues> class BTree {
 		}
 	};
 
-	struct InnerNode {
+	alignas(2) struct InnerNode {
 		array<KeyType, MaxKeys> keys;
+		uint8_t size;
 		array<NodePtr, MaxKeys + 1> children;
 		InnerNode* parent;
 
@@ -69,41 +69,35 @@ template<class TKey, class... TValues> class BTree {
 			children.fill(NodePtr{});
 		}
 	};
-	struct LeafNode {
+	alignas(2) struct LeafNode {
+		Records records;
+		uint8_t size;
 		LeafNode* next;
 		LeafNode* previous;
-		LeafNode* nextDirty;
 		InnerNode* parent;
-		Counts counts;
-		Records records;
 
-		LeafNode() : next(nullptr), previous(nullptr), parent(nullptr), nextDirty(nullptr) {}
+		LeafNode() : next(nullptr), previous(nullptr), parent(nullptr) {}
 	};
-
-	static_assert(alignof(InnerNode) >= 2, "Can not use low byte for type info because InnerNode has alignment of 1 byte.");
-	static_assert(alignof(LeafNode) >= 2, "Can not use low byte for type info because LeafNode has alignment of 1 byte.");
 
 	template<class... TSomeValues> class Iterator {
 		using IteratorType = Records::Iterator<TSomeValues...>;
 
 		LeafNode* current;
-		IteratorType pos;
+		size_t pos;
 
 	public:
 		using reference = typename IteratorType::reference;
 		using pointer = typename IteratorType::pointer;
 		using iterator_category = std::forward_iterator_tag;
 
-		Iterator(LeafNode* current) : current(current) {
-			pos = current->records.begin<TSomeValues...>();
-		}
-		Iterator(LeafNode* current, IteratorType pos) : current(current), pos(pos) {}
+		Iterator(LeafNode* current) : current(current), pos(0) {}
+		Iterator(LeafNode* current, size_t pos) : current(current), pos(pos) {}
 
 		Iterator& operator++() {
 			++pos;
-			if (current->next != nullptr && pos == current->records.end<TSomeValues...>()) {
+			if (current->next != nullptr && pos == current->size) {
 				current = current->next;
-				pos = current->records.begin<TSomeValues...>();
+				pos = 0;
 			}
 			return *this;
 		}
@@ -114,7 +108,7 @@ template<class TKey, class... TValues> class BTree {
 		}
 
 		reference operator*() const {
-			return *pos;
+			return current->records[pos];
 		}
 		pointer operator->() const {
 			return pos.operator->();
@@ -140,252 +134,30 @@ template<class TKey, class... TValues> class BTree {
 	LeafNode* firstLeaf;
 	LeafNode* lastLeaf;
 	LeafNode* dirty;
-	size_t innerLevels;
-	Records scratch;
 
-	size_t leaves = 1; // TODO: remove
+	//uint8_t findSlot(InnerNode* inner, KeyType key) {
+	//	for (uint_fast8_t i = 0; i < inner->size; ++i) {
+	//		if (KeyLess()(key, inner->keys[i]))
+	//			return i;
+	//	}
+	//	return inner->size;
+	//}
 
-	template<uint8_t BEGIN, uint8_t END, int N> uint8_t findSlot(const array<KeyType, N>& keys, KeyType key) {
-		for (uint_fast8_t i = BEGIN; i < END; ++i) {
-			if (KeyLess()(key, keys[i]))
-				return i;
-		}
-		return END;
-	}
-
-	struct PathEntry {
-		KeyType upperBound;
-		NodePtr node;
-	};
-	void findLeaf(KeyType key, PathEntry* path) {
-		while (path->node.isInner()) {
-			InnerNode* inner = path->node.inner();
-			auto slot = findSlot<0, MaxKeys>(inner->keys, key);
-			KeyType newBound = slot == MaxKeys ? path->upperBound : inner->keys[slot];
-			++path;
-			path->upperBound = newBound;
-			path->node = inner->children[slot];
-		}
-	}
-
-	void incrementCount(Counts& counts, size_t& pos, KeyType key) {
-		auto size = counts.size();
-		while (pos < size && KeyLess()(KeyType(counts[pos]), key))
-			++pos;
-		if (pos < size) {
-			if (!KeyLess()(key, KeyType(counts[pos]))) {
-				assert(PerKeyRecordCount(counts[pos]) < std::numeric_limits<PerKeyRecordCount::type>::max());
-				counts[pos].col<PerKeyRecordCount>() += 1;
-			}
-			else
-				counts.insert(pos, makeRow(key, PerKeyRecordCount(1)));
-		}
-		else
-			counts.pushBack(makeRow(key, PerKeyRecordCount(1)));
-	}
-
-	template<class TIter> void moveMerge(LeafNode* leaf, TIter newIter, TIter newEnd) {
-		Records& target = leaf->records;
-		scratch.reserve(target.size() + (newEnd - newIter));
-
-		size_t countsPos = 0;
-		auto oldIter = ::begin(target);
-		auto oldEnd = ::end(target);
-		for (;;) {
-			if (oldIter == oldEnd) {
-				while (newIter != newEnd) {
-					incrementCount(leaf->counts, countsPos, TGetKey()(*newIter));
-					scratch.unsafePushBack(std::move(*newIter));
-					++newIter;
-				}
-				break;
-			}
-			if (newIter == newEnd) {
-				while (oldIter != oldEnd)
-					scratch.unsafePushBack(std::move(*oldIter++));
-				break;
-			}
-
-			if (TLess()(*oldIter, *newIter))
-				scratch.unsafePushBack(std::move(*oldIter++));
-			else if (TLess()(*newIter, *oldIter)) {
-				incrementCount(leaf->counts, countsPos, TGetKey()(*newIter));
-				scratch.unsafePushBack(std::move(*newIter));
-				++newIter;
-			}
-			else { // New overwrites old. Counts are unchanged.
-				scratch.unsafePushBack(std::move(*newIter++));
-				++oldIter;
-			}
-		}
-
-		swap(scratch, target);
-		scratch.clear();
-	}
-	template<class TIter> TIter moveMergeUntil(LeafNode* leaf, TIter newIter, TIter newEnd, KeyType upperBound) {
-		Records& target = leaf->records;
-		size_t sizeAtLeast = target.size();
-		scratch.reserve(sizeAtLeast);
-
-		size_t countsPos = 0;
-		auto oldIter = ::begin(target);
-		auto oldEnd = ::end(target);
-		for (;;) {
-			if (oldIter == oldEnd) {
-				while (newIter != newEnd && KeyLess()(TGetKey()(*newIter), upperBound)) {
-					incrementCount(leaf->counts, countsPos, TGetKey()(*newIter));
-					scratch.pushBack(std::move(*newIter));
-					++newIter;
-				}
-				break;
-			}
-			if (newIter == newEnd || !KeyLess()(TGetKey()(*newIter), upperBound)) {
-				while (oldIter != oldEnd) {
-					scratch.unsafePushBack(std::move(*oldIter));
-					++oldIter;
-				}
-				break;
-			}
-
-			if (TLess()(*oldIter, *newIter)) {
-				scratch.unsafePushBack(std::move(*oldIter));
-				++oldIter;
-			}
-			else if (TLess()(*newIter, *oldIter)) {
-				incrementCount(leaf->counts, countsPos, TGetKey()(*newIter));
-				++sizeAtLeast;
-				scratch.reserve(sizeAtLeast);
-				scratch.unsafePushBack(std::move(*newIter));
-				++newIter;
-			}
-			else { // New overwrites old. Counts are unchanged.
-				scratch.unsafePushBack(std::move(*newIter));
-				++newIter;
-				++oldIter;
-			}
-		}
-
-		swap(scratch, target);
-		scratch.clear();
-		return newIter;
-	}
-
-	void innerInsert(InnerNode* inner, KeyType key, NodePtr node) {
-		if (!inner->children[0]) {
-			inner->children[0] = inner->children[1];
-			inner->children[1] = node;
-			inner->keys[0] = key;
-			for (size_t i = 0; i < MaxKeys - 1; ++i) {
-				if (!KeyLess()(inner->keys[i], inner->keys[i + 1])) {
-					using std::swap;
-					swap(inner->keys[i], inner->keys[i + 1]);
-					swap(inner->children[i + 1], inner->children[i + 2]);
+	pair<LeafNode*, optional<KeyType>> findLeaf(KeyType key) {
+		NodePtr current = root;
+		optional<KeyType> leafBound;
+		while (current.isInner()) {
+			InnerNode* inner = current.inner();
+			uint_fast8_t slot = 0;
+			for (; slot < inner->size; ++slot) {
+				if (KeyLess()(key, inner->keys[slot])) {
+					leafBound = inner->keys[slot];
+					break;
 				}
 			}
+			current = inner->children[slot];
 		}
-		else {
-			// Split
-			InnerNode* newSibling = innerPool.construct();
-			size_t numRight = (MaxKeys + 1) / 2;
-			size_t numLeft = (MaxKeys + 1) - numRight;
-			for (size_t i = 0; i < MaxKeys + 1; ++i) {
-				if (i < numRight)
-					newSibling->children[MaxKeys - i] = inner->children[MaxKeys - i];
-				else
-					newSibling->children[MaxKeys - i] = nullptr;
-
-				if (i < numLeft)
-					inner->children[MaxKeys - i] = inner->children[MaxKeys - numRight - i];
-				else
-					inner->children[MaxKeys - i] = nullptr;
-			}
-			KeyType middleKey = inner->keys[MaxKeys - numRight];
-			for (size_t i = 0; i < MaxKeys; ++i) {
-				if (i < numRight - 1)
-					newSibling->keys[MaxKeys - 1 - i] = inner->keys[MaxKeys - 1 - i];
-				else
-					newSibling->keys[MaxKeys - 1 - i] = LeastKey;
-
-				if (i < numLeft - 1)
-					inner->keys[MaxKeys - 1 - i] = inner->keys[MaxKeys - 1 - (numRight - 1) - 1 - i];
-				else
-					inner->keys[MaxKeys - 1 - i] = LeastKey;
-			}
-			InnerNode* targetNode = KeyLess()(key, middleKey) ? inner : newSibling;
-			innerInsert(targetNode, key, node); // Will not split again
-			if (inner->parent)
-				innerInsert(inner->parent, middleKey, newSibling);
-			else {
-				InnerNode* parent = innerPool.construct();
-				parent->keys.back() = middleKey;
-				*(parent->children.end() - 1) = newSibling;
-				*(parent->children.end() - 2) = inner;
-
-				inner->parent = parent;
-				root = parent;
-				++innerLevels;
-			}
-			newSibling->parent = inner->parent;
-		}
-	}
-
-	void splitLeaf(LeafNode* leaf) {
-		auto numRecords = leaf->records.size();
-		auto idealLeafSize = numRecords / 2;
-		auto numLeft = decltype(numRecords)(0);
-		auto countsLeftEnd = ::begin(leaf->counts);
-		auto countsEnd = ::end(leaf->counts);
-		for (;;) {
-			if (countsLeftEnd == countsEnd)
-				break;
-			auto newNumLeft = numLeft + PerKeyRecordCount(*countsLeftEnd);
-			if (newNumLeft >= idealLeafSize) {
-				auto oldDiff = idealLeafSize - numLeft;
-				auto newDiff = newNumLeft - idealLeafSize;
-				if (newDiff < oldDiff) {
-					numLeft = newNumLeft;
-					++countsLeftEnd;
-				}
-				break;
-			}
-			numLeft = newNumLeft;
-			++countsLeftEnd;
-		}
-		if (numLeft < MinRecords || (numRecords - numLeft) < MinRecords)
-			return;
-
-		LeafNode* newNext = leafPool.construct();
-		leaves += 1; // TODO: remove
-		newNext->previous = leaf;
-		if (lastLeaf == leaf)
-			lastLeaf = newNext;
-		if (leaf->next) {
-			newNext->next = leaf->next;
-			leaf->next->previous = newNext;
-		}
-		leaf->next = newNext;
-
-		auto toNextBegin = ::begin(leaf->records) + numLeft;
-		auto toNextEnd = ::end(leaf->records);
-		newNext->records.moveInsert(::begin(newNext->records), toNextBegin, toNextEnd);
-		leaf->records.erase(toNextBegin, toNextEnd);
-
-		newNext->counts.moveInsert(::begin(newNext->counts), countsLeftEnd, countsEnd);
-		leaf->counts.erase(countsLeftEnd, countsEnd);
-
-		if (leaf->parent)
-			innerInsert(leaf->parent, KeyType(newNext->counts[0]), NodePtr(newNext));
-		else {
-			InnerNode* parent = innerPool.construct();
-			parent->keys.back() = KeyType(newNext->counts[0]);
-			*(parent->children.end() - 1) = newNext;
-			*(parent->children.end() - 2) = leaf;
-
-			leaf->parent = parent;
-			root = parent;
-			++innerLevels;
-		}
-		newNext->parent = leaf->parent;
+		return make_pair(current.leaf(), leafBound);
 	}
 
 	void updateKey(InnerNode* inner, KeyType key, KeyType newKey) {
@@ -402,99 +174,6 @@ template<class TKey, class... TValues> class BTree {
 		assert(leaf->parent);
 		KeyType key = KeyType(leaf->counts[0]);
 		updateKey(leaf->parent, oldLowKey, key);
-	}
-
-	void insertBalance() {
-		while (dirty) {
-			LeafNode* current = dirty;
-			dirty = current->nextDirty;
-			current->nextDirty = nullptr;
-
-			if (current->records.size() > MaxRecords) {
-				size_t overage = current->records.size() - MaxRecords;
-				size_t prevSize = current->previous ? current->previous->records.size() : MaxRecords;
-				size_t nextSize = current->next ? current->next->records.size() : MaxRecords;
-				size_t prevSpace = prevSize < MaxRecords ? MaxRecords - prevSize : 0;
-				size_t nextSpace = nextSize < MaxRecords ? MaxRecords - nextSize : 0;
-
-				size_t toPrev = 0;
-				size_t toNext = 0;
-				auto toPrevCountsEnd = ::begin(current->counts);
-				auto toNextCountsBegin = ::end(current->counts);
-
-				do {
-					if (prevSize + toPrev < nextSize + toNext) {
-						if (toPrev + PerKeyRecordCount(toPrevCountsEnd[0]) <= prevSpace) {
-							toPrev += PerKeyRecordCount(toPrevCountsEnd[0]);
-							++toPrevCountsEnd;
-						}
-						else {
-							while (toPrev + toNext < overage) {
-								if (toNext + PerKeyRecordCount(toNextCountsBegin[-1]) <= nextSpace) {
-									toNext += PerKeyRecordCount(toNextCountsBegin[-1]);
-									--toNextCountsBegin;
-								}
-								else
-									goto SPLIT;
-							}
-						}
-					}
-					else {
-						if (toNext + PerKeyRecordCount(toNextCountsBegin[-1]) <= nextSpace) {
-							toNext += PerKeyRecordCount(toNextCountsBegin[-1]);
-							--toNextCountsBegin;
-						}
-						else {
-							while (toPrev + toNext < overage) {
-								if (toPrev + PerKeyRecordCount(toPrevCountsEnd[0]) <= prevSpace) {
-									toPrev += PerKeyRecordCount(toPrevCountsEnd[0]);
-									++toPrevCountsEnd;
-								}
-								else
-									goto SPLIT;
-							}
-						}
-					}
-				} while (toPrev + toNext < overage);
-
-				if (toNext > 0) {
-					Records& nextRecords = current->next->records;
-					auto toNextEnd = ::end(current->records);
-					auto toNextBegin = toNextEnd - toNext;
-					nextRecords.moveInsert(::begin(nextRecords), toNextBegin, toNextEnd);
-					current->records.erase(toNextBegin, toNextEnd);
-
-					Counts& nextCounts = current->next->counts;
-					KeyType nextLowKey = KeyType(nextCounts[0]);
-
-					auto toNextCountsEnd = ::end(current->counts);
-					nextCounts.moveInsert(::begin(nextCounts), toNextCountsBegin, toNextCountsEnd);
-					current->counts.erase(toNextCountsBegin, toNextCountsEnd);
-
-					updateParentKeys(current->next, nextLowKey);
-				}
-				if (toPrev > 0) {
-					Records& prevRecords = current->previous->records;
-					auto toPrevBegin = ::begin(current->records);
-					auto toPrevEnd = toPrevBegin + toPrev;
-					prevRecords.moveInsert(::end(prevRecords), toPrevBegin, toPrevEnd);
-					current->records.erase(toPrevBegin, toPrevEnd);
-
-					KeyType lowKey = KeyType(current->counts[0]);
-
-					Counts& prevCounts = current->previous->counts;
-					auto toPrevCountsBegin = ::begin(current->counts);
-					prevCounts.moveInsert(::end(prevCounts), toPrevCountsBegin, toPrevCountsEnd);
-					current->counts.erase(toPrevCountsBegin, toPrevCountsEnd);
-
-					updateParentKeys(current, lowKey);
-				}
-
-				continue;
-			SPLIT:
-				splitLeaf(current);
-			}
-		}
 	}
 
 public:
@@ -514,27 +193,24 @@ public:
 		return end<TValues...>();
 	}
 
-	template<class TIter> void moveInsertSorted(TIter iter, TIter end) {
-		PathEntry path[MaxInnerLevels];
-		path[0].upperBound = LeastKey;
-		path[0].node = root;
-		size_t currentDepth = 0;
-		while (iter != end) {
-			auto key = TGetKey()(*iter);
-			while (path[currentDepth].upperBound != LeastKey && !(KeyLess()(key, path[currentDepth].upperBound)))
-				--currentDepth;
-			findLeaf(key, path + currentDepth);
-			LeafNode* leaf = path[innerLevels].node.leaf();
+	template<class TIter> void insertSorted(TIter rangeBegin, TIter rangeEnd) {
+		TIter iter = rangeBegin;
+		while (iter != rangeEnd) {
+			auto key = GetKey()(*iter);
+			auto result = findLeaf(key);
 
-			leaf->nextDirty = dirty;
-			dirty = leaf;
-			if (path[innerLevels].upperBound == LeastKey) {
-				moveMerge(leaf, iter, end);
-				break;
+			optional<KeyType> bound = result.second;
+			TIter boundedEnd = rangeEnd;
+			if (bound) {
+				boundedEnd = iter + 1;
+				while (KeyLess()(GetKey()(*boundedEnd), *bound))
+					++boundedEnd;
 			}
-			iter = moveMergeUntil(leaf, iter, end, path[innerLevels].upperBound);
+
+			LeafNode* leaf = result.first;
+			size_t boundedSize = boundedEnd - iter;
+			if (leaf->size + boundedSize)
 		}
-		insertBalance();
 	}
 };
 
