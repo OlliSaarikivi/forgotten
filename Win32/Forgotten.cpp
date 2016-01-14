@@ -29,29 +29,49 @@ struct ExtractIntCol {
 	}
 };
 
-struct IntColLess {
-	template<class TLeft, class TRight> bool operator()(const TLeft& left, const TRight& right) {
-		return left.col<int>() < right.col<int>();
-	}
-};
+#define TIME(N,B) { Timer tmr; tmr.reset(); B; double t = tmr.elapsed(); std::cout << N << ": " << t << "s\n"; }
+
+#define ROWS 1000000
+
+COL(int, Ac)
+COL(uint64_t, Bc)
+COL(uint64_t, Bc2)
+COL(uint64_t, Bc3)
+COL(char, Cc)
 
 int _tmain(int argc, _TCHAR* argv[]) {
-	Timer tmr;
+	for (;;) {
+		Timer tmr;
 
-	BTree<ExtractIntCol, IntColLess, int> table{};
-	Columnar<int> add{};
+		vector<Row<Ac, Bc, Bc2, Bc3, Cc>> vec{};
+		TIME("vec_build",
+			vec.reserve(ROWS);
+			for (int i = 0; i < ROWS; ++i) {
+				vec.push_back(makeRow(Ac(i), Bc(i), Bc2(i), Bc3(i), Cc(i)));
+			}
+		);
+		TIME("vec_sum",
+			int sum = 0;
+		for (auto& row : vec)
+			sum += Ac(row);
+		std::cout << sum << "\n";
+		);
 
-	tmr.reset();
-	for (int i = 0; i < 100; ++i) {
-		for (int j = 0; j < 10; ++j) {
-			add.pushBack(makeRow(j*100 + i));
-		}
-		table.moveInsertSorted(begin(add), end(add));
-		add.clear();
+		Columnar<Ac, Bc, Bc2, Bc3, Cc> mine{};
+		TIME("mineBuild",
+			mine.reserve(ROWS);
+			for (int i = 0; i < ROWS; ++i) {
+				mine.pushBack(makeRow(Ac(i), Bc(i), Bc2(i), Bc3(i), Cc(i)));
+			}
+		);
+		TIME("mineSum",
+			int sum = 0;
+		for (auto& row : mine)
+			sum += Ac(row);
+		std::cout << sum << "\n";
+		);
+
+		string line;
+		std::cin >> line;
 	}
-	double t = tmr.elapsed();
-	std::cout << t << std::endl;
-
-	string line;
-	std::cin >> line;
 }

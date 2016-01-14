@@ -339,7 +339,7 @@ private:
 	alignas(alignment) char data[capacity * impl::SizeOfAll<ValueTypes>::value];
 
 public:
-	template<class T> auto colBegin() const {
+	template<class T> auto colBegin() {
 		return reinterpret_cast<T*>(data + (capacity * impl::SizeOfPreceding<ValueTypes, T>::value));
 	}
 	template<class T, class... Ts> auto begin() {
@@ -349,7 +349,7 @@ public:
 		return begin<TValues...>();
 	}
 
-	template<class T> auto colEnd() const {
+	template<class T> auto colEnd() {
 		return colBegin<T>() + N;
 	}
 	template<class T, class... Ts> auto end() {

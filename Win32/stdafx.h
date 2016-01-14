@@ -20,6 +20,7 @@
 #include <functional>
 #include <assert.h>
 #include <set>
+#include <map>
 #include <iomanip>
 #include <limits>
 #include <unordered_set>
