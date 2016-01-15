@@ -13,6 +13,7 @@ template<class TKey, class... TValues> class BTree {
 	static const size_t MaxKeys = KeysInCacheLine < 2 ? 2 : KeysInCacheLine;
 	static const size_t MaxInnerLevels = 32; // Gives at least 2^32
 
+	static const size_t MinRows = 32;
 	static const size_t MaxRows = 64;
 
 	using Rows = ColumnarArray<MaxRows, TValues...>;
@@ -102,6 +103,7 @@ template<class TKey, class... TValues> class BTree {
 
 		PathEntry& operator[](size_t pos) { return entries[end_ - pos]; }
 		PathEntry* descend() { return entries + (++end_); }
+		void ascend() { --end_; }
 		PathEntry* addRoot() { return entries + (free--); }
 	};
 
@@ -181,6 +183,27 @@ template<class TKey, class... TValues> class BTree {
 			current->node = inner->children[slot];
 			current->upperBound = newBound;
 		}
+	}
+
+	void updateKey(InnerNode* inner, KeyType key, KeyType newKey) {
+		size_t slot = 0;
+		for (; slot < inner->size; ++slot) {
+			if (KeyLess()(key, inner->keys[slot])) {
+				break;
+			}
+		}
+		if (slot == 0) {
+			if (inner->parent)
+				updateKey(inner->parent, key, newKey);
+		}
+		else
+			inner->keys[slot - 1] = newKey;
+	}
+
+	void updateParentKeys(LeafNode* leaf, KeyType oldLowKey) {
+		assert(leaf->parent);
+		KeyType key = GetKey()(leaf->rows[0]);
+		updateKey(leaf->parent, oldLowKey, key);
 	}
 
 	void innerInsert(Path& path, size_t myLevel, KeyType key, NodePtr node) {
@@ -286,7 +309,84 @@ template<class TKey, class... TValues> class BTree {
 		}
 	}
 
-	template<class TIter> TIter leafInsertSorted(LeafNode* leaf, TIter rangeBegin, TIter rangeEnd) {
+	void innerErase(Path& path, size_t myLevel, KeyType key) {
+
+	}
+
+	void balance(Path& path, KeyType oldLeast) {
+		LeafNode* leaf = path[0].node.leaf();
+		uint_fast8_t needed = leaf->size < MinRows ? MinRows - leaf->size : 0;
+		if (needed > 0) {
+			LeafNode* prev = leaf->previous;
+			uint_fast8_t prevAvailable = prev && prev->size > MinRows ? prev->size - MinRows : 0;
+			LeafNode* next = leaf->next;
+			uint_fast8_t nextAvailable = next && next->size > MinRows ? next->size - MinRows : 0;
+
+			if (prevAvailable + nextAvailable > needed) {
+				auto fromPrev = std::min(needed, prevAvailable);
+				if (fromPrev > 0) {
+					for (uint_fast8_t i = 1; i <= leaf->size; ++i) {
+						leaf->rows[leaf->size - i + fromPrev] = leaf->rows[leaf->size - i]
+					}
+					for (int_fast8_t i = 0; i < fromPrev; ++i) {
+						leaf->rows[i] = prev->rows[prev->size - fromPrev + i];
+					}
+					prev->size -= fromPrev;
+					leaf->size += fromPrev;
+					needed -= fromPrev;
+
+					updateParentKeys(leaf, oldLeast);
+				}
+				auto fromNext = std::min(needed, nextAvailable);
+				if (fromNext > 0) {
+					KeyType nextOldLeast = GetKey()(next->rows[0]);
+
+					for (int_fast8_t i = 0; i < fromNext; ++i) {
+						leaf->rows[leaf->size + i] = next->rows[i];
+					}
+					next->size -= fromNext;
+					for (int_fast8_t i = 0; i < next->size; ++i) {
+						next->rows[i] = next->rows[i + fromNext];
+					}
+					leaf->size += fromNext;
+
+					path[0].upperBound = GetKey()(next->rows[0]);
+					updateParentKeys(next, nextOldLeast);
+				}
+			}
+			else {
+				// Merge
+				if (next) {
+					for (uint_fast8_t i = 0; i < next->size; ++i) {
+						leaf->rows[leaf->size + i] = next->rows[i];
+					}
+					leaf->size += next->size;
+					leaf->next = next->next;
+					if (leaf->next) {
+						leaf->next->previous = leaf;
+						path[0].upperBound = GetKey()(leaf->next->rows[0]);
+					}
+					else
+						path[0].upperBound = leastKey;
+
+					assert(leaf->size <= MaxRows);
+					innerErase(path)
+				}
+				else if (prev) {
+
+				}
+			}
+		}
+	}
+
+	struct NoInsertBound {
+		bool operator()(KeyType key) { return true; }
+	};
+	struct InsertBound {
+		KeyType upperBound;
+		bool operator()(KeyType key) { return KeyLess()(key, upperBound); }
+	};
+	template<class TIter, class TBound = NoInsertBound> TIter leafInsertSorted(LeafNode* leaf, TIter rangeBegin, TIter rangeEnd, TBound inBound = NoInsertBound{}) {
 		uint_fast8_t space = MaxRows - leaf->size;
 
 		TIter actualEnd = rangeBegin;
@@ -295,19 +395,21 @@ template<class TKey, class... TValues> class BTree {
 			for (;;) {
 				if (actualEnd == rangeEnd || space == 0) goto FIND_RANGE_DONE;
 				KeyType rangeKey = GetKey()(*actualEnd);
+				if (!inBound(rangeKey)) goto FIND_RANGE_DONE;
 				if (!KeyLess()(rangeKey, key)) {
 					while (!KeyLess()(key, rangeKey)) {
 						++actualEnd;
 						if (actualEnd == rangeEnd) goto FIND_RANGE_DONE;
 						rangeKey = GetKey()(*actualEnd);
 					}
+					if (!inBound(rangeKey)) goto FIND_RANGE_DONE;
 					break;
 				}
 				++actualEnd;
 				--space;
 			}
 		}
-		while (actualEnd != rangeEnd && space != 0) {
+		while (actualEnd != rangeEnd && space != 0 && inBound(GetKey()(*actualEnd))) {
 			++actualEnd;
 			--space;
 		}
@@ -362,25 +464,42 @@ template<class TKey, class... TValues> class BTree {
 		return actualEnd;
 	}
 
-	void validate() {
-		optional<KeyType> prevKey;
-		auto iter = begin();
-		while (iter != end()) {
-			auto row = *iter;
-			KeyType key = GetKey()(*iter);
-			if (prevKey) {
-				if (!KeyLess()(*prevKey, key)) {
-					for (auto row2 : *this) {
-						std::cout << int(row2) << " ";
+	template<class TIter> TIter leafEraseSorted(LeafNode* leaf, TIter rangeBegin, TIter rangeEnd) {
+		TIter rangeIter = rangeBegin;
+		uint_fast8_t out = 0;
+		uint_fast8_t i = 0;
+		if (rangeIter == rangeEnd) goto MATCH_DONE;
+		KeyType rangeKey = GetKey()(*rangeIter);
+		for (; i < leaf->size; ++i) {
+			KeyType key = GetKey()(leaf->rows[i]);
+			for (;;) {
+				if (!KeyLess()(rangeKey, key)) {
+					if (KeyLess()(key, rangeKey)) {
+						if (out != i) leaf->rows[out] |= leaf->rows[i];
+						++out;
 					}
-					assert(false);
+					else { // Not necessary for correctness
+						++rangeIter;
+						if (rangeIter == rangeEnd) goto MATCH_DONE;
+						KeyType rangeKey = GetKey()(*rangeIter);
+					}
+					break;
 				}
+				++rangeIter;
+				if (rangeIter == rangeEnd) goto MATCH_DONE;
+				KeyType rangeKey = GetKey()(*rangeIter);
 			}
-			prevKey = key;
-			++iter;
 		}
-
-		assertBounds(root, std::numeric_limits<KeyType>::min(), std::numeric_limits<KeyType>::max());
+		goto ALL_DONE;
+	MATCH_DONE:
+		if (out != i)
+			for (; i < leaf->size; ++i) {
+				leaf->rows[out] |= leaf->rows[i];
+				++out;
+			}
+	ALL_DONE:
+		leaf->size = out;
+		return rangeIter;
 	}
 
 	void assertBounds(NodePtr node, KeyType lowerBound, KeyType upperBound) {
@@ -429,38 +548,77 @@ public:
 		Path path{ root };
 		findLeaf(key, path);
 
-		LeafNode* leaf = path[0].node.leaf();
-
 		if (path[0].node.leaf()->isFull())
 			split(path, key);
 
 		leafInsertSorted(path[0].node.leaf(), &row, &row + 1);
 	}
 
-	//template<class TIter> void insertSorted(TIter rangeBegin, TIter rangeEnd) {
-	//	TIter iter = rangeBegin;
-	//	while (iter != rangeEnd) {
-	//		auto key = GetKey()(*iter);
-	//		auto result = findLeaf(key);
+	template<class TIter> void insertSorted(TIter rangeBegin, TIter rangeEnd) {
+		TIter iter = rangeBegin;
+		Path path{ root };
+		while (iter != rangeEnd) {
+			auto key = GetKey()(*iter);
+			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
+				path.ascend();
+			findLeaf(key, path);
 
-	//		LeafNode* leaf = result.first;
-	//		optional<KeyType> bound = result.second;
+			if (path[0].node.leaf()->isFull())
+				split(path, key);
 
-	//		if (leaf->isFull())
-	//			bound = split(leaf);
+			if (path[0].upperBound == LeastKey)
+				iter = leafInsertSorted(path[0].node.leaf(), iter, rangeEnd);
+			else
+				iter = leafInsertSorted(path[0].node.leaf(), iter, rangeEnd, InsertBound{ path[0].upperBound });
+		}
+	}
 
-	//		TIter maxEnd = iter + (MaxRows - leaf->size());
-	//		TIter boundedEnd = std::min(rangeEnd, maxEnd);
-	//		if (bound) {
-	//			while (!KeyLess()(GetKey()(*(boundedEnd - 1)), *bound))
-	//				++boundedEnd;
-	//		}
+	template<class TRow> void unsafeAppend(const TRow& row) {
+		if (lastLeaf->isFull()) {
+			Path path{ root };
+			while (path[0].node.isInner()) {
+				InnerNode* inner = path[0].node.inner();
+				path.descend();
+				path[0].node = inner->children[inner->size];
+				path[0].upperBound = LeastKey;
+			}
+			split(path, LeastKey);
+		}
 
-	//		size_t boundedSize = boundedEnd - iter;
+		lastLeaf->rows[lastLeaf->size++] |= row;
+	}
 
-	//		if (leaf->size + boundedSize)
-	//	}
-	//}
+	template<class TRow> void erase(const TRow& row) {
+		auto key = GetKey()(row);
+		Path path{ root };
+		findLeaf(key, path);
+
+		LeafNode* leaf = path[0].node.leaf();
+		KeyType oldLeast = GetKey()(leaf->rows[0]);
+		leafEraseSorted(leaf, &row, &row + 1);
+		balance(path, oldLeast);
+	}
+
+	void validate() {
+		optional<KeyType> prevKey;
+		auto iter = begin();
+		while (iter != end()) {
+			auto row = *iter;
+			KeyType key = GetKey()(*iter);
+			if (prevKey) {
+				if (!KeyLess()(*prevKey, key)) {
+					for (auto row2 : *this) {
+						std::cout << int(row2) << " ";
+					}
+					assert(false);
+				}
+			}
+			prevKey = key;
+			++iter;
+		}
+
+		assertBounds(root, std::numeric_limits<KeyType>::min(), std::numeric_limits<KeyType>::max());
+	}
 };
 
 template<class... Ts> inline auto begin(BTree<Ts...>& t) { return t.begin(); }

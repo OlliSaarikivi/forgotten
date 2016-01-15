@@ -43,12 +43,12 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	for (;;) {
 		Timer tmr;
 
-		vector<Row<Ac, Bc, Bc2, Bc3, Cc>> vec{};
+		vector<Row<Ac>> vec{};
 		TIME("vec_build",
 			vec.reserve(ROWS);
-			for (int i = 0; i < ROWS; ++i) {
-				vec.push_back(makeRow(Ac(i), Bc(i), Bc2(i), Bc3(i), Cc(i)));
-			}
+		for (int i = 0; i < ROWS; ++i) {
+			vec.push_back(makeRow(Ac(i)));
+		}
 		);
 		TIME("vec_sum",
 			int sum = 0;
@@ -57,18 +57,82 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		std::cout << sum << "\n";
 		);
 
-		Columnar<Ac, Bc, Bc2, Bc3, Cc> mine{};
+		Columnar<Ac> mine{};
 		TIME("mineBuild",
 			mine.reserve(ROWS);
-			for (int i = 0; i < ROWS; ++i) {
-				mine.pushBack(makeRow(Ac(i), Bc(i), Bc2(i), Bc3(i), Cc(i)));
-			}
+		for (int i = 0; i < ROWS; ++i) {
+			mine.pushBack(makeRow(Ac(i)));
+		}
 		);
 		TIME("mineSum",
 			int sum = 0;
 		for (auto& row : mine)
 			sum += Ac(row);
 		std::cout << sum << "\n";
+		);
+
+		map<int, uint64_t> map{};
+		TIME("map_build",
+		for (int i = 0; i < ROWS/10; ++i) {
+			for (int j = 0; j < 10; ++j) {
+				map.emplace(j * ROWS/10 + i, uint64_t(j));
+			}
+		}
+		);
+
+		TIME("map_sum",
+		uint64_t sum = 0;
+		for (auto x : map) {
+			sum += x.second;
+		}
+		std::cout << sum << std::endl;
+		);
+
+		BTree<ExtractIntCol, int, uint64_t> tableAppend{};
+		TIME("tableBuildAppend",
+			for (int i = 0; i < ROWS; ++i) {
+				tableAppend.unsafeAppend(makeRow(i, uint64_t(i)));
+			}
+		);
+		tableAppend.validate();
+
+		BTree<ExtractIntCol, int, uint64_t> tableSorted{};
+		Columnar<int, uint64_t> toAdd{};
+		TIME("tableBuildSorted",
+			for (int j = 0; j < 10; ++j) {
+				for (int i = 0; i < ROWS / 10; ++i) {
+					toAdd.pushBack(makeRow(j * ROWS / 10 + i, uint64_t(j)));
+				}
+				tableSorted.insertSorted(begin(toAdd), end(toAdd));
+				toAdd.clear();
+			}
+		);
+		tableSorted.validate();
+
+		TIME("tableSumSorted",
+			uint64_t sum = 0;
+		for (auto x : tableSorted) {
+			sum += uint64_t(x);
+		}
+		std::cout << sum << std::endl;
+		);
+
+		BTree<ExtractIntCol, int, uint64_t> table{};
+		TIME("tableBuild",
+		for (int i = 0; i < ROWS/10; ++i) {
+			for (int j = 0; j < 10; ++j) {
+				table.insert(makeRow(j * ROWS/10 + i, uint64_t(j)));
+			}
+		}
+		);
+		table.validate();
+
+		TIME("tableSum",
+		uint64_t sum = 0;
+		for (auto x : table) {
+			sum += uint64_t(x);
+		}
+		std::cout << sum << std::endl;
 		);
 
 		string line;

@@ -146,37 +146,30 @@ private:
 
 	size_t size_ = 0;
 	size_t capacity_ = 0;
-	char* data = nullptr;
+	tuple<TValues*...> columns;
 
-	void grow(size_t requiredSize) {
-		auto newCapacity = (size_t)(requiredSize * 1.5);
-		newCapacity += newCapacity % alignment;
-		auto newMe = Columnar{ size_, newCapacity, (char*)malloc(newCapacity * impl::SizeOfAll<ValueTypes>::value) };
-
-		auto fromIter = this->begin();
-		auto fromEnd = this->end();
-		auto toIter = newMe.begin();
-		while (fromIter != fromEnd) {
-			*toIter |= *fromIter;
-			++fromIter;
-			++toIter;
+	struct ReallocColumn {
+		Columnar& columnar;
+		template<class T> void operator()(const T& type) {
+			using PointerType = AsPointer<T::type>;
+			auto& column = get<PointerType>(columnar.columns);
+			column = (PointerType)realloc(column, columnar.capacity_ * sizeof(T::type));
 		}
-
-		using std::swap;
-		swap(*this, newMe);
+	};
+	void grow(size_t requiredSize) {
+		capacity_ = (size_t)(requiredSize * 1.5);
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(ReallocColumn{ *this });
 	}
 
-	Columnar(size_t size, size_t capacity, char* data) : size_(size), capacity_(capacity), data(data) {}
-
 public:
-	Columnar() : size_(0), capacity_(0), data(nullptr) {}
+	Columnar() : size_(0), capacity_(0), columns((AsPointer<TValues>)nullptr...) {}
 	~Columnar() {
-		free(data);
-		data = nullptr;
+		//free(data);
+		//data = nullptr;
 	}
 
 	template<class T> auto colBegin() const {
-		return reinterpret_cast<T*>(data + (capacity_ * impl::SizeOfPreceding<ValueTypes, T>::value));
+		return get<T*>(columns);
 	}
 	template<class T, class... Ts> auto begin() {
 		return Iterator<T, Ts...>{ colBegin<T>(), colBegin<Ts>()... };
@@ -310,7 +303,7 @@ public:
 		using std::swap;
 		swap(left.size_, right.size_);
 		swap(left.capacity_, right.capacity_);
-		swap(left.data, right.data);
+		swap(left.columns, right.columns);
 	}
 };
 
@@ -322,25 +315,20 @@ template<int N, class... TValues> class ColumnarArray {
 	template<class TValue> using AsPointer = TValue*;
 
 public:
-	static const size_t alignment = mpl::max_element<
-		typename mpl::transform<ValueTypes, impl::AlignmentOf<mpl::_1>>::type>::type::type::value;
-
 	template<class... Ts> using Iterator = RowIterator<AsPointer, Ts...>;
 	using iterator = Iterator<TValues...>;
 
 private:
-	static const size_t capacity = (N + N % alignment);
-
 #ifndef ALLOW_COLS_OVER_HWPREFETCH_STREAMS
 	static_assert(sizeof...(TValues) <= 16, "Columns exceeds number of prefetch streams supported by Intel Core. "
 		"Iteration performance may be reduced. Define ALLOW_COLS_OVER_HWPREFETCH_STREAMS to disable this error.");
 #endif
 
-	alignas(alignment) char data[capacity * impl::SizeOfAll<ValueTypes>::value];
+	tuple<array<TValues, N>...> columns;
 
 public:
 	template<class T> auto colBegin() {
-		return reinterpret_cast<T*>(data + (capacity * impl::SizeOfPreceding<ValueTypes, T>::value));
+		return get<array<T, N>>(columns).data();
 	}
 	template<class T, class... Ts> auto begin() {
 		return Iterator<T, Ts...>{ colBegin<T>(), colBegin<Ts>()... };
