@@ -15,8 +15,8 @@ template<class TKey, class... TValues> class BTree {
 
 	static const size_t MaxInnerLevels = 16;
 
-	static const size_t MaxRows = 64;
-	static const size_t MinRows = 32;
+	static const size_t MaxRows = 32;
+	static const size_t MinRows = 16;
 
 	using Rows = ColumnarArray<MaxRows, TValues...>;
 
@@ -24,24 +24,20 @@ template<class TKey, class... TValues> class BTree {
 	struct LeafNode;
 	struct NodePtr {
 		uintptr_t value;
-		InnerNode* innerDebug;
-		LeafNode* leafDebug;
 
 		NodePtr() : value(reinterpret_cast<uintptr_t>(nullptr)) {}
 		NodePtr(nullptr_t n) : value(reinterpret_cast<uintptr_t>(nullptr)) {}
-		NodePtr(InnerNode* node) : value(reinterpret_cast<uintptr_t>(node)), innerDebug(node) {}
-		NodePtr(LeafNode* node) : value(reinterpret_cast<uintptr_t>(node) | 1u), leafDebug(node) {}
+		NodePtr(InnerNode* node) : value(reinterpret_cast<uintptr_t>(node)) {}
+		NodePtr(LeafNode* node) : value(reinterpret_cast<uintptr_t>(node) | 1u) {}
 
 		operator bool() { return value != reinterpret_cast<uintptr_t>(nullptr); }
 
 		NodePtr& operator=(InnerNode* node) {
 			value = reinterpret_cast<uintptr_t>(node);
-			innerDebug = node;
 			return *this;
 		}
 		NodePtr& operator=(LeafNode* node) {
 			value = reinterpret_cast<uintptr_t>(node) | 1u;
-			leafDebug = node;
 			return *this;
 		}
 		NodePtr& operator=(nullptr_t nullPtr) {
@@ -83,8 +79,8 @@ template<class TKey, class... TValues> class BTree {
 	};
 	struct LeafNode {
 		LeafNode* next;
-		Rows rows;
 		uint8_t size;
+		Rows rows;
 		LeafNode* previous;
 
 		LeafNode() : size(0), next(nullptr), previous(nullptr) {}
@@ -348,12 +344,12 @@ template<class TKey, class... TValues> class BTree {
 				--(prev->size);
 			}
 			else if (next && next->size > MinKeys) {
+				++(inner->size);
+				--(next->size);
+
 				inner->children[inner->size] = next->children[0];
 				inner->keys[inner->size - 1] = parent->keys[slot];
 				parent->keys[slot] = next->keys[0];
-
-				++(inner->size);
-				--(next->size);
 
 				next->children[0] = next->children[1];
 				for (uint_fast8_t i = 1; i <= next->size; ++i) {
@@ -369,11 +365,11 @@ template<class TKey, class... TValues> class BTree {
 				}
 				inner->children[inner->size + next->size + 1] = next->children[next->size];
 
-				inner->size += next->size;
+				inner->size += next->size + 1;
 
 				innerErase(path, myLevel + 1, slot + 1);
 
-				innerPool.destroy(next);
+				//innerPool.destroy(next);
 				removeRedundantRoot();
 			}
 			else if (prev) {
@@ -384,11 +380,11 @@ template<class TKey, class... TValues> class BTree {
 				}
 				prev->children[prev->size + inner->size + 1] = inner->children[inner->size];
 
-				prev->size += inner->size;
+				prev->size += inner->size + 1;
 
 				innerErase(path, myLevel + 1, slot);
 
-				innerPool.destroy(inner);
+				//innerPool.destroy(inner);
 				removeRedundantRoot();
 			}
 		}
@@ -405,7 +401,7 @@ template<class TKey, class... TValues> class BTree {
 			uint_fast8_t prevAvailable = prev && prev->size > MinRows ? prev->size - MinRows : 0;
 			uint_fast8_t nextAvailable = next && next->size > MinRows ? next->size - MinRows : 0;
 
-			if (prevAvailable + nextAvailable > needed) {
+			if (prevAvailable + nextAvailable >= needed) {
 				auto fromPrev = std::min(needed, prevAvailable);
 				if (fromPrev > 0) {
 					for (uint_fast8_t i = 1; i <= leaf->size; ++i) {
@@ -634,6 +630,15 @@ template<class TKey, class... TValues> class BTree {
 		}
 	}
 
+	void assertFirstLast() {
+		NodePtr rightMost = root;
+		while (rightMost.isInner()) {
+			auto inner = rightMost.inner();
+			rightMost = inner->children[inner->size];
+		}
+		assert(rightMost.leaf() == lastLeaf);
+	}
+
 public:
 	BTree() : root(leafPool.construct()), firstLeaf(root.leaf()), lastLeaf(firstLeaf) {}
 
@@ -767,25 +772,20 @@ public:
 	}
 
 	template<class TRow> void erase(const TRow& row) {
-		auto key = GetKey()(row);
+		auto key = GetKey()(row); // TODO: remove
 		Path path{ root };
 		findLeaf(key, path);
 
 		LeafNode* leaf = path[0].node.leaf();
-		KeyType oldLeast = GetKey()(leaf->rows[0]);
 		leafEraseSorted(leaf, &row, &row + 1);
-
-		validate();
-
 		balance(path);
-
-		validate();
 	}
 
 	void validate() {
 		optional<KeyType> prevKey;
 		auto iter = begin();
-		while (iter != end()) {
+		auto until = end();
+		while (iter != until) {
 			auto row = *iter;
 			KeyType key = GetKey()(*iter);
 			if (prevKey) {
@@ -796,6 +796,12 @@ public:
 			prevKey = key;
 			++iter;
 		}
+
+		if (root.isLeaf()) {
+			assert(!root.leaf()->previous && !root.leaf()->next);
+		}
+
+		assertFirstLast();
 
 		assertBounds(root, std::numeric_limits<KeyType>::min(), std::numeric_limits<KeyType>::max());
 	}
