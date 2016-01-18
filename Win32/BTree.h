@@ -9,12 +9,14 @@ template<class TKey, class... TValues> class BTree {
 	using GetKey = TKey;
 	static const KeyType LeastKey = TKey::LeastKey;
 
-	static const size_t KeysInCacheLine = ((CACHE_LINE_SIZE * 3) / 2 - 1) / sizeof(KeyType);
+	static const size_t KeysInCacheLine = ((CACHE_LINE_SIZE * 3) / 2) / sizeof(KeyType);
 	static const size_t MaxKeys = KeysInCacheLine < 2 ? 2 : KeysInCacheLine;
-	static const size_t MaxInnerLevels = 32; // Gives at least 2^32
+	static const size_t MinKeys = MaxKeys / 2;
 
-	static const size_t MinRows = 32;
+	static const size_t MaxInnerLevels = 16;
+
 	static const size_t MaxRows = 64;
+	static const size_t MinRows = 32;
 
 	using Rows = ColumnarArray<MaxRows, TValues...>;
 
@@ -26,6 +28,7 @@ template<class TKey, class... TValues> class BTree {
 		LeafNode* leafDebug;
 
 		NodePtr() : value(reinterpret_cast<uintptr_t>(nullptr)) {}
+		NodePtr(nullptr_t n) : value(reinterpret_cast<uintptr_t>(nullptr)) {}
 		NodePtr(InnerNode* node) : value(reinterpret_cast<uintptr_t>(node)), innerDebug(node) {}
 		NodePtr(LeafNode* node) : value(reinterpret_cast<uintptr_t>(node) | 1u), leafDebug(node) {}
 
@@ -58,14 +61,18 @@ template<class TKey, class... TValues> class BTree {
 			return reinterpret_cast<InnerNode*>(value);
 		}
 		LeafNode* leaf() {
-			assert(isLeaf());
+			assert(isLeaf() || value == reinterpret_cast<uintptr_t>(nullptr));
 			return reinterpret_cast<LeafNode*>(value & ~((uintptr_t)1u));
+		}
+
+		friend bool operator==(const NodePtr& left, const NodePtr& right) {
+			return left.value == right.value;
 		}
 	};
 
 	struct InnerNode {
-		array<KeyType, MaxKeys> keys;
 		uint8_t size;
+		array<KeyType, MaxKeys> keys;
 		array<NodePtr, MaxKeys + 1> children;
 
 		InnerNode() : size(0) {}
@@ -90,15 +97,17 @@ template<class TKey, class... TValues> class BTree {
 	struct PathEntry {
 		NodePtr node;
 		KeyType upperBound;
+		uint_fast8_t slot;
 	};
 	struct Path {
-		PathEntry entries[32]; // Actual capacity 16
+		PathEntry entries[MaxInnerLevels * 2];
 		size_t end_;
 		size_t free;
 
 		Path(NodePtr root) : end_(16), free(15) {
 			entries[end_].node = root;
 			entries[end_].upperBound = LeastKey;
+			entries[end_].slot = 0;
 		}
 
 		PathEntry& operator[](size_t pos) { return entries[end_ - pos]; }
@@ -163,7 +172,6 @@ template<class TKey, class... TValues> class BTree {
 	boost::object_pool<InnerNode> innerPool;
 	boost::object_pool<LeafNode> leafPool;
 	NodePtr root;
-	size_t innerLevels = 0;
 	LeafNode* firstLeaf;
 	LeafNode* lastLeaf;
 
@@ -172,7 +180,7 @@ template<class TKey, class... TValues> class BTree {
 		while (current->node.isInner()) {
 			InnerNode* inner = current->node.inner();
 			KeyType newBound = current->upperBound;
-			size_t slot = 0;
+			uint_fast8_t slot = 0;
 			for (; slot < inner->size; ++slot) {
 				if (KeyLess()(key, inner->keys[slot])) {
 					newBound = inner->keys[slot];
@@ -182,31 +190,19 @@ template<class TKey, class... TValues> class BTree {
 			current = path.descend();
 			current->node = inner->children[slot];
 			current->upperBound = newBound;
+			current->slot = slot;
 		}
 	}
 
-	void updateKey(InnerNode* inner, KeyType key, KeyType newKey) {
-		size_t slot = 0;
-		for (; slot < inner->size; ++slot) {
-			if (KeyLess()(key, inner->keys[slot])) {
-				break;
-			}
-		}
-		if (slot == 0) {
-			if (inner->parent)
-				updateKey(inner->parent, key, newKey);
-		}
-		else
-			inner->keys[slot - 1] = newKey;
+	NodePtr prevSibling(InnerNode* inner, uint_fast8_t slot) {
+		return slot != 0 ? inner->children[slot - 1] : nullptr;
 	}
 
-	void updateParentKeys(LeafNode* leaf, KeyType oldLowKey) {
-		assert(leaf->parent);
-		KeyType key = GetKey()(leaf->rows[0]);
-		updateKey(leaf->parent, oldLowKey, key);
+	NodePtr nextSibling(InnerNode* inner, uint_fast8_t slot) {
+		return slot != inner->size ? inner->children[slot + 1] : nullptr;
 	}
 
-	void innerInsert(Path& path, size_t myLevel, KeyType key, NodePtr node) {
+	void innerInsert(Path& path, size_t myLevel, KeyType key, NodePtr node, uint_fast8_t pos) {
 		InnerNode* inner = path[myLevel].node.inner();
 
 		if (inner->isFull()) {
@@ -223,17 +219,22 @@ template<class TKey, class... TValues> class BTree {
 			inner->size = numLeft - 1;
 			newSibling->size = numRight - 1;
 
+			uint_fast8_t insertAt = path[myLevel].slot + 1;
+
 			KeyType middleKey = inner->keys[numLeft - 1];
 			InnerNode* target = inner;
 			if (KeyLess()(key, middleKey))
 				path[myLevel].upperBound = middleKey;
 			else {
 				path[myLevel].node = newSibling;
+				++(path[myLevel].slot);
+				path[myLevel - 1].slot -= numLeft;
+				pos -= numLeft;
 				target = newSibling;
 			}
 
 			if (inner != root.inner())
-				innerInsert(path, myLevel + 1, middleKey, newSibling);
+				innerInsert(path, myLevel + 1, middleKey, newSibling, insertAt);
 			else {
 				InnerNode* parent = innerPool.construct();
 				parent->keys[0] = middleKey;
@@ -244,23 +245,20 @@ template<class TKey, class... TValues> class BTree {
 				PathEntry* rootEntry = path.addRoot();
 				rootEntry->node = parent;
 				rootEntry->upperBound = LeastKey;
+				rootEntry->slot = 0;
 				root = parent;
-				++innerLevels;
 			}
 
 			inner = target;
 		}
 
-		size_t pos = inner->size;
-		while (pos > 0) {
-			if (KeyLess()(inner->keys[pos - 1], key))
-				break;
-			inner->keys[pos] = inner->keys[pos - 1];
-			inner->children[pos + 1] = inner->children[pos];
-			--pos;
+		assert(pos != 0);
+		for (uint_fast8_t i = inner->size; i >= pos; --i) {
+			inner->keys[i] = inner->keys[i - 1];
+			inner->children[i + 1] = inner->children[i];
 		}
-		inner->keys[pos] = key;
-		inner->children[pos + 1] = node;
+		inner->keys[pos - 1] = key;
+		inner->children[pos] = node;
 		++(inner->size);
 	}
 
@@ -271,12 +269,11 @@ template<class TKey, class... TValues> class BTree {
 
 		LeafNode* newLeaf = leafPool.construct();
 		newLeaf->previous = leaf;
-		if (lastLeaf == leaf)
-			lastLeaf = newLeaf;
 		if (leaf->next) {
 			newLeaf->next = leaf->next;
 			leaf->next->previous = newLeaf;
-		}
+		} else
+			lastLeaf = newLeaf;
 		leaf->next = newLeaf;
 
 		uint_fast8_t toNext = (MaxRows + 1) / 2;
@@ -286,14 +283,18 @@ template<class TKey, class... TValues> class BTree {
 		leaf->size = MaxRows - toNext;
 		newLeaf->size = toNext;
 
+		uint_fast8_t insertAt = path[0].slot + 1;
+
 		KeyType splitKey = GetKey()(newLeaf->rows[0]);
 		if (KeyLess()(key, splitKey))
 			path[0].upperBound = splitKey;
-		else
+		else {
 			path[0].node = newLeaf;
+			++(path[0].slot);
+		}
 
 		if (!root.isLeaf())
-			innerInsert(path, 1, splitKey, NodePtr(newLeaf));
+			innerInsert(path, 1, splitKey, NodePtr(newLeaf), insertAt);
 		else {
 			InnerNode* parent = innerPool.construct();
 			parent->keys[0] = splitKey;
@@ -304,61 +305,142 @@ template<class TKey, class... TValues> class BTree {
 			PathEntry* rootEntry = path.addRoot();
 			rootEntry->node = parent;
 			rootEntry->upperBound = LeastKey;
+			rootEntry->slot = 0;
 			root = parent;
-			++innerLevels;
 		}
 	}
 
-	void innerErase(Path& path, size_t myLevel, KeyType key) {
-
+	void removeRedundantRoot() {
+		if (root.inner()->size == 0) {
+			InnerNode* oldRoot = root.inner();
+			root = oldRoot->children[0];
+			innerPool.destroy(oldRoot);
+		}
 	}
 
-	void balance(Path& path, KeyType oldLeast) {
+	void innerErase(Path& path, size_t myLevel, uint_fast8_t slot) {
+		InnerNode* inner = path[myLevel].node.inner();
+
+		for (uint_fast8_t i = slot; i < inner->size; ++i) {
+			inner->keys[i - 1] = inner->keys[i];
+			inner->children[i] = inner->children[i + 1];
+		}
+		--(inner->size);
+
+		if (inner->size < MinKeys && root.inner() != inner) {
+			InnerNode* parent = path[myLevel + 1].node.inner();
+			uint_fast8_t slot = path[myLevel].slot;
+			InnerNode* prev = prevSibling(parent, slot).inner();
+			InnerNode* next = nextSibling(parent, slot).inner();
+
+			if (prev && prev->size > MinKeys) {
+				for (uint_fast8_t i = 0; i < inner->size; ++i) {
+					inner->keys[inner->size - i] = inner->keys[inner->size - i - 1];
+					inner->children[inner->size + 1 - i] = inner->children[inner->size - i];
+				}
+				inner->children[1] = inner->children[0];
+
+				inner->children[0] = prev->children[prev->size];
+				inner->keys[0] = parent->keys[slot - 1];
+				parent->keys[slot - 1] = prev->keys[prev->size - 1];
+
+				++(inner->size);
+				--(prev->size);
+			}
+			else if (next && next->size > MinKeys) {
+				inner->children[inner->size] = next->children[0];
+				inner->keys[inner->size - 1] = parent->keys[slot];
+				parent->keys[slot] = next->keys[0];
+
+				++(inner->size);
+				--(next->size);
+
+				next->children[0] = next->children[1];
+				for (uint_fast8_t i = 1; i <= next->size; ++i) {
+					next->keys[i - 1] = next->keys[i];
+					next->children[i] = next->children[i + 1];
+				}
+			}
+			else if (next) {
+				inner->keys[inner->size] = parent->keys[slot];
+				for (uint_fast8_t i = 0; i < next->size; ++i) {
+					inner->keys[inner->size + 1 + i] = next->keys[i];
+					inner->children[inner->size + 1 + i] = next->children[i];
+				}
+				inner->children[inner->size + next->size + 1] = next->children[next->size];
+
+				inner->size += next->size;
+
+				innerErase(path, myLevel + 1, slot + 1);
+
+				innerPool.destroy(next);
+				removeRedundantRoot();
+			}
+			else if (prev) {
+				prev->keys[prev->size] = parent->keys[slot - 1];
+				for (uint_fast8_t i = 0; i < inner->size; ++i) {
+					prev->keys[prev->size + 1 + i] = inner->keys[i];
+					prev->children[prev->size + 1 + i] = inner->children[i];
+				}
+				prev->children[prev->size + inner->size + 1] = inner->children[inner->size];
+
+				prev->size += inner->size;
+
+				innerErase(path, myLevel + 1, slot);
+
+				innerPool.destroy(inner);
+				removeRedundantRoot();
+			}
+		}
+	}
+
+	void balance(Path& path) {
 		LeafNode* leaf = path[0].node.leaf();
 		uint_fast8_t needed = leaf->size < MinRows ? MinRows - leaf->size : 0;
-		if (needed > 0) {
-			LeafNode* prev = leaf->previous;
+		if (needed > 0 && !root.isLeaf()) {
+			InnerNode* parent = path[1].node.inner();
+			uint_fast8_t slot = path[0].slot;
+			LeafNode* prev = prevSibling(parent, slot).leaf();
+			LeafNode* next = nextSibling(parent, slot).leaf();
 			uint_fast8_t prevAvailable = prev && prev->size > MinRows ? prev->size - MinRows : 0;
-			LeafNode* next = leaf->next;
 			uint_fast8_t nextAvailable = next && next->size > MinRows ? next->size - MinRows : 0;
 
 			if (prevAvailable + nextAvailable > needed) {
 				auto fromPrev = std::min(needed, prevAvailable);
 				if (fromPrev > 0) {
 					for (uint_fast8_t i = 1; i <= leaf->size; ++i) {
-						leaf->rows[leaf->size - i + fromPrev] = leaf->rows[leaf->size - i]
+						leaf->rows[leaf->size - i + fromPrev] |= leaf->rows[leaf->size - i];
 					}
 					for (int_fast8_t i = 0; i < fromPrev; ++i) {
-						leaf->rows[i] = prev->rows[prev->size - fromPrev + i];
+						leaf->rows[i] |= prev->rows[prev->size - fromPrev + i];
 					}
 					prev->size -= fromPrev;
 					leaf->size += fromPrev;
 					needed -= fromPrev;
 
-					updateParentKeys(leaf, oldLeast);
+					parent->keys[slot - 1] = GetKey()(leaf->rows[0]);
 				}
 				auto fromNext = std::min(needed, nextAvailable);
 				if (fromNext > 0) {
-					KeyType nextOldLeast = GetKey()(next->rows[0]);
-
 					for (int_fast8_t i = 0; i < fromNext; ++i) {
-						leaf->rows[leaf->size + i] = next->rows[i];
+						leaf->rows[leaf->size + i] |= next->rows[i];
 					}
 					next->size -= fromNext;
 					for (int_fast8_t i = 0; i < next->size; ++i) {
-						next->rows[i] = next->rows[i + fromNext];
+						next->rows[i] |= next->rows[i + fromNext];
 					}
 					leaf->size += fromNext;
 
-					path[0].upperBound = GetKey()(next->rows[0]);
-					updateParentKeys(next, nextOldLeast);
+					KeyType newUpperBound = GetKey()(next->rows[0]);
+					path[0].upperBound = newUpperBound;
+					parent->keys[slot] = newUpperBound;
 				}
 			}
 			else {
 				// Merge
 				if (next) {
 					for (uint_fast8_t i = 0; i < next->size; ++i) {
-						leaf->rows[leaf->size + i] = next->rows[i];
+						leaf->rows[leaf->size + i] |= next->rows[i];
 					}
 					leaf->size += next->size;
 					leaf->next = next->next;
@@ -367,14 +449,37 @@ template<class TKey, class... TValues> class BTree {
 						path[0].upperBound = GetKey()(leaf->next->rows[0]);
 					}
 					else
-						path[0].upperBound = leastKey;
+						path[0].upperBound = LeastKey;
+					if (lastLeaf == next)
+						lastLeaf = leaf;
 
 					assert(leaf->size <= MaxRows);
-					innerErase(path)
+					innerErase(path, 1, path[0].slot + 1);
+
+					leafPool.destroy(next);
+					removeRedundantRoot();
 				}
 				else if (prev) {
+					for (uint_fast8_t i = 0; i < leaf->size; ++i) {
+						prev->rows[prev->size + i] |= leaf->rows[i];
+					}
+					prev->size += leaf->size;
+					prev->next = leaf->next;
+					if (prev->next)
+						prev->next->previous = prev;
+					path[0].node = prev;
+					--(path[0].slot);
+					if (lastLeaf == leaf)
+						lastLeaf = prev;
 
+					assert(prev->size <= MaxRows);
+					innerErase(path, 1, path[0].slot + 1);
+
+					leafPool.destroy(leaf);
+					removeRedundantRoot();
 				}
+				else
+					assert(false);
 			}
 		}
 	}
@@ -468,7 +573,7 @@ template<class TKey, class... TValues> class BTree {
 		TIter rangeIter = rangeBegin;
 		uint_fast8_t out = 0;
 		uint_fast8_t i = 0;
-		if (rangeIter == rangeEnd) goto MATCH_DONE;
+		if (rangeIter == rangeEnd) goto ALL_DONE;
 		KeyType rangeKey = GetKey()(*rangeIter);
 		for (; i < leaf->size; ++i) {
 			KeyType key = GetKey()(leaf->rows[i]);
@@ -478,11 +583,14 @@ template<class TKey, class... TValues> class BTree {
 						if (out != i) leaf->rows[out] |= leaf->rows[i];
 						++out;
 					}
-					else { // Not necessary for correctness
-						++rangeIter;
-						if (rangeIter == rangeEnd) goto MATCH_DONE;
-						KeyType rangeKey = GetKey()(*rangeIter);
-					}
+					//else { // Not necessary for correctness
+					//	++rangeIter;
+					//	if (rangeIter == rangeEnd) {
+					//		++i;
+					//		goto MATCH_DONE;
+					//	}
+					//	KeyType rangeKey = GetKey()(*rangeIter);
+					//}
 					break;
 				}
 				++rangeIter;
@@ -498,7 +606,7 @@ template<class TKey, class... TValues> class BTree {
 				++out;
 			}
 	ALL_DONE:
-		leaf->size = out;
+		leaf->size -= i - out;
 		return rangeIter;
 	}
 
@@ -563,8 +671,55 @@ public:
 				path.ascend();
 			findLeaf(key, path);
 
-			if (path[0].node.leaf()->isFull())
-				split(path, key);
+			if (path[0].node.leaf()->isFull()) {
+				LeafNode* leaf = path[0].node.leaf();
+
+				if (KeyLess()(GetKey()(leaf->rows[leaf->size - 1]), key)) {
+					TIter countIter = iter;
+					while (countIter - iter < MinRows && countIter != rangeEnd &&
+						(path[0].upperBound == LeastKey || KeyLess()(GetKey()(*countIter), path[0].upperBound))) {
+
+						++countIter;
+					}
+
+					if (countIter - iter >= MinRows) { // Split without moving anything
+						LeafNode* newLeaf = leafPool.construct();
+						newLeaf->previous = leaf;
+						if (leaf->next) {
+							newLeaf->next = leaf->next;
+							leaf->next->previous = newLeaf;
+						}
+						else
+							lastLeaf = newLeaf;
+						leaf->next = newLeaf;
+
+						uint_fast8_t insertAt = path[0].slot + 1;
+
+						path[0].node = newLeaf;
+						++(path[0].slot);
+
+						if (!root.isLeaf())
+							innerInsert(path, 1, key, NodePtr(newLeaf), insertAt);
+						else {
+							InnerNode* parent = innerPool.construct();
+							parent->keys[0] = key;
+							parent->children[0] = leaf;
+							parent->children[1] = newLeaf;
+							parent->size = 1;
+
+							PathEntry* rootEntry = path.addRoot();
+							rootEntry->node = parent;
+							rootEntry->upperBound = LeastKey;
+							rootEntry->slot = 0;
+							root = parent;
+						}
+					}
+					else
+						split(path, key);
+				}
+				else
+					split(path, key);
+			}
 
 			if (path[0].upperBound == LeastKey)
 				iter = leafInsertSorted(path[0].node.leaf(), iter, rangeEnd);
@@ -574,6 +729,7 @@ public:
 	}
 
 	template<class TRow> void unsafeAppend(const TRow& row) {
+		KeyType key = GetKey()(row);
 		if (lastLeaf->isFull()) {
 			Path path{ root };
 			while (path[0].node.isInner()) {
@@ -581,8 +737,30 @@ public:
 				path.descend();
 				path[0].node = inner->children[inner->size];
 				path[0].upperBound = LeastKey;
+				path[0].slot = inner->size;
 			}
-			split(path, LeastKey);
+
+			LeafNode* leaf = path[0].node.leaf();
+			assert(leaf->isFull());
+			assert(leaf == lastLeaf);
+
+			LeafNode* newLeaf = leafPool.construct();
+			newLeaf->previous = leaf;
+			lastLeaf = newLeaf;
+			leaf->next = newLeaf;
+
+			uint_fast8_t insertAt = path[0].slot + 1;
+
+			if (!root.isLeaf())
+				innerInsert(path, 1, key, NodePtr(newLeaf), insertAt);
+			else {
+				InnerNode* parent = innerPool.construct();
+				parent->keys[0] = key;
+				parent->children[0] = leaf;
+				parent->children[1] = newLeaf;
+				parent->size = 1;
+				root = parent;
+			}
 		}
 
 		lastLeaf->rows[lastLeaf->size++] |= row;
@@ -596,7 +774,12 @@ public:
 		LeafNode* leaf = path[0].node.leaf();
 		KeyType oldLeast = GetKey()(leaf->rows[0]);
 		leafEraseSorted(leaf, &row, &row + 1);
-		balance(path, oldLeast);
+
+		validate();
+
+		balance(path);
+
+		validate();
 	}
 
 	void validate() {
@@ -607,9 +790,6 @@ public:
 			KeyType key = GetKey()(*iter);
 			if (prevKey) {
 				if (!KeyLess()(*prevKey, key)) {
-					for (auto row2 : *this) {
-						std::cout << int(row2) << " ";
-					}
 					assert(false);
 				}
 			}
@@ -618,6 +798,18 @@ public:
 		}
 
 		assertBounds(root, std::numeric_limits<KeyType>::min(), std::numeric_limits<KeyType>::max());
+	}
+
+	void printStats() {
+		double sum = 0;
+		uint64_t count = 0;
+		LeafNode* current = firstLeaf;
+		while (current) {
+			sum += current->size;
+			++count;
+			current = current->next;
+		}
+		std::cout << "Avg leaf size: " << (sum / count) << "\n";
 	}
 };
 

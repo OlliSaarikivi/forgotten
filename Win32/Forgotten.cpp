@@ -31,7 +31,7 @@ struct ExtractIntCol {
 
 #define TIME(N,B) { Timer tmr; tmr.reset(); B; double t = tmr.elapsed(); std::cout << N << ": " << t << "s\n"; }
 
-#define ROWS 1000000
+#define ROWS 1000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
@@ -40,102 +40,53 @@ COL(uint64_t, Bc3)
 COL(char, Cc)
 
 int _tmain(int argc, _TCHAR* argv[]) {
+	Columnar<int, uint64_t> randomInsert{};
+	for (int i = 0; i < ROWS; ++i) {
+		randomInsert.pushBack(makeRow(i, uint64_t(i)));
+	}
+	Columnar<int, uint64_t> randomDelete{};
+	for (int i = 0; i < ROWS; ++i) {
+		if (rand() % 2 == 0)
+			randomDelete.pushBack(randomInsert[i]);
+	}
+
+	std::cout << randomDelete.size() << "\n";
+
+	int64_t greatSum = 0;
 	for (;;) {
 		Timer tmr;
 
-		vector<Row<Ac>> vec{};
-		TIME("vec_build",
-			vec.reserve(ROWS);
-		for (int i = 0; i < ROWS; ++i) {
-			vec.push_back(makeRow(Ac(i)));
-		}
-		);
-		TIME("vec_sum",
-			int sum = 0;
-		for (auto& row : vec)
-			sum += Ac(row);
-		std::cout << sum << "\n";
-		);
-
-		Columnar<Ac> mine{};
-		TIME("mineBuild",
-			mine.reserve(ROWS);
-		for (int i = 0; i < ROWS; ++i) {
-			mine.pushBack(makeRow(Ac(i)));
-		}
-		);
-		TIME("mineSum",
-			int sum = 0;
-		for (auto& row : mine)
-			sum += Ac(row);
-		std::cout << sum << "\n";
-		);
-
 		map<int, uint64_t> map{};
-		TIME("map_build",
-		for (int i = 0; i < ROWS/10; ++i) {
-			for (int j = 0; j < 10; ++j) {
-				map.emplace(j * ROWS/10 + i, uint64_t(j));
-			}
-		}
-		);
-
-		TIME("map_sum",
-		uint64_t sum = 0;
-		for (auto x : map) {
-			sum += x.second;
-		}
-		std::cout << sum << std::endl;
-		);
-
-		BTree<ExtractIntCol, int, uint64_t> tableAppend{};
-		TIME("tableBuildAppend",
-			for (int i = 0; i < ROWS; ++i) {
-				tableAppend.unsafeAppend(makeRow(i, uint64_t(i)));
+		TIME("map_insert",
+			for (auto row : randomInsert) {
+				map.emplace(int(row), uint64_t(row));
 			}
 		);
-		tableAppend.validate();
-
-		BTree<ExtractIntCol, int, uint64_t> tableSorted{};
-		Columnar<int, uint64_t> toAdd{};
-		TIME("tableBuildSorted",
-			for (int j = 0; j < 10; ++j) {
-				for (int i = 0; i < ROWS / 10; ++i) {
-					toAdd.pushBack(makeRow(j * ROWS / 10 + i, uint64_t(j)));
-				}
-				tableSorted.insertSorted(begin(toAdd), end(toAdd));
-				toAdd.clear();
+		TIME("map_delete",
+			for (auto row : randomDelete) {
+				map.erase(int(row));
 			}
-		);
-		tableSorted.validate();
-
-		TIME("tableSumSorted",
-			uint64_t sum = 0;
-		for (auto x : tableSorted) {
-			sum += uint64_t(x);
-		}
-		std::cout << sum << std::endl;
 		);
 
 		BTree<ExtractIntCol, int, uint64_t> table{};
-		TIME("tableBuild",
-		for (int i = 0; i < ROWS/10; ++i) {
-			for (int j = 0; j < 10; ++j) {
-				table.insert(makeRow(j * ROWS/10 + i, uint64_t(j)));
+		TIME("tableInsert",
+			for (auto row : randomInsert) {
+				table.insert(row);
 			}
-		}
 		);
+		table.printStats();
 		table.validate();
 
-		TIME("tableSum",
-		uint64_t sum = 0;
-		for (auto x : table) {
-			sum += uint64_t(x);
-		}
-		std::cout << sum << std::endl;
+		TIME("tableDelete",
+			for (auto row : randomInsert) {
+				table.erase(row);
+			}
 		);
+		table.printStats();
+		table.validate();
 
 		string line;
 		std::cin >> line;
+		std::cout << greatSum << "\n";
 	}
 }
