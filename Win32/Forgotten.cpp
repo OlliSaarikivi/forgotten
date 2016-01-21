@@ -31,7 +31,7 @@ struct ExtractIntCol {
 
 #define TIME(N,B) { Timer tmr; tmr.reset(); B; double t = tmr.elapsed(); std::cout << N << ": " << t << "s\n"; }
 
-#define ROWS 10000000
+#define ROWS 1000000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
@@ -44,62 +44,60 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	for (int i = 0; i < ROWS; ++i) {
 		randomInsert.pushBack(makeRow(rand(), uint64_t(i)));
 	}
-	//Columnar<int, uint64_t> randomDelete{};
-	//for (int i = 0; i < ROWS; ++i) {
-	//	//if (rand() % 100 > 10)
-	//		randomDelete.pushBack(randomInsert[ROWS-1-i]);
-	//}
+	Columnar<int, uint64_t> randomDelete{};
+	for (int i = 0; i < ROWS; ++i) {
+		//if (rand() % 100 > 10)
+			randomDelete.pushBack(randomInsert[ROWS-1-i]);
+	}
 
-	//std::cout << randomDelete.size() << "\n";
-
-	map<int, uint64_t> map{};
-	TIME("map_insert",
-		for (auto row : randomInsert) {
-			map.emplace(int(row), uint64_t(row));
-		}
-	);
-
-	BTree<ExtractIntCol, int, uint64_t> table{};
-	TIME("tableInsert",
-		for (auto row : randomInsert) {
-			table.insert(row);
-		}
-	);
-	table.printStats();
-	table.validate();
-
-	int64_t greatSum = 0;
 	for (;;) {
-		Timer tmr;
 
-		TIME("map_update",
-			for (auto& entry : map) {
-				entry.second *= entry.first;
+		map<int, uint64_t> map{};
+		TIME("map_insert",
+			for (auto row : randomInsert) {
+				map.emplace(int(row), uint64_t(row));
 			}
 		);
 
-		//TIME("map_delete",
-		//	for (auto row : randomDelete) {
-		//		map.erase(int(row));
-		//	}
-		//);
+		BTree<ExtractIntCol, int, uint64_t> table{};
+		TIME("tableInsert",
+			for (auto row : randomInsert) {
+				table.insert(row);
+			}
+		);
+		table.validate();
 
-		TIME("tableUpdate",
-			for (auto row : table) {
-				row.col<uint64_t>() *= int(row);
+		for (int i = 0; i < 20; ++i) {
+			TIME("map_update",
+				for (auto& entry : map) {
+					entry.second *= entry.first;
+				}
+			);
+		}
+
+		for (int i = 0; i < 20; ++i) {
+			TIME("tableUpdate",
+				for (auto row : table) {
+					row.col<uint64_t>() *= int(row);
+				}
+			);
+		}
+
+
+		TIME("map_delete",
+			for (auto row : randomDelete) {
+				map.erase(int(row));
 			}
 		);
 
-		//TIME("tableDelete",
-		//	for (auto row : randomDelete) {
-		//		table.erase(row);
-		//	}
-		//);
-		//table.printStats();
-		//table.validate();
+		TIME("tableDelete",
+			for (auto row : randomDelete) {
+				table.erase(row);
+			}
+		);
+		table.validate();
 
 		string line;
 		std::cin >> line;
-		std::cout << greatSum << "\n";
 	}
 }

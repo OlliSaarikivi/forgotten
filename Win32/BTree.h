@@ -2,8 +2,13 @@
 
 #include "Columnar.h"
 #include "Row.h"
+#include "Sentinels.h"
 
 template<class TKey, class... TValues> class BTree {
+public:
+	using Key = TKey;
+
+private:
 	using KeyType = typename TKey::KeyType;
 	using KeyLess = typename TKey::Less;
 	using GetKey = TKey;
@@ -15,8 +20,8 @@ template<class TKey, class... TValues> class BTree {
 
 	static const size_t MaxInnerLevels = 16;
 
-	static const size_t MaxRows = 32;
-	static const size_t MinRows = 16;
+	static const size_t MaxRows = 24;
+	static const size_t MinRows = 12;
 
 	using Rows = ColumnarArray<MaxRows, TValues...>;
 
@@ -115,26 +120,29 @@ template<class TKey, class... TValues> class BTree {
 	static_assert(alignof(InnerNode) >= 2, "Can not use low byte for type info because InnerNode has alignment of 1 byte.");
 	static_assert(alignof(LeafNode) >= 2, "Can not use low byte for type info because LeafNode has alignment of 1 byte.");
 
-	template<class... TSomeValues> class Iterator {
-		using IteratorType = Rows::Iterator<TSomeValues...>;
-
+	template<class... TSomeValues> class Iterator
+		: boost::equality_comparable<Iterator<TSomeValues...>
+		, boost::equality_comparable<Iterator<TSomeValues...>, End>>
+	{
 		LeafNode* current;
 		size_t pos;
 
 	public:
-		using reference = typename IteratorType::reference;
-		using pointer = typename IteratorType::pointer;
-		using iterator_category = std::forward_iterator_tag;
+		using RowType = Row<TSomeValues&...>;
 
-		Iterator(LeafNode* current) : current(current), pos(0) {}
-		Iterator(LeafNode* current, size_t pos) : current(current), pos(pos) {}
+		Iterator() : current(nullptr), pos(0) {}
+		Iterator(LeafNode* beginLeaf, size_t beginPos) : current(beginLeaf), pos(beginPos) {
+			if (pos == current->size) {
+				current = current->next;
+				pos = 0;
+			}
+		}
 
 		Iterator& operator++() {
 			++pos;
-			if (current->next != nullptr && pos == current->size) {
+			if (pos == current->size) {
 				current = current->next;
 				pos = 0;
-				_mm_prefetch((const char*)current->next, _MM_HINT_T0);
 			}
 			return *this;
 		}
@@ -144,18 +152,19 @@ template<class TKey, class... TValues> class BTree {
 			return old;
 		}
 
-		reference operator*() const {
+		RowType operator*() const {
 			return current->rows[pos];
 		}
-		pointer operator->() const {
-			return pos.operator->();
+		FauxPointer<RowType> operator->() const {
+			return FauxPointer<RowType>{ this->operator*() };
+		}
+
+		friend bool operator==(const Iterator& iter, const End& sentinel) {
+			return iter.current == nullptr;
 		}
 
 		friend bool operator==(const Iterator& left, const Iterator& right) {
 			return left.current == right.current && left.pos == right.pos;
-		}
-		friend bool operator!=(const Iterator& left, const Iterator& right) {
-			return !(left == right);
 		}
 
 		friend void swap(Iterator& left, Iterator& right) {
@@ -176,13 +185,28 @@ template<class TKey, class... TValues> class BTree {
 		while (current->node.isInner()) {
 			InnerNode* inner = current->node.inner();
 			KeyType newBound = current->upperBound;
-			uint_fast8_t slot = 0;
-			for (; slot < inner->size; ++slot) {
-				if (KeyLess()(key, inner->keys[slot])) {
-					newBound = inner->keys[slot];
+
+
+			uint_fast8_t lower = 0;
+
+			// We could first do a bit of binary search. Doesn't seem to help much though
+			//uint_fast8_t upper = inner->size;
+			//for (int i = 0; i < 2; ++i)
+			//{
+			//	uint_fast8_t middle = (upper + lower) / 2;
+			//	bool isLess = KeyLess()(key, inner->keys[middle]);
+			//	lower = isLess ? lower : middle;
+			//	upper = isLess ? middle : upper;
+			//}
+
+			for (; lower < inner->size; ++lower) {
+				if (KeyLess()(key, inner->keys[lower])) {
+					newBound = inner->keys[lower];
 					break;
 				}
 			}
+			uint_fast8_t slot = lower;
+
 			current = path.descend();
 			current->node = inner->children[slot];
 			current->upperBound = newBound;
@@ -643,14 +667,14 @@ public:
 	BTree() : root(leafPool.construct()), firstLeaf(root.leaf()), lastLeaf(firstLeaf) {}
 
 	template<class T, class... Ts> auto begin() {
-		return Iterator<T, Ts...>(firstLeaf);
+		return Iterator<T, Ts...>(firstLeaf, 0);
 	}
 	auto begin() {
 		return begin<TValues...>();
 	}
 
 	template<class T, class... Ts> auto end() {
-		return Iterator<T, Ts...>(lastLeaf, lastLeaf->size);
+		return Iterator<T, Ts...>();
 	}
 	auto end() {
 		return end<TValues...>();
@@ -670,10 +694,8 @@ public:
 	template<class TIter> void insertSorted(TIter rangeBegin, TIter rangeEnd) {
 		TIter iter = rangeBegin;
 		Path path{ root };
-		while (iter != rangeEnd) {
-			auto key = GetKey()(*iter);
-			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
-				path.ascend();
+		auto key = GetKey()(*iter);
+		for (;;) {
 			findLeaf(key, path);
 
 			if (path[0].node.leaf()->isFull()) {
@@ -730,6 +752,11 @@ public:
 				iter = leafInsertSorted(path[0].node.leaf(), iter, rangeEnd);
 			else
 				iter = leafInsertSorted(path[0].node.leaf(), iter, rangeEnd, InsertBound{ path[0].upperBound });
+
+			if (iter == rangeEnd) break;
+			key = GetKey()(*iter);
+			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
+				path.ascend();
 		}
 	}
 
@@ -772,13 +799,28 @@ public:
 	}
 
 	template<class TRow> void erase(const TRow& row) {
-		auto key = GetKey()(row); // TODO: remove
+		KeyType key = GetKey()(row);
 		Path path{ root };
 		findLeaf(key, path);
 
 		LeafNode* leaf = path[0].node.leaf();
 		leafEraseSorted(leaf, &row, &row + 1);
 		balance(path);
+	}
+
+	template<class TIter> void eraseSorted(TIter rangeBegin, TIter rangeEnd) {
+		TIter iter = rangeBegin;
+		Path path{ root };
+		auto key = GetKey()(*iter);
+		for (;;) {
+			findLeaf(key, path);
+			iter = leafEraseSorted(leaf, iter, rangeEnd);
+			balance(path);
+			if (iter == rangeEnd) break;
+			key = GetKey()(*iter);
+			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
+				path.ascend();
+		}
 	}
 
 	void validate() {

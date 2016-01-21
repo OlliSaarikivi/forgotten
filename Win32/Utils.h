@@ -30,7 +30,7 @@ template<class T> struct TypeWrap {
 
 template<class... T> void ignore(const T&... x) {}
 
-template<typename T>
+template<class T>
 struct FauxPointer {
 	FauxPointer(const T& value) : value(value) {}
 	T* operator->() {

@@ -35,6 +35,8 @@
 
 #include <boost/serialization/strong_typedef.hpp>
 
+#include <boost/integer/static_log2.hpp>
+
 #include <boost/mpl/vector.hpp>
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/arithmetic.hpp>

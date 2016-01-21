@@ -106,6 +106,8 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
       <SDLCheck>false</SDLCheck>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -150,10 +152,12 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Release\*.dll" "$(OutDir)"</Co
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BTree.h" />
+    <ClInclude Include="Join.h" />
     <ClInclude Include="KeyCompressionBTree.h" />
     <ClInclude Include="Columnar.h" />
     <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Row.h" />
+    <ClInclude Include="Sentinels.h" />
     <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

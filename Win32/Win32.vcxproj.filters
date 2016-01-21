@@ -50,6 +50,12 @@
     <ClInclude Include="BTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Join.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sentinels.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

@@ -81,3 +81,6 @@ namespace impl {
 template<class... Ts> auto makeRow(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
 	return impl::MakerRow<decltype(params)...>::type(std::forward<Ts>(params)...);
 }
+
+template<class TRow1, class TRow2> struct RowUnion;
+template<class... TValues1, class... TValues2> struct RowUnion;
