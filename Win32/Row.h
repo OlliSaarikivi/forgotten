@@ -82,5 +82,15 @@ template<class... Ts> auto makeRow(Ts&&... params) -> typename impl::MakerRow<de
 	return impl::MakerRow<decltype(params)...>::type(std::forward<Ts>(params)...);
 }
 
+template<class TRow, class T> struct ExtendRow;
+template<class... TValues, class T> struct ExtendRow<Row<TValues...>, T> {
+	using type = Row<TValues..., T>;
+};
+
 template<class TRow1, class TRow2> struct RowUnion;
-template<class... TValues1, class... TValues2> struct RowUnion;
+template<class... TValues1, class... TValues2> class RowUnion<Row<TValues1...>, Row<TValues2...>> {
+	using AllValues = typename mpl::vector<TValues1..., TValues2...>::type;
+	using Unique = typename mpl::unique<AllValues, std::is_same<mpl::_1, mpl::_2>>::type;
+public:
+	using type = typename mpl::fold<Unique, Row<>, ExtendRow<mpl::_1, mpl::_2>>::type;
+};

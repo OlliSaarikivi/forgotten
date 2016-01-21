@@ -31,7 +31,8 @@
 #include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
-#include <boost/pool/object_pool.hpp>
+#include <boost/pool/pool.hpp>
+#include <boost/pool/detail/mutex.hpp>
 
 #include <boost/serialization/strong_typedef.hpp>
 
