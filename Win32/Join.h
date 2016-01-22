@@ -70,7 +70,7 @@ public:
 	}
 
 	RowType operator*() const {
-		return 
+		return joinRows<RowType>(*left, *right);
 	}
 	FauxPointer<RowType> operator->() const {
 		return FauxPointer<RowType>{ this->operator*() };

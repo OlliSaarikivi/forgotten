@@ -28,7 +28,10 @@ private:
 	struct InnerNode;
 	struct LeafNode;
 	struct NodePtr {
-		uintptr_t value;
+		union {
+			uintptr_t value;
+			InnerNode* innerDebug;
+		};
 
 		NodePtr() : value(reinterpret_cast<uintptr_t>(nullptr)) {}
 		NodePtr(nullptr_t n) : value(reinterpret_cast<uintptr_t>(nullptr)) {}
@@ -132,7 +135,7 @@ private:
 
 		Iterator() : current(nullptr), pos(0) {}
 		Iterator(LeafNode* beginLeaf, size_t beginPos) : current(beginLeaf), pos(beginPos) {
-			if (pos == current->size) {
+			while (current && pos == current->size) {
 				current = current->next;
 				pos = 0;
 			}
@@ -173,10 +176,10 @@ private:
 		}
 	};
 
-	boost::pool<> innerPool;
+	LeafNode firstLeaf;
 	boost::pool<> leafPool;
+	boost::pool<> innerPool;
 	NodePtr root;
-	LeafNode* firstLeaf;
 	LeafNode* lastLeaf;
 
 	InnerNode* constructInner() {
@@ -382,6 +385,8 @@ private:
 
 				++(inner->size);
 				--(prev->size);
+
+				++(path[myLevel - 1].slot);
 			}
 			else if (next && next->size > MinKeys) {
 				++(inner->size);
@@ -390,6 +395,8 @@ private:
 				inner->children[inner->size] = next->children[0];
 				inner->keys[inner->size - 1] = parent->keys[slot];
 				parent->keys[slot] = next->keys[0];
+
+				path[myLevel].upperBound = parent->keys[slot];
 
 				next->children[0] = next->children[1];
 				for (uint_fast8_t i = 1; i <= next->size; ++i) {
@@ -407,6 +414,11 @@ private:
 
 				inner->size += next->size + 1;
 
+				if ((slot + 1) < parent->size)
+					path[myLevel].upperBound = parent->keys[slot + 1];
+				else
+					path[myLevel].upperBound = path[myLevel + 1].upperBound;
+
 				innerErase(path, myLevel + 1, slot + 1);
 
 				destroyInner(next);
@@ -419,6 +431,10 @@ private:
 					prev->children[prev->size + 1 + i] = inner->children[i];
 				}
 				prev->children[prev->size + inner->size + 1] = inner->children[inner->size];
+
+				path[myLevel].node = prev;
+				--(path[myLevel].slot);
+				path[myLevel - 1].slot += prev->size + 1;
 
 				prev->size += inner->size + 1;
 
@@ -475,6 +491,7 @@ private:
 			else {
 				// Merge
 				if (next) {
+					assert(leaf != next);
 					for (uint_fast8_t i = 0; i < next->size; ++i) {
 						leaf->rows[leaf->size + i] |= next->rows[i];
 					}
@@ -489,7 +506,6 @@ private:
 					if (lastLeaf == next)
 						lastLeaf = leaf;
 
-					assert(leaf->size <= MaxRows);
 					innerErase(path, 1, path[0].slot + 1);
 
 					destroyLeaf(next);
@@ -508,7 +524,6 @@ private:
 					if (lastLeaf == leaf)
 						lastLeaf = prev;
 
-					assert(prev->size <= MaxRows);
 					innerErase(path, 1, path[0].slot + 1);
 
 					destroyLeaf(leaf);
@@ -671,6 +686,28 @@ private:
 		}
 	}
 
+	void assertNotInTree(NodePtr node, InnerNode* illegal) {
+		if (node.isInner()) {
+			auto inner = node.inner();
+			assert(inner != illegal);
+			for (int i = 0; i < inner->size + 1; ++i) {
+				assertNotInTree(inner->children[i], illegal);
+			}
+		}
+	}
+
+	void assertNotInPath(Path& path, InnerNode* illegal) {
+		int i = 0;
+		for (;;) {
+			auto current = path[i].node;
+			if (current.isInner()) {
+				assert(current.inner() != illegal);
+			}
+			if (current == root) return;
+			++i;
+		}
+	}
+
 	void assertFirstLast() {
 		NodePtr rightMost = root;
 		while (rightMost.isInner()) {
@@ -681,10 +718,11 @@ private:
 	}
 
 public:
-	BTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), root(constructLeaf()), firstLeaf(root.leaf()), lastLeaf(firstLeaf) {}
+	BTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), firstLeaf(), lastLeaf(&firstLeaf), root(&firstLeaf) {
+	}
 
 	template<class T, class... Ts> auto begin() {
-		return Iterator<T, Ts...>(firstLeaf, 0);
+		return Iterator<T, Ts...>(&firstLeaf, 0);
 	}
 	auto begin() {
 		return begin<TValues...>();
@@ -831,8 +869,6 @@ public:
 		for (;;) {
 			findLeaf(key, path);
 			iter = leafEraseSorted(path[0].node.leaf(), iter, rangeEnd);
-			balance(path);
-			validate();
 			if (path[0].upperBound == LeastKey) return;
 			for (;;) {
 				if (iter == rangeEnd) return;
@@ -840,24 +876,27 @@ public:
 				if (!KeyLess()(key, path[0].upperBound)) break;
 				++iter;
 			}
+			balance(path);
 			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
 				path.ascend();
 		}
 	}
 
 	void validate() {
-		optional<KeyType> prevKey;
+		bool hasPrev = false;
+		KeyType prevKey;
 		auto iter = begin();
 		auto until = end();
 		while (iter != until) {
 			auto row = *iter;
 			KeyType key = GetKey()(*iter);
-			if (prevKey) {
-				if (!KeyLess()(*prevKey, key)) {
+			if (hasPrev) {
+				if (!KeyLess()(prevKey, key)) {
 					assert(false);
 				}
 			}
 			prevKey = key;
+			hasPrev = true;
 			++iter;
 		}
 
@@ -873,7 +912,7 @@ public:
 	void printStats() {
 		double sum = 0;
 		uint64_t count = 0;
-		LeafNode* current = firstLeaf;
+		LeafNode* current = &firstLeaf;
 		while (current) {
 			sum += current->size;
 			++count;

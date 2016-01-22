@@ -24,9 +24,9 @@ private:
 };
 
 struct ExtractIntCol {
-	using KeyType = int32_t;
+	using KeyType = int;
 	using Less = std::less<KeyType>;
-	static const KeyType LeastKey = 0;
+	static const KeyType LeastKey = INT_MIN;
 	template<class TRow> KeyType operator()(const TRow& row) {
 		return row.col<int>();
 	}
@@ -34,7 +34,7 @@ struct ExtractIntCol {
 
 #define TIME(N,B) { Timer tmr; tmr.reset(); B; double t = tmr.elapsed(); std::cout << N << ": " << t << "s\n"; }
 
-#define ROWS 1000
+#define ROWS 1000000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
@@ -44,12 +44,12 @@ COL(char, Cc)
 
 int _tmain(int argc, _TCHAR* argv[]) {
 	std::default_random_engine e1(0);
-	std::uniform_int_distribution<int> randomInt(0, 1000 - 1);
+	std::uniform_int_distribution<int> randomInt(0, INT_MAX - 1);
 
 
 	Columnar<int, uint64_t> randomInsert{};
 	for (int i = 0; i < ROWS; ++i) {
-		randomInsert.pushBack(makeRow(randomInt(e1), uint64_t(i)));
+		randomInsert.pushBack(makeRow(i, uint64_t(i)));
 	}
 	Columnar<int, uint64_t> randomDelete{};
 	for (int i = 0; i < ROWS; ++i) {
@@ -67,6 +67,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 				map.emplace(int(row), uint64_t(row));
 			}
 		);
+		std::cout << "map size: " << map.size() << "\n";
 
 		BTree<ExtractIntCol, int, uint64_t> table{};
 		TIME("tableInsert",
@@ -77,29 +78,35 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		table.validate();
 		table.printStats();
 
-		//for (int i = 0; i < 10; ++i) {
-		//	TIME("map_update",
-		//		for (auto& entry : map) {
-		//			entry.second *= entry.first;
-		//		}
-		//	);
-		//}
+		for (int i = 0; i < 10; ++i) {
+			TIME("map_update",
+				for (auto& entry : map) {
+					entry.second *= entry.first;
+				}
+			);
+		}
 
-		//for (int i = 0; i < 10; ++i) {
-		//	TIME("tableUpdate",
-		//		for (auto row : table) {
-		//			row.col<uint64_t>() *= int(row);
-		//		}
-		//	);
-		//}
+		for (int i = 0; i < 10; ++i) {
+			TIME("tableUpdate",
+				for (auto row : table) {
+					row.col<uint64_t>() *= int(row);
+				}
+			);
+		}
 
 
-		//for (int i = 0; i < 20; ++i) {
-		//	auto iter = MergeJoinIterator<ExtractIntCol, decltype(begin(table)), End, decltype(begin(table2)), End>(begin(table), End{}, begin(table2), End{});
-		//	while (iter != End{}) {
-		//		++iter;
-		//	}
-		//}
+		BTree<ExtractIntCol, int, uint64_t> deleteTable{};
+		for (auto row : randomDelete) {
+			deleteTable.insert(row);
+		}
+		for (int i = 0; i < 20; ++i) {
+			Columnar<int, uint64_t> joined;
+			auto iter = MergeJoinIterator<ExtractIntCol, decltype(begin(table)), End, decltype(begin(deleteTable)), End>(begin(table), End{}, begin(deleteTable), End{});
+			while (iter != End{}) {
+				joined.pushBack(*iter);
+				++iter;
+			}
+		}
 
 
 		TIME("map_delete",
@@ -107,27 +114,17 @@ int _tmain(int argc, _TCHAR* argv[]) {
 				map.erase(int(row));
 			}
 		);
+		std::cout << "map size: " << map.size() << "\n";
 
 		{ Timer tmr; tmr.reset();
-		BTree<ExtractIntCol, int, uint64_t> deleteTable{};
-		for (auto row : randomDelete) {
-			deleteTable.insert(row);
-			//table.erase(row);
-		}
-		Columnar<int, uint64_t> reverse;
-		for (auto row : deleteTable) {
-			reverse.pushBack(row);
-		}
-		//for (auto row : deleteTable) {
+			table.eraseSorted(begin(deleteTable), end(deleteTable));
+
+		//for (auto row : randomDelete) {
 		//	table.erase(row);
 		//}
-		table.eraseSorted(begin(deleteTable), end(deleteTable));
-		//for (unsigned i = 0; i < reverse.size(); ++i) {
-		//	table.erase(reverse[reverse.size() - 1 - i]);
-		//}
 		double t = tmr.elapsed(); std::cout << "tableDelete: " << t << "s\n"; }
-		table.validate();
 		table.printStats();
+		table.validate();
 
 
 

@@ -1,12 +1,11 @@
 #pragma once
 
-// Adapted from BOOST_STRONG_TYPEDEF to support unique_ptr
 #define COL(T, D) BOOST_STRONG_TYPEDEF(T, D)
 
 template<class... TValues> class Row {
 	using ValueTypes = typename mpl::vector<typename std::remove_reference<TValues>::type...>::type;
 	using ValueTypeSet = typename mpl::set<typename std::remove_reference<TValues>::type...>::type;
-	using Types = typename mpl::vector<TValues...>::type;
+	using Types = typename mpl::set<TValues...>::type;
 
 	template<class T> using StoredType = typename std::conditional<mpl::contains<Types, T&>::type::value, T&, T>::type;
 
@@ -31,6 +30,8 @@ template<class... TValues> class Row {
 	};
 
 public:
+	template<class T> using HasCol = typename mpl::contains<ValueTypeSet, T>::type;
+
 	Row(TValues&&... values) : refs(std::forward<TValues>(values)...) {}
 
 	Row(const Row& other) = default;
@@ -80,6 +81,12 @@ namespace impl {
 
 template<class... Ts> auto makeRow(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
 	return impl::MakerRow<decltype(params)...>::type(std::forward<Ts>(params)...);
+}
+
+template<class TResult, class... TRows> TResult joinRows(TRows&&... params) {
+	using RowTypes = typename mpl::vector<TRows...>::type;
+	using Begin = typename mpl::begin<RowTypes>::type;
+
 }
 
 template<class TRow, class T> struct ExtendRow;

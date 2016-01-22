@@ -40,6 +40,19 @@ private:
 	T value;
 };
 
+template<unsigned Index, class T, class... Ts> struct PackGet
+{
+	auto operator()(T&& t, Ts&&... ts) {
+		return PackGet<Index - 1, Ts...>(std::forward<Ts>(ts)...);
+	}
+};
+template<class T, class... Ts> struct PackGet<0, T, Ts...>
+{
+	auto operator()(T&& t, Ts&&... ts) {
+		return t;
+	}
+};
+
 //namespace std
 //{
 //    template<>
