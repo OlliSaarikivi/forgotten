@@ -22,6 +22,7 @@ private:
 
 	static const size_t MaxRows = 24;
 	static const size_t MinRows = 12;
+	static const unsigned LeafBinSearchRounds = 2;
 
 	using Rows = ColumnarArray<MaxRows, TValues...>;
 
@@ -135,7 +136,7 @@ private:
 
 		Iterator() : current(nullptr), pos(0) {}
 		Iterator(LeafNode* beginLeaf, size_t beginPos) : current(beginLeaf), pos(beginPos) {
-			while (current && pos == current->size) {
+			if (current && pos == current->size) {
 				current = current->next;
 				pos = 0;
 			}
@@ -176,38 +177,78 @@ private:
 		}
 	};
 
-	class Searcher {
+	class SortedFinder {
 		Path path;
+		uint_fast8_t lower;
 
 	public:
 		using RowType = Row<TValues&...>;
 		using Iterator = Iterator;
 
-		Searcher(NodePtr root) : path{ root } {}
+		SortedFinder(NodePtr root) : path{ root }, lower{ 0 } {}
 
-		template<class TRow> Iterator search(TRow&& row) {
-			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
-				path.ascend();
+		template<class TRow> Iterator find(TRow&& row) {
 			KeyType key = GetKey()(row);
+			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound))) {
+				path.ascend();
+				lower = 0;
+			}
 			findLeaf(key, path);
 			LeafNode* leaf = path[0].node.leaf();
 
-			uint_fast8_t lower = 0;
 			uint_fast8_t upper = leaf->size;
-			for (int i = 0; i < 2; ++i) {
+			for (int i = 0; i < LeafBinSearchRounds; ++i) {
 				uint_fast8_t middle = lower + (upper - lower) / 2;
 				bool isLess = KeyLess()(key, GetKey()(leaf->rows[middle]));
 				lower = isLess ? lower : middle;
 				upper = isLess ? middle : upper;
 			}
 
-			for (; lower < inner->size; ++lower) {
-				if (KeyLess()(key, GetKey()(leaf->rows[lower]))) {
+			for (; lower < leaf->size; ++lower) {
+				KeyType rowKey = GetKey()(leaf->rows[lower]);
+				if (!KeyLess()(rowKey, key)) {
+					if (!KeyLess()(key, rowKey))
+						return Iterator{ leaf, lower };
 					break;
 				}
 			}
+			return Iterator{};
+		}
+	};
 
-			return Iterator{ leaf, lower };
+	class Finder {
+		NodePtr root;
+
+	public:
+		using RowType = Row<TValues&...>;
+		using Iterator = Iterator;
+
+		Finder(NodePtr root) : root{ root } {}
+
+		template<class TRow> Iterator find(TRow&& row) {
+			Path path{ root };
+			KeyType key = GetKey()(row);
+			findLeaf(key, path);
+			LeafNode* leaf = path[0].node.leaf();
+
+			uint_fast8_t lower = 0;
+			uint_fast8_t upper = leaf->size;
+			for (int i = 0; i < LeafBinSearchRounds; ++i) {
+				uint_fast8_t middle = lower + (upper - lower) / 2;
+				bool isLess = KeyLess()(key, GetKey()(leaf->rows[middle]));
+				lower = isLess ? lower : middle;
+				upper = isLess ? middle : upper;
+			}
+
+			for (; lower < leaf->size; ++lower) {
+				KeyType rowKey = GetKey()(leaf->rows[lower]);
+				if (!KeyLess()(rowKey, key)) {
+					if (!KeyLess()(key, rowKey))
+						return Iterator{ leaf, lower };
+					break;
+				}
+			}
+			return Iterator{};
 		}
 	};
 
@@ -235,7 +276,7 @@ private:
 		leafPool.free(node);
 	}
 
-	void findLeaf(KeyType key, Path& path) {
+	static void findLeaf(KeyType key, Path& path) {
 		PathEntry* current = &path[0];
 		while (current->node.isInner()) {
 			InnerNode* inner = current->node.inner();
@@ -696,62 +737,6 @@ private:
 		return rangeIter;
 	}
 
-	void assertBounds(NodePtr node, KeyType lowerBound, KeyType upperBound) {
-		if (node.isInner()) {
-			auto inner = node.inner();
-			assert(inner->size <= MaxKeys);
-			for (int i = 0; i < inner->size; ++i) {
-				KeyType key = inner->keys[i];
-				assert(!KeyLess()(key, lowerBound));
-				assert(KeyLess()(key, upperBound));
-			}
-			assertBounds(inner->children[0], lowerBound, inner->keys[0]);
-			for (int i = 1; i < inner->size; ++i) {
-				assertBounds(inner->children[i], inner->keys[i - 1], inner->keys[i]);
-			}
-			assertBounds(inner->children[inner->size], inner->keys[inner->size - 1], upperBound);
-		}
-		else {
-			auto leaf = node.leaf();
-			for (int i = 0; i < leaf->size; ++i) {
-				KeyType key = GetKey()(leaf->rows[i]);
-				assert(!KeyLess()(key, lowerBound));
-				assert(KeyLess()(key, upperBound));
-			}
-		}
-	}
-
-	void assertNotInTree(NodePtr node, InnerNode* illegal) {
-		if (node.isInner()) {
-			auto inner = node.inner();
-			assert(inner != illegal);
-			for (int i = 0; i < inner->size + 1; ++i) {
-				assertNotInTree(inner->children[i], illegal);
-			}
-		}
-	}
-
-	void assertNotInPath(Path& path, InnerNode* illegal) {
-		int i = 0;
-		for (;;) {
-			auto current = path[i].node;
-			if (current.isInner()) {
-				assert(current.inner() != illegal);
-			}
-			if (current == root) return;
-			++i;
-		}
-	}
-
-	void assertFirstLast() {
-		NodePtr rightMost = root;
-		while (rightMost.isInner()) {
-			auto inner = rightMost.inner();
-			rightMost = inner->children[inner->size];
-		}
-		assert(rightMost.leaf() == lastLeaf);
-	}
-
 public:
 	BTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), firstLeaf(), lastLeaf(&firstLeaf), root(&firstLeaf) {
 	}
@@ -764,8 +749,16 @@ public:
 		return Iterator();
 	}
 
-	auto searcher() {
-		return Searcher();
+	auto sortedFinder() {
+		return SortedFinder{ root };
+	}
+
+	auto finder() {
+		return Finder{ root };
+	}
+
+	auto finderFail() {
+		return End{};
 	}
 
 	template<class TRow> void insert(const TRow& row) {
@@ -913,45 +906,6 @@ public:
 			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
 				path.ascend();
 		}
-	}
-
-	void validate() {
-		bool hasPrev = false;
-		KeyType prevKey;
-		auto iter = begin();
-		auto until = end();
-		while (iter != until) {
-			auto row = *iter;
-			KeyType key = GetKey()(*iter);
-			if (hasPrev) {
-				if (!KeyLess()(prevKey, key)) {
-					assert(false);
-				}
-			}
-			prevKey = key;
-			hasPrev = true;
-			++iter;
-		}
-
-		if (root.isLeaf()) {
-			assert(!root.leaf()->previous && !root.leaf()->next);
-		}
-
-		assertFirstLast();
-
-		assertBounds(root, std::numeric_limits<KeyType>::min(), std::numeric_limits<KeyType>::max());
-	}
-
-	void printStats() {
-		double sum = 0;
-		uint64_t count = 0;
-		LeafNode* current = &firstLeaf;
-		while (current) {
-			sum += current->size;
-			++count;
-			current = current->next;
-		}
-		std::cout << "Avg leaf size: " << (sum / count) << " Elements: " << sum << " Leaves: " << count << "\n";
 	}
 };
 

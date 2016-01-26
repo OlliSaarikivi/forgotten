@@ -28,11 +28,7 @@ template<template<typename> class TIter, class... TValues> class RowIterator
 	tuple<TIter<TValues>...> iters;
 
 public:
-	using difference_type = typename std::iterator_traits<FirstIter>::difference_type;
-	//using value_type = ; // Not really there
-	using reference = Row<TValues&...>;
-	using pointer = FauxPointer<reference>;
-	using iterator_category = std::random_access_iterator_tag;
+	using RowType = Row<TValues&...>;
 
 	RowIterator() {}
 	RowIterator(TIter<TValues>... iters) : iters(std::make_tuple(iters...)) {}
@@ -80,17 +76,17 @@ public:
 		return iter - n;
 	}
 
-	friend difference_type operator-(const RowIterator& left, const RowIterator& right) {
+	friend auto operator-(const RowIterator& left, const RowIterator& right) {
 		return get<FirstIter>(left.iters) - get<FirstIter>(right.iters);
 	}
 
-	reference operator*() const {
+	RowType operator*() const {
 		return makeRow(*std::get<TValues*>(iters)...);
 	}
-	pointer operator->() const {
-		return pointer{ this->operator*() };
+	FauxPointer<RowType> operator->() const {
+		return FauxPointer<RowType>{ this->operator*() };
 	}
-	reference operator[](size_t n) const {
+	RowType operator[](size_t n) const {
 		return *(*this + n);
 	}
 

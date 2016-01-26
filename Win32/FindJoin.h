@@ -5,16 +5,16 @@
 #include "Sentinels.h"
 
 template<class TLeft, class TLeftSentinel, class TFinder, class TFinderFail> class FindJoinIterator
-	: boost::equality_comparable<FindJoinIterator<TLeft, TLeftSentinel, TFinder>, End> {
+	: boost::equality_comparable<FindJoinIterator<TLeft, TLeftSentinel, TFinder, TFinderFail>, End> {
 
 	TLeft left;
 	TLeftSentinel leftEnd;
 	TFinder finder;
-	TFinder::Iterator result;
+	typename TFinder::Iterator result;
 	TFinderFail finderFail;
 
 public:
-	using RowType = typename RowUnion<typename TLeft::RowType, typename TRight::RowType>::type;
+	using RowType = typename RowUnion<typename TLeft::RowType, typename TFinder::RowType>::type;
 
 	FindJoinIterator(TLeft left, TLeftSentinel leftEnd, TFinder finder, TFinderFail finderFail) :
 		left(left), leftEnd(leftEnd), finder(finder), finderFail(finderFail) {
@@ -64,6 +64,11 @@ public:
 };
 
 template<class TLeft, class TRight> auto findJoin(TLeft& left, TRight& right) {
-	return FindJoinIterator<typename TRight::Key, decltype(begin(left)), decltype(end(left)), decltype(begin(right)), decltype(end(right))>
-		(begin(left), end(left), begin(right), end(right));
+	return FindJoinIterator<decltype(begin(left)), decltype(end(left)), decltype(right.finder()), decltype(right.finderFail())>
+		(begin(left), end(left), right.finder(), right.finderFail());
+}
+
+template<class TLeft, class TRight> auto sortedFindJoin(TLeft& left, TRight& right) {
+	return FindJoinIterator<decltype(begin(left)), decltype(end(left)), decltype(right.sortedFinder()), decltype(right.finderFail())>
+		(begin(left), end(left), right.sortedFinder(), right.finderFail());
 }

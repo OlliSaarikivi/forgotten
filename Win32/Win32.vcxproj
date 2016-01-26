@@ -133,7 +133,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions);METRICS</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,6 +152,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BTree.h" />
+    <ClInclude Include="ThreeLevelBTree.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="KeyCompressionBTree.h" />
     <ClInclude Include="Columnar.h" />

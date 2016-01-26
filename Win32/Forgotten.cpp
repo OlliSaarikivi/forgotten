@@ -5,7 +5,8 @@
 #include <random>
 
 #include "BTree.h"
-#include "Join.h"
+#include "MergeJoin.h"
+#include "FindJoin.h"
 
 class Timer
 {
@@ -54,9 +55,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 	Columnar<int, uint64_t> randomSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 100) > 90)
+		if ((randomInt(e1) % 1000) > 990)
 			randomSubset.pushBack(randomInsert[ROWS - 1 - i]);
 	}
+	//randomSubset.pushBack(randomInsert[ROWS - 1]);
 
 	std::cout << randomInsert.size() << " " << randomSubset.size() << "\n";
 
@@ -71,26 +73,68 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			subsetTable.insert(row);
 		}
 
-		uint64_t sum;
 		for (int i = 0; i < 10; ++i) {
+			uint64_t sum = 0;
 			Time("scan", [&]() {
-				for (auto row : table) {
-					sum += row.col<uint64_t>();
+				for (auto row : subsetTable) {
+					sum += row.col<int>();
 				}
 			});
+			
 		}
+
 		for (int i = 0; i < 10; ++i) {
-			Time("join", [&]() {
-				auto iter = mergeJoin(table, subsetTable);
+			uint64_t sum = 0;
+			Time("scan sentinel", [&]() {
+				auto iter = subsetTable.begin();
 				while (iter != End{}) {
 					auto row = *iter;
-					sum += row.col<uint64_t>();
+					sum += row.col<int>();
 					++iter;
 				}
 			});
+			
 		}
 
-		std::cout << sum;
+		for (int i = 0; i < 10; ++i) {
+			uint64_t sum = 0;
+			Time("merge join", [&]() {
+				auto iter = mergeJoin(subsetTable, table);
+				while (iter != End{}) {
+					auto row = *iter;
+					sum += row.col<int>();
+					++iter;
+				}
+			});
+			
+		}
+
+		for (int i = 0; i < 10; ++i) {
+			uint64_t sum = 0;
+			Time("find join", [&]() {
+				auto iter = findJoin(randomSubset, table);
+				while (iter != End{}) {
+					auto row = *iter;
+					sum += row.col<int>();
+					++iter;
+				}
+			});
+			
+		}
+		
+		for (int i = 0; i < 10; ++i) {
+			uint64_t sum = 0;
+			Time("sorted find join", [&]() {
+				auto iter = sortedFindJoin(subsetTable, table);
+				while (iter != End{}) {
+					auto row = *iter;
+					sum += row.col<int>();
+					++iter;
+				}
+			});
+			
+		}
+
 		string line;
 		std::cin >> line;
 	}
