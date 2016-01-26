@@ -50,10 +50,13 @@
     <ClInclude Include="BTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Join.h">
+    <ClInclude Include="Sentinels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Sentinels.h">
+    <ClInclude Include="MergeJoin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FindJoin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

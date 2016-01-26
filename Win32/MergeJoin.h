@@ -5,8 +5,7 @@
 #include "Sentinels.h"
 
 template<class TKey, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
-	: boost::equality_comparable<MergeJoinIterator<TKey, TLeft, TLeftSentinel, TRight, TRightSentinel>
-	, boost::equality_comparable<MergeJoinIterator<TKey, TLeft, TLeftSentinel, TRight, TRightSentinel>, End >> {
+	: boost::equality_comparable<MergeJoinIterator<TKey, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
 
 	using KeyType = typename TKey::KeyType;
 	using KeyLess = typename TKey::Less;
@@ -70,7 +69,7 @@ public:
 	}
 
 	RowType operator*() const {
-		return joinRows<RowType>(*left, *right);
+		return JoinRows<RowType>()(*left, *right);
 	}
 	FauxPointer<RowType> operator->() const {
 		return FauxPointer<RowType>{ this->operator*() };
@@ -78,9 +77,6 @@ public:
 
 	friend bool operator==(const MergeJoinIterator& iter, const End& sentinel) {
 		return iter.left == iter.leftEnd || iter.right == iter.rightEnd;
-	}
-	friend bool operator==(const MergeJoinIterator& left, const MergeJoinIterator& right) {
-		return left.left == right.left && left.right == right.right;
 	}
 
 	friend void swap(MergeJoinIterator& left, MergeJoinIterator& right) {
@@ -93,3 +89,8 @@ public:
 		swap(left.rightEnd, right.rightEnd);
 	}
 };
+
+template<class TLeft, class TRight> auto mergeJoin(TLeft& left, TRight& right) {
+	return MergeJoinIterator<typename TRight::Key, decltype(begin(left)), decltype(end(left)), decltype(begin(right)), decltype(end(right))>
+		(begin(left), end(left), begin(right), end(right));
+}

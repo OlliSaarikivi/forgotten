@@ -152,11 +152,12 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BTree.h" />
-    <ClInclude Include="Join.h" />
+    <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="KeyCompressionBTree.h" />
     <ClInclude Include="Columnar.h" />
     <ClInclude Include="ElementSpriteShader.h" />
     <ClInclude Include="Row.h" />
+    <ClInclude Include="FindJoin.h" />
     <ClInclude Include="Sentinels.h" />
     <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="stdafx.h" />

@@ -53,6 +53,7 @@
 #include <boost/mpl/transform.hpp>
 #include <boost/mpl/contains.hpp>
 #include <boost/mpl/remove_if.hpp>
+#include <boost/mpl/copy_if.hpp>
 
 #define NOMINMAX
 #include <windows.h>

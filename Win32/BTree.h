@@ -123,15 +123,15 @@ private:
 	static_assert(alignof(InnerNode) >= 2, "Can not use low byte for type info because InnerNode has alignment of 1 byte.");
 	static_assert(alignof(LeafNode) >= 2, "Can not use low byte for type info because LeafNode has alignment of 1 byte.");
 
-	template<class... TSomeValues> class Iterator
-		: boost::equality_comparable<Iterator<TSomeValues...>
-		, boost::equality_comparable<Iterator<TSomeValues...>, End>> {
+	class Iterator
+		: boost::equality_comparable<Iterator
+		, boost::equality_comparable<Iterator, End>> {
 
 		LeafNode* current;
 		size_t pos;
 
 	public:
-		using RowType = Row<TSomeValues&...>;
+		using RowType = Row<TValues&...>;
 
 		Iterator() : current(nullptr), pos(0) {}
 		Iterator(LeafNode* beginLeaf, size_t beginPos) : current(beginLeaf), pos(beginPos) {
@@ -173,6 +173,41 @@ private:
 			using std::swap;
 			swap(left.current, right.current);
 			swap(left.pos, right.pos);
+		}
+	};
+
+	class Searcher {
+		Path path;
+
+	public:
+		using RowType = Row<TValues&...>;
+		using Iterator = Iterator;
+
+		Searcher(NodePtr root) : path{ root } {}
+
+		template<class TRow> Iterator search(TRow&& row) {
+			while (path[0].upperBound != LeastKey && !(KeyLess()(key, path[0].upperBound)))
+				path.ascend();
+			KeyType key = GetKey()(row);
+			findLeaf(key, path);
+			LeafNode* leaf = path[0].node.leaf();
+
+			uint_fast8_t lower = 0;
+			uint_fast8_t upper = leaf->size;
+			for (int i = 0; i < 2; ++i) {
+				uint_fast8_t middle = lower + (upper - lower) / 2;
+				bool isLess = KeyLess()(key, GetKey()(leaf->rows[middle]));
+				lower = isLess ? lower : middle;
+				upper = isLess ? middle : upper;
+			}
+
+			for (; lower < inner->size; ++lower) {
+				if (KeyLess()(key, GetKey()(leaf->rows[lower]))) {
+					break;
+				}
+			}
+
+			return Iterator{ leaf, lower };
 		}
 	};
 
@@ -721,18 +756,16 @@ public:
 	BTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), firstLeaf(), lastLeaf(&firstLeaf), root(&firstLeaf) {
 	}
 
-	template<class T, class... Ts> auto begin() {
-		return Iterator<T, Ts...>(&firstLeaf, 0);
-	}
 	auto begin() {
-		return begin<TValues...>();
+		return Iterator(&firstLeaf, 0);
 	}
 
-	template<class T, class... Ts> auto end() {
-		return Iterator<T, Ts...>();
-	}
 	auto end() {
-		return end<TValues...>();
+		return Iterator();
+	}
+
+	auto searcher() {
+		return Searcher();
 	}
 
 	template<class TRow> void insert(const TRow& row) {
