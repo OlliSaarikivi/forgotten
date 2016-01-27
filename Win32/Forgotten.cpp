@@ -8,6 +8,9 @@
 #include "MergeJoin.h"
 #include "FindJoin.h"
 
+#include "ThreeLevelBTree.h"
+#include "LazyTree.h"
+
 class Timer
 {
 public:
@@ -33,8 +36,27 @@ struct ExtractIntCol {
 	}
 };
 
+struct IntColIndex {
+	using Key = int;
+	using GetKey = IntColIndex;
+	static const Key LeastKey = INT_MIN;
+	template<class TRow> Key operator()(const TRow& row) {
+		return row.col<int>();
+	}
+};
+
 template<class TFunc> void Time(string name, const TFunc& f) {
 	Timer tmr; tmr.reset(); f(); double t = tmr.elapsed(); std::cout << name << ": " << t << "s\n";
+}
+
+template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
+	int sum = 0;
+	int sign = 1;
+	while (rangeBegin != rangeEnd) {
+		sum += sign * int(*rangeBegin++);
+		sign = -sign;
+	}
+	std::cout << "Checksum: " << sum << "\n";
 }
 
 #define ROWS 10000000
@@ -55,85 +77,68 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 	Columnar<int, uint64_t> randomSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 990)
+		if ((randomInt(e1) % 1000) > 500)
 			randomSubset.pushBack(randomInsert[ROWS - 1 - i]);
 	}
-	//randomSubset.pushBack(randomInsert[ROWS - 1]);
 
-	std::cout << randomInsert.size() << " " << randomSubset.size() << "\n";
+	//std::cout << randomInsert.size() << " " << randomSubset.size() << "\n";
 
 	for (;;) {
+
 		BTree<ExtractIntCol, int, uint64_t> table{};
-		for (auto row : randomInsert) {
-			table.insert(row);
-		}
 
-		BTree<ExtractIntCol, int, uint64_t> subsetTable{};
-		for (auto row : randomSubset) {
-			subsetTable.insert(row);
-		}
+		Time("orig insert", [&]() {
+			for (auto row : randomInsert) {
+				table.insert(row);
+			}
+		});
 
-		for (int i = 0; i < 10; ++i) {
-			uint64_t sum = 0;
-			Time("scan", [&]() {
-				for (auto row : subsetTable) {
-					sum += row.col<int>();
-				}
-			});
-			
-		}
+		Time("orig erase", [&]() {
+			for (auto row : randomSubset) {
+				table.erase(row);
+			}
+		});
 
-		for (int i = 0; i < 10; ++i) {
-			uint64_t sum = 0;
-			Time("scan sentinel", [&]() {
-				auto iter = subsetTable.begin();
-				while (iter != End{}) {
-					auto row = *iter;
-					sum += row.col<int>();
-					++iter;
-				}
-			});
-			
-		}
+		ThreeLevelBTree<IntColIndex, int, uint64_t> newTable{};
 
-		for (int i = 0; i < 10; ++i) {
-			uint64_t sum = 0;
-			Time("merge join", [&]() {
-				auto iter = mergeJoin(subsetTable, table);
-				while (iter != End{}) {
-					auto row = *iter;
-					sum += row.col<int>();
-					++iter;
-				}
-			});
-			
-		}
+		Time("new insert", [&]() {
+			for (auto row : randomInsert) {
+				newTable.insert(row);
+			}
+		});
 
-		for (int i = 0; i < 10; ++i) {
-			uint64_t sum = 0;
-			Time("find join", [&]() {
-				auto iter = findJoin(randomSubset, table);
-				while (iter != End{}) {
-					auto row = *iter;
-					sum += row.col<int>();
-					++iter;
-				}
-			});
-			
-		}
-		
-		for (int i = 0; i < 10; ++i) {
-			uint64_t sum = 0;
-			Time("sorted find join", [&]() {
-				auto iter = sortedFindJoin(subsetTable, table);
-				while (iter != End{}) {
-					auto row = *iter;
-					sum += row.col<int>();
-					++iter;
-				}
-			});
-			
-		}
+		Time("new erase", [&]() {
+			for (auto row : randomSubset) {
+				newTable.erase(row);
+			}
+		});
+
+		LazyTree<IntColIndex, int, uint64_t> lazyTable{};
+
+		Time("new insert", [&]() {
+			for (auto row : randomInsert) {
+				lazyTable.insert(row);
+			}
+		});
+
+		Time("new erase", [&]() {
+			for (auto row : randomSubset) {
+				lazyTable.erase(row);
+			}
+		});
+
+		newTable.printStats();
+
+		checkSum(begin(table), end(table));
+		checkSum(begin(newTable), end(newTable));
+		checkSum(begin(lazyTable), end(lazyTable));
+
+
+		//BTree<ExtractIntCol, int, uint64_t> subsetTable{};
+		//for (auto row : randomSubset) {
+		//	subsetTable.insert(row);
+		//}
+
 
 		string line;
 		std::cin >> line;

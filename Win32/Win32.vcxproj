@@ -152,6 +152,8 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BTree.h" />
+    <ClInclude Include="LazyTree.h" />
+    <ClInclude Include="SmoothSort.h" />
     <ClInclude Include="ThreeLevelBTree.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="KeyCompressionBTree.h" />

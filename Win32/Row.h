@@ -74,6 +74,10 @@ public:
 	Row<StoredType<typename std::remove_reference<Ts>::type>...> cols() {
 		return Row<StoredType<typename std::remove_reference<Ts>::type>...>(col<Ts>()...);
 	}
+
+	friend void swap(Row&& left, Row&& right) {
+		static_assert(false); // TODO
+	}
 };
 
 namespace impl {

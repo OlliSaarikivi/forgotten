@@ -10,6 +10,9 @@ using std::function;
 
 using std::map;
 
+using std::begin;
+using std::end;
+
 using std::pair;
 using std::make_pair;
 using std::tuple;
