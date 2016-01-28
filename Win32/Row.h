@@ -32,6 +32,15 @@ private:
 		}
 	};
 
+	struct SwapColumn {
+		Row& left;
+		Row& right;
+		template<class T> void operator()(const T& type) {
+			using std::swap;
+			swap(left.unsafeCol<T::type>(), right.unsafeCol<T::type>());
+		}
+	};
+
 public:
 	template<class T> using HasCol = typename mpl::contains<ValueTypeSet, T>::type;
 
@@ -75,8 +84,12 @@ public:
 		return Row<StoredType<typename std::remove_reference<Ts>::type>...>(col<Ts>()...);
 	}
 
+	auto temp() {
+		return makeRow(std::remove_reference<TValues>::type(*this)...);
+	}
+
 	friend void swap(Row&& left, Row&& right) {
-		static_assert(false); // TODO
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(SwapColumn{ left, right });
 	}
 };
 

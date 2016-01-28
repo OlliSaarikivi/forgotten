@@ -481,7 +481,7 @@ template<class TIndex, class... TValues> class ThreeLevelBTree {
 			else
 				assert(false); // Should have neighbors
 		}
-		assert(leaf->size + fromPrev + fromNext > MinRows);
+		assert(leaf->size + fromPrev + fromNext >= MinRows);
 
 		if (fromPrev > 0) {
 			for (size_t i = 1; i <= leaf->size; ++i) {

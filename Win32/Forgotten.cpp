@@ -50,13 +50,18 @@ template<class TFunc> void Time(string name, const TFunc& f) {
 }
 
 template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
+	int count = 0;
 	int sum = 0;
+	int orderless = 0;
 	int sign = 1;
 	while (rangeBegin != rangeEnd) {
-		sum += sign * int(*rangeBegin++);
+		auto value = int(*rangeBegin++);
+		sum += sign * value;
 		sign = -sign;
+		orderless += value;
+		++count;
 	}
-	std::cout << "Checksum: " << sum << "\n";
+	std::cout << "Checksum: " << sum << "\t Orderless: " << orderless << "\tCount: " << count << "\n";
 }
 
 #define ROWS 10000000
@@ -85,33 +90,21 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 	for (;;) {
 
-		BTree<ExtractIntCol, int, uint64_t> table{};
+		//BTree<ExtractIntCol, int, uint64_t> table{};
 
-		Time("orig insert", [&]() {
-			for (auto row : randomInsert) {
-				table.insert(row);
-			}
-		});
+		//Time("orig insert", [&]() {
+		//	for (auto row : randomInsert) {
+		//		table.insert(row);
+		//	}
+		//});
 
-		Time("orig erase", [&]() {
-			for (auto row : randomSubset) {
-				table.erase(row);
-			}
-		});
+		//ThreeLevelBTree<IntColIndex, int, uint64_t> newTable{};
 
-		ThreeLevelBTree<IntColIndex, int, uint64_t> newTable{};
-
-		Time("new insert", [&]() {
-			for (auto row : randomInsert) {
-				newTable.insert(row);
-			}
-		});
-
-		Time("new erase", [&]() {
-			for (auto row : randomSubset) {
-				newTable.erase(row);
-			}
-		});
+		//Time("new insert", [&]() {
+		//	for (auto row : randomInsert) {
+		//		newTable.insert(row);
+		//	}
+		//});
 
 		LazyTree<IntColIndex, int, uint64_t> lazyTable{};
 
@@ -121,26 +114,65 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
-		Time("new erase", [&]() {
-			for (auto row : randomSubset) {
-				lazyTable.erase(row);
-			}
-		});
-
-		newTable.printStats();
-
-		checkSum(begin(table), end(table));
-		checkSum(begin(newTable), end(newTable));
-		checkSum(begin(lazyTable), end(lazyTable));
-
-
-		//BTree<ExtractIntCol, int, uint64_t> subsetTable{};
-		//for (auto row : randomSubset) {
-		//	subsetTable.insert(row);
+		//uint64_t sum;
+		//for (int i = 0; i < 5; ++i) {
+		//	Time("orig scan", [&]() {
+		//		for (auto row : table) {
+		//			sum += int(row);
+		//		}
+		//	});
 		//}
 
+		//for (int i = 0; i < 5; ++i) {
+		//	Time("new scan", [&]() {
+		//		for (auto row : newTable) {
+		//			sum += int(row);
+		//		}
+		//	});
+		//}
 
-		string line;
-		std::cin >> line;
+		//for (int i = 0; i < 5; ++i) {
+		//	Time("lazy scan", [&]() {
+		//		for (auto row : lazyTable) {
+		//			sum += int(row);
+		//		}
+		//	});
+		//}
+		//std::cout << sum << "\n";
+
+		//Time("orig erase", [&]() {
+		//	for (auto row : randomSubset) {
+		//		table.erase(row);
+		//	}
+		//});
+
+		//Time("new erase", [&]() {
+		//	for (auto row : randomSubset) {
+		//		newTable.erase(row);
+		//	}
+		//});
+
+		//Time("lazy erase", [&]() {
+		//	for (auto row : randomSubset) {
+		//		lazyTable.erase(row);
+		//	}
+		//});
+
+		//checkSum(begin(table), end(table));
+		//checkSum(begin(newTable), end(newTable));
+		//checkSum(begin(lazyTable), end(lazyTable));
+
+		//newTable.printStats();
+
+
+
+		////BTree<ExtractIntCol, int, uint64_t> subsetTable{};
+		////for (auto row : randomSubset) {
+		////	subsetTable.insert(row);
+		////}
+
+
+		//string line;
+		//std::cin >> line;
 	}
 }
