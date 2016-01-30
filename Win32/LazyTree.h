@@ -22,8 +22,10 @@ template<class TIndex, class... TValues> class LazyTree {
 		size_t size;
 		ColumnarArray<MaxRows, TValues...> rows;
 		LeafNode* previous;
+		bool dirty;
 
-		LeafNode() : size(0), next(nullptr), previous(nullptr) {}
+		LeafNode() : size(0), next(nullptr), previous(nullptr), dirty(false)
+		{}
 
 		bool isFull() {
 			return size == MaxRows;
@@ -38,10 +40,9 @@ template<class TIndex, class... TValues> class LazyTree {
 			return min;
 		}
 
-		void insertionSort() {
-			for (size_t i = 1; i < size; ++i) {
-				auto row = rows[i];
-				auto value = row.temp();
+		void insertionSort(size_t left, size_t right) {
+			for (size_t i = left + 1; i <= right; ++i) {
+				auto value = rows[i].temp();
 				auto key = GetKey()(value);
 				auto j = i - 1;
 				while (j >= 0 && GetKey()(rows[j]) > key) {
@@ -52,13 +53,23 @@ template<class TIndex, class... TValues> class LazyTree {
 			}
 		}
 
-		void sort() {
-			//insertionSort();
-			if (size > 0)
-				quickSort(0, size - 1);
+		size_t choosePivot(size_t left, size_t right) {
+			size_t middle = (left + right) / 2;
+
+			if (GetKey()(rows[left]) > GetKey()(rows[middle]))
+				swap(rows[left], rows[middle]);
+
+			if (GetKey()(rows[left]) > GetKey()(rows[right]))
+				swap(rows[left], rows[right]);
+
+			if (GetKey()(rows[middle]) > GetKey()(rows[right]))
+				swap(rows[middle], rows[right]);
+
+			swap(rows[middle], rows[right - 1]);
+			return right - 1;
 		}
 
-		size_t quickPartition(size_t left, size_t right, size_t pivotIndex) {
+		size_t quickPartition(int left, int right, int pivotIndex) {
 			auto pivotKey = GetKey()(rows[pivotIndex]);
 			swap(rows[pivotIndex], rows[right]);
 			auto storeIndex = left;
@@ -72,38 +83,75 @@ template<class TIndex, class... TValues> class LazyTree {
 			return storeIndex;
 		}
 
-		void quickSort(size_t left, size_t right) {
-			if (left <= right)
-				return;
-			if (left == right - 1) {
-				if (GetKey()(rows[left]) > GetKey()(rows[right]))
-					swap(rows[left], rows[right]);
+		size_t quickPartitionHoare(int left, int right, int pivotIndex) {
+			auto pivotKey = GetKey()(rows[pivotIndex]);
+			auto i = left - 1;
+			auto j = right + 1;
+			for (;;) {
+				do {
+					--j;
+				} while (GetKey()(rows[j]) > pivotKey);
+				do {
+					++i;
+				} while (GetKey()(rows[i]) < pivotKey);
+				if (i < j)
+					swap(rows[i], rows[j]);
+				else
+					return j;
+			}
+		}
+
+		void quickSort(int left, int right) {
+			if (right - left <= 24) {
+				insertionSort(left, right);
 				return;
 			}
-			auto pivotIndex = (left + right) / 2;
-			pivotIndex = quickPartition(left, right, pivotIndex);
-			quickSort(left, pivotIndex - 1);
+			auto pivotIndex = choosePivot(left, right);
+			pivotIndex = quickPartitionHoare(left, right, pivotIndex);
+			quickSort(left, pivotIndex);
 			quickSort(pivotIndex + 1, right);
 		}
 
-		size_t quickPrepare(size_t left, size_t right) {
+		void sort() {
+			if (dirty && size > 0) {
+				quickSort(0, size - 1);
+				dirty = false;
+			}
+		}
+
+		size_t quickPrepare(int left, int right, size_t minLeft, size_t minRight) {
 			if (left == right)
 				return left;
-			auto pivotIndex = (left + right) / 2;
+			auto pivotIndex = choosePivot(left, right);
 			pivotIndex = quickPartition(left, right, pivotIndex);
-			if (pivotIndex >= MinRows) {
-				if (size - pivotIndex >= MinRows)
+			if (pivotIndex >= minLeft) {
+				if (size - pivotIndex >= minRight)
 					return pivotIndex;
 				else
-					return quickPrepare(left, pivotIndex - 1);
+					return quickPrepare(left, pivotIndex - 1, minLeft, minRight);
 			}
 			else
-				return quickPrepare(pivotIndex + 1, right);
+				return quickPrepare(pivotIndex + 1, right, minLeft, minRight);
+		}
+
+		void leonardoPrepareBalance(size_t toRight) {
+			while (heapSize < size) {
+				++heapSize;
+				leonardo::heapPush(::begin(rows), heapSize, size, heapShape, GetKey());
+			}
+			for (int i = 0; i < toRight; ++i) {
+				--heapSize;
+				leonardo::heapPop(::begin(rows), heapSize, heapShape, GetKey());
+			}
+		}
+
+		size_t prepareBalance(size_t minLeft, size_t minRight) {
+			return quickPrepare(0, size - 1, minLeft, minRight);
 		}
 
 		size_t prepareSplit() {
 			assert(size != 0);
-			return quickPrepare(0, size - 1);
+			return quickPrepare(0, size - 1, MinRows, MinRows);
 		}
 	};
 	struct InnerNode {
@@ -212,14 +260,6 @@ template<class TIndex, class... TValues> class LazyTree {
 	}
 
 	void findInner(Path& path, Key key) {
-		// Linear search
-		//size_t i = 0;
-		//for (;;) {
-		//	if (i == rootKeys.size()) break;
-		//	if (key < rootKeys[i]) break;
-		//	++i;
-		//}
-
 		size_t lower = 0;
 		size_t upper = rootKeys.size();
 		while (upper - lower > 8) {
@@ -320,6 +360,7 @@ template<class TIndex, class... TValues> class LazyTree {
 		else
 			lastLeaf = newLeaf;
 		leaf->next = newLeaf;
+		newLeaf->dirty = leaf->dirty;
 
 		auto toNext = leaf->size - toNextBegin;
 		for (size_t i = 0; i < toNext; ++i) {
@@ -344,6 +385,7 @@ template<class TIndex, class... TValues> class LazyTree {
 	template<class TRow> void leafInsert(LeafNode* leaf, const TRow& row) {
 		leaf->rows[leaf->size] |= row;
 		++(leaf->size);
+		leaf->dirty = true;
 	}
 
 	void rootErase(size_t pos) {
@@ -415,7 +457,10 @@ template<class TIndex, class... TValues> class LazyTree {
 
 			inner->size += next->size + 1;
 
-			path.innerUpperBound = rootKeys[slot + 1];
+			if ((slot + 1) < rootKeys.size())
+				path.innerUpperBound = rootKeys[slot + 1];
+			else
+				path.innerUpperBound = LeastKey;
 
 			rootErase(slot + 1);
 
@@ -463,28 +508,35 @@ template<class TIndex, class... TValues> class LazyTree {
 		size_t fromNext = 0;
 		if (prev) {
 			if (next) {
-				auto targetSize = (prev->size + leaf->size) / 2;
-				if (targetSize >= MinRows) {
-					fromPrev = targetSize - leaf->size;
+				auto prevAvailable = prev->size - MinRows;
+				if (prevAvailable + leaf->size >= MinRows) {
+					fromPrev = prev->size - prev->prepareBalance(MinRows, MinRows - leaf->size);
 				}
 				else {
-					targetSize = (next->size + leaf->size) / 2;
-					if (targetSize >= MinRows) {
-						fromNext = targetSize - leaf->size;
+					auto nextAvailable = next->size - MinRows;
+					if (nextAvailable + leaf->size >= MinRows) {
+						fromNext = next->prepareBalance(MinRows - leaf->size, MinRows);
 					}
-					else if ((MinRows - prev->size) + (MinRows - next->size) + leaf->size > MinRows) {
-						fromPrev = (MinRows - prev->size);
-						targetSize = (next->size + (leaf->size + fromPrev)) / 2;
-						fromNext = targetSize - (leaf->size + fromPrev);
+					else {
+						if (prevAvailable + nextAvailable + leaf->size >= MinRows) {
+							if (prevAvailable > 0) {
+								auto prevRequired = nextAvailable + leaf->size < MinRows ?
+									MinRows - (nextAvailable + leaf->size) :
+									0;
+								fromPrev = prev->size - prev->prepareBalance(MinRows, prevRequired);
+							}
+							if (fromPrev + leaf->size < MinRows)
+								fromNext = next->prepareBalance(MinRows - (fromPrev + leaf->size), MinRows);
+						}
+						else
+							goto MERGE_WITH_PREV;
 					}
-					else
-						goto MERGE_WITH_NEXT;
 				}
 			}
 			else {
-				auto targetSize = (prev->size + leaf->size) / 2;
-				if (targetSize >= MinRows) {
-					fromPrev = targetSize - leaf->size;
+				auto prevAvailable = prev->size - MinRows;
+				if (prevAvailable + leaf->size >= MinRows) {
+					fromPrev = prev->size - prev->prepareBalance(MinRows, MinRows - leaf->size);
 				}
 				else
 					goto MERGE_WITH_PREV;
@@ -492,9 +544,9 @@ template<class TIndex, class... TValues> class LazyTree {
 		}
 		else {
 			if (next) {
-				auto targetSize = (next->size + leaf->size) / 2;
-				if (targetSize >= MinRows) {
-					fromNext = targetSize - leaf->size;
+				auto nextAvailable = next->size - MinRows;
+				if (nextAvailable + leaf->size >= MinRows) {
+					fromNext = next->prepareBalance(MinRows - leaf->size, MinRows);
 				}
 				else
 					goto MERGE_WITH_NEXT;
@@ -505,24 +557,30 @@ template<class TIndex, class... TValues> class LazyTree {
 		assert(leaf->size + fromPrev + fromNext >= MinRows);
 
 		if (fromPrev > 0) {
-			for (int_fast8_t i = 0; i < fromPrev; ++i) {
+			for (uint_fast8_t i = 0; i < fromPrev; ++i) {
 				leaf->rows[leaf->size + i] |= prev->rows[prev->size - fromPrev + i];
 			}
 			auto oldEnd = leaf->size;
 			prev->size -= fromPrev;
 			leaf->size += fromPrev;
 
-			parent->keys[slot - 1] = leaf->leastKey(oldEnd);
+			leaf->dirty = true;
+
+			parent->keys[slot - 1] = getKey(leaf->rows[oldEnd]);
 		}
 		if (fromNext > 0) {
-			for (int_fast8_t i = 0; i < fromNext; ++i) {
-				leaf->rows[leaf->size + i] |= next->rows[next->size - fromNext + i];
+			for (uint_fast8_t i = 0; i < fromNext; ++i) {
+				leaf->rows[leaf->size + i] |= next->rows[i];
 			}
-			auto oldEnd = leaf->size;
 			next->size -= fromNext;
 			leaf->size += fromNext;
+			for (uint_fast8_t i = 0; i < next->size; ++i) {
+				next->rows[i] |= next->rows[i + fromNext];
+			}
 
-			Key newUpperBound = leaf->leastKey(oldEnd);
+			leaf->dirty |= next->dirty;
+
+			Key newUpperBound = getKey(next->rows[0]);
 			path.leafUpperBound = newUpperBound;
 			parent->keys[slot] = newUpperBound;
 		}
@@ -545,6 +603,8 @@ template<class TIndex, class... TValues> class LazyTree {
 		if (lastLeaf == next)
 			lastLeaf = leaf;
 
+		next->dirty = true;
+
 		innerErase(path, path.innerSlot + 1);
 
 		destroyLeaf(next);
@@ -563,6 +623,8 @@ template<class TIndex, class... TValues> class LazyTree {
 		if (lastLeaf == leaf)
 			lastLeaf = prev;
 
+		prev->dirty |= leaf->dirty;
+
 		innerErase(path, path.innerSlot + 1);
 
 		destroyLeaf(leaf);
@@ -574,6 +636,8 @@ template<class TIndex, class... TValues> class LazyTree {
 			if (getKey(leaf->rows[i]) == key) {
 				leaf->rows[i] |= leaf->rows[leaf->size - 1];
 				--(leaf->size);
+
+				leaf->dirty = true;
 				return;
 			}
 		}
@@ -613,10 +677,29 @@ public:
 
 		leafErase(path.leaf, key);
 		balanceLeaf(path);
+
+		//LeafNode* current = &firstLeaf;
+		//do {
+		//	assert(current->size >= MinRows);
+		//	current = current->next;
+		//} while (current);
+
+		//set<int> s;
+		//for (auto row : *this) {
+		//	int r = int(row);
+		//	assert(s.find(r) == ::end(s));
+		//	s.emplace(r);
+		//}
 	}
 
-	void printStats() {
-		std::cout << "Root size: " << rootChildren.size() << "\n";
+	size_t size() {
+		size_t size = 0;
+		LeafNode* current = &firstLeaf;
+		do {
+			size += current->size;
+			current = current->next;
+		} while (current);
+		return size;
 	}
 };
 

@@ -9,6 +9,7 @@ using std::array;
 using std::function;
 
 using std::map;
+using std::set;
 
 using std::begin;
 using std::end;

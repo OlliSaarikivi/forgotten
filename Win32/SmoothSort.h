@@ -22,29 +22,190 @@ const size_t LNums[] =    { 1, 1, 3, 5, 9, 15, 25, 41, 67, 109, 177, 287, 465, 7
 							3559958832009428377u, 5760134388741632239u, 9320093220751060617u,
 							15080227609492692857u };
 
+template<unsigned N> struct HeapShape {
+	HeapShape() : size(0) {
+		// Dummy values to make the addTree comparisons work
+		orders[0] = 32;
+		orders[1] = 64;
+	}
+
+	void addTree() {
+		if (orders[size + 1] == (orders[size] - 1)) {
+			orders[size] += 1;
+			--size;
+		}
+		else {
+			orders[size + 2] = orders[size + 1] == 1 ? 0 : 1;
+			++size;
+		}
+	}
+
+	uint8_t& lowestOrder() {
+		assert(size > 0);
+		return orders[size + 1];
+	}
+
+	uint8_t& order(size_t i) {
+		return orders[size + 1 - i];
+	}
+
+	size_t invalidate(size_t numValid) {
+		size_t sum = 0;
+		for (int i = 0; i < size; ++i) {
+			size_t newSum = sum + LNums[orders[2 + i]];
+			if (newSum > numValid) {
+				size = i;
+				break;
+			}
+			sum = newSum;
+		}
+		return sum;
+	}
+
+	size_t size;
+
+private:
+	array<uint8_t, N + 2> orders;
+};
+
 size_t rightChild(size_t root) {
 	return root - 1;
 }
 
-template<class TOrder> size_t leftChild(size_t root, TOrder order) {
-	return rightChild(root) - LNums[size - 2];
+size_t leftChild(size_t root, uint8_t order) {
+	return rightChild(root) - LNums[order - 2];
 }
 
-template<class TIter, class TOrder> void heapPush(TIter heap, size_t n, TOrder* orders, size_t m) {
-	// Make trees
-	if (orders[m - 1] == (orders[m - 2] - 1)) {
-		orders[m - 2] += 1;
-		--m;
+template<class TIter, class TGetKey> size_t largerChild(TIter heap, size_t root, uint_fast8_t order, TGetKey getKey) {
+	auto left = leftChild(root, order);
+	auto right = rightChild(root);
+	return getKey(heap[left]) < getKey(heap[right]) ? right : left;
+}
+
+template<class TIter, class TGetKey>
+void rebalanceOne(TIter heap, size_t root, uint_fast8_t order, TGetKey getKey) {
+	while (order > 1) {
+		auto left = leftChild(root, order);
+		auto right = rightChild(root);
+
+		auto leftKey = getKey(heap[left]);
+		auto rightKey = getKey(heap[right]);
+
+		auto largerKey = leftKey;
+		auto child = left;
+		auto childOrder = order - 1;
+		if (leftKey < rightKey) {
+			largerKey = rightKey;
+			child = right;
+			childOrder = order - 2;
+		}
+
+		if (getKey(heap[root]) >= largerKey)
+			return;
+
+		swap(heap[root], heap[child]);
+		root = child;
+		order = childOrder;
 	}
+}
+
+template<class TIter, unsigned N, class TGetKey>
+void rectify(TIter heap, size_t root, size_t rootOrderIndex, HeapShape<N>& s, TGetKey getKey) {
+	auto current = root;
+	size_t currentOrderIndex = rootOrderIndex;
+
+	for (;;) {
+		if (currentOrderIndex == s.size - 1)
+			break;
+
+		auto toCompare = current;
+		auto toCompareKey = getKey(heap[toCompare]);
+		auto currentOrder = s.order(currentOrderIndex);
+		if (currentOrder > 1) {
+			auto left = leftChild(current, currentOrder);
+			auto right = rightChild(current);
+			auto leftKey = getKey(heap[left]);
+			auto rightKey = getKey(heap[right]);
+			auto largerKey = leftKey;
+			auto child = left;
+			if (leftKey < rightKey) {
+				largerKey = rightKey;
+				child = right;
+			}
+			if (toCompareKey < largerKey) {
+				toCompareKey = largerKey;
+				toCompare = child;
+			}
+		}
+
+		auto prior = current - LNums[currentOrder];
+		auto priorKey = getKey(heap[prior]);
+		if (toCompareKey >= priorKey)
+			break;
+
+		swap(heap[current], heap[prior]);
+		current = prior;
+		++currentOrderIndex;
+	}
+
+	rebalanceOne(heap, current, s.order(currentOrderIndex), getKey);
+}
+
+template<class TIter, unsigned N, class TGetKey>
+void heapPushOne(TIter heap, size_t newSize, HeapShape<N>& s, TGetKey getKey) {
+	s.addTree();
+	rectify(heap, newSize - 1, 0, s, getKey);
+}
+
+template<class TIter, unsigned N, class TGetKey>
+void heapPush(TIter heap, size_t newSize, size_t finalSize, HeapShape<N>& s, TGetKey getKey) {
+	s.addTree();
+
+	bool isLast;
+	switch (s.lowestOrder()) {
+	case 0:
+		isLast = newSize == finalSize;
+		break;
+	case 1:
+		isLast = newSize == finalSize || (newSize + 1 == finalSize && s.lowestOrder() != s.order(1) - 1);
+		break;
+	default:
+		isLast = (finalSize - newSize) < LNums[s.lowestOrder() - 1] + 1;
+	}
+
+	if (!isLast)
+		rebalanceOne(heap, newSize - 1, s.lowestOrder(), getKey);
 	else
-		orders[m] = orders[m - 1] == 1 ? 0 : 1;
-		++m;
+		rectify(heap, newSize - 1, 0, s, getKey);
+}
+
+template<class TIter, unsigned N, class TGetKey>
+void heapPop(TIter heap, size_t newSize, HeapShape<N>& s, TGetKey getKey) {
+	if (s.lowestOrder() <= 1) {
+		--(s.size);
+		return;
 	}
 
-	// Order tops
+	auto lowestOrder = s.lowestOrder();
+	++(s.size);
+	s.order(1) = lowestOrder - 1;
+	s.order(0) = lowestOrder - 2;
 
-	// Heapify
+	auto leftRoot = leftChild(newSize, lowestOrder);
+	auto rightRoot = rightChild(newSize);
 
+	rectify(heap, leftRoot, 1, s, getKey);
+	rectify(heap, rightRoot, 0, s, getKey);
+}
+
+template<class TIter, unsigned N, class TGetKey>
+void smoothSort(TIter begin, size_t size, TGetKey getKey) {
+	if (size <= 1) return;
+	HeapShape<N> s;
+	for (size_t i = 1; i <= size; ++i)
+		heapPush(begin, i, size, s, getKey);
+	for (size_t i = 1; i <= size; ++i)
+		heapPop(begin, size - i, s, getKey);
 }
 
 }

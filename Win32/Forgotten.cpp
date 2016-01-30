@@ -64,7 +64,7 @@ template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
 	std::cout << "Checksum: " << sum << "\t Orderless: " << orderless << "\tCount: " << count << "\n";
 }
 
-#define ROWS 10000000
+#define ROWS 1000000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
@@ -80,31 +80,37 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	for (int i = 0; i < ROWS; ++i) {
 		randomInsert.pushBack(makeRow(i, uint64_t(i)));
 	}
+	for (int i = randomInsert.size() - 1; i > 0; --i) {
+		int j = randomInt(e1) % (i + 1);
+		swap(randomInsert[j], randomInsert[i]);
+	}
 	Columnar<int, uint64_t> randomSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 500)
-			randomSubset.pushBack(randomInsert[ROWS - 1 - i]);
+		if ((randomInt(e1) % 1000) > 900)
+			randomSubset.pushBack(randomInsert[i]);
 	}
-
-	//std::cout << randomInsert.size() << " " << randomSubset.size() << "\n";
+	for (int i = randomSubset.size() - 1; i > 0; --i) {
+		int j = randomInt(e1) % (i + 1);
+		swap(randomSubset[j], randomSubset[i]);
+	}
 
 	for (;;) {
 
-		//BTree<ExtractIntCol, int, uint64_t> table{};
+		map<int, uint64_t> map{};
 
-		//Time("orig insert", [&]() {
-		//	for (auto row : randomInsert) {
-		//		table.insert(row);
-		//	}
-		//});
+		Time("map insert", [&]() {
+			for (auto row : randomInsert) {
+				map.emplace(int(row), uint64_t(row));
+			}
+		});
 
-		//ThreeLevelBTree<IntColIndex, int, uint64_t> newTable{};
+		BTree<ExtractIntCol, int, uint64_t> table{};
 
-		//Time("new insert", [&]() {
-		//	for (auto row : randomInsert) {
-		//		newTable.insert(row);
-		//	}
-		//});
+		Time("orig insert", [&]() {
+			for (auto row : randomInsert) {
+				table.insert(row);
+			}
+		});
 
 		LazyTree<IntColIndex, int, uint64_t> lazyTable{};
 
@@ -114,65 +120,63 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
-		//uint64_t sum;
-		//for (int i = 0; i < 5; ++i) {
-		//	Time("orig scan", [&]() {
-		//		for (auto row : table) {
-		//			sum += int(row);
-		//		}
-		//	});
-		//}
+		uint64_t sum;
+		for (int i = 0; i < 5; ++i) {
+			Time("map scan", [&]() {
+				for (auto row : map) {
+					sum += row.second;
+				}
+			});
+		}
 
-		//for (int i = 0; i < 5; ++i) {
-		//	Time("new scan", [&]() {
-		//		for (auto row : newTable) {
-		//			sum += int(row);
-		//		}
-		//	});
-		//}
+		for (int i = 0; i < 5; ++i) {
+			Time("orig scan", [&]() {
+				for (auto row : table) {
+					sum += uint64_t(row);
+				}
+			});
+		}
 
-		//for (int i = 0; i < 5; ++i) {
-		//	Time("lazy scan", [&]() {
-		//		for (auto row : lazyTable) {
-		//			sum += int(row);
-		//		}
-		//	});
-		//}
-		//std::cout << sum << "\n";
+		for (int i = 0; i < 5; ++i) {
+			Time("lazy scan", [&]() {
+				for (auto row : lazyTable) {
+					sum += uint64_t(row);
+				}
+			});
+		}
 
-		//Time("orig erase", [&]() {
-		//	for (auto row : randomSubset) {
-		//		table.erase(row);
-		//	}
-		//});
+		Time("map erase", [&]() {
+			for (auto row : randomSubset) {
+				map.erase(int(row));
+			}
+		});
 
-		//Time("new erase", [&]() {
-		//	for (auto row : randomSubset) {
-		//		newTable.erase(row);
-		//	}
-		//});
+		Time("orig erase", [&]() {
+			for (auto row : randomSubset) {
+				table.erase(row);
+			}
+		});
 
-		//Time("lazy erase", [&]() {
-		//	for (auto row : randomSubset) {
-		//		lazyTable.erase(row);
-		//	}
-		//});
+		Time("lazy erase", [&]() {
+			for (auto row : randomSubset) {
+				lazyTable.erase(row);
+			}
+		});
 
-		//checkSum(begin(table), end(table));
-		//checkSum(begin(newTable), end(newTable));
-		//checkSum(begin(lazyTable), end(lazyTable));
+		for (int i = 0; i < 5; ++i) {
+			Time("lazy scan", [&]() {
+				for (auto row : lazyTable) {
+					sum += uint64_t(row);
+				}
+			});
+		}
 
-		//newTable.printStats();
-
-
-
-		////BTree<ExtractIntCol, int, uint64_t> subsetTable{};
-		////for (auto row : randomSubset) {
-		////	subsetTable.insert(row);
-		////}
+		checkSum(begin(table), end(table));
+		checkSum(begin(lazyTable), end(lazyTable));
 
 
-		//string line;
-		//std::cin >> line;
+		string line;
+		std::cin >> line;
+		std::cout << sum << "\n";
 	}
 }
