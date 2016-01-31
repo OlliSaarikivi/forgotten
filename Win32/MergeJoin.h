@@ -4,17 +4,18 @@
 #include "Row.h"
 #include "Sentinels.h"
 
-template<class TKey, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
-	: boost::equality_comparable<MergeJoinIterator<TKey, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
+template<class TIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
+	: boost::equality_comparable<MergeJoinIterator<TIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
+	using Index = TIndex;
 
-	using KeyType = typename TKey::KeyType;
-	using KeyLess = typename TKey::Less;
-	using GetKey = TKey;
+private:
+	using Key = typename Index::Key;
+	using GetKey = typename Index::GetKey;
 
-	KeyType leftKey;
+	Key leftKey;
 	TLeft left;
 	TLeftSentinel leftEnd;
-	KeyType rightKey;
+	Key rightKey;
 	TRight right;
 	TRightSentinel rightEnd;
 
@@ -34,23 +35,23 @@ public:
 	void findMatch()
 	{
 		for (;;) {
-			while (KeyLess()(leftKey, rightKey)) {
+			while (leftKey < rightKey) {
 				++left;
 				if (left != leftEnd)
 					leftKey = GetKey()(*left);
 				else
 					return;
 			}
-			if (!KeyLess()(rightKey, leftKey))
+			if (rightKey == leftKey)
 				return;
-			while (KeyLess()(rightKey, leftKey)) {
+			while (rightKey < leftKey) {
 				++right;
 				if (right != rightEnd)
 					rightKey = GetKey()(*right);
 				else
 					return;
 			}
-			if (!KeyLess()(leftKey, rightKey))
+			if (leftKey == rightKey)
 				return;
 		}
 	}
@@ -63,7 +64,7 @@ public:
 		return *this;
 	}
 	MergeJoinIterator operator++(int) {
-		Iterator old = *this;
+		auto old = *this;
 		this->operator++();
 		return old;
 	}
@@ -91,6 +92,6 @@ public:
 };
 
 template<class TLeft, class TRight> auto mergeJoin(TLeft& left, TRight& right) {
-	return MergeJoinIterator<typename TRight::Key, decltype(begin(left)), decltype(end(left)), decltype(begin(right)), decltype(end(right))>
+	return MergeJoinIterator<typename TRight::Index, decltype(begin(left)), decltype(end(left)), decltype(begin(right)), decltype(end(right))>
 		(begin(left), end(left), begin(right), end(right));
 }

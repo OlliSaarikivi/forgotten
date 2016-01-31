@@ -2,12 +2,13 @@
 
 #include "Columnar.h"
 
-template<class TIndex, class... TValues> class LazyTree {
+template<class TIndex, class... TValues> struct MBPlusTree {
 	using Index = TIndex;
+
+private:
 	using Key = typename Index::Key;
 	using GetKey = typename Index::GetKey;
 
-	GetKey getKey = GetKey{};
 	static const Key LeastKey = Index::LeastKey;
 
 	static const size_t KeysInCacheLine = (CACHE_LINE_SIZE * 8) / sizeof(Key);
@@ -17,27 +18,30 @@ template<class TIndex, class... TValues> class LazyTree {
 	static const size_t MaxRows = MaxKeys;
 	static const size_t MinRows = MaxRows / 3;
 
+	static const size_t InsertionSortMax = 24;
+	static const size_t LinearRowSearchMax = 24;
+
 	struct LeafNode {
 		LeafNode* next;
 		size_t size;
 		ColumnarArray<MaxRows, TValues...> rows;
 		LeafNode* previous;
-		bool dirty;
+		bool isUnsorted;
 
-		LeafNode() : size(0), next(nullptr), previous(nullptr), dirty(false)
+		LeafNode() : size(0), next(nullptr), previous(nullptr), isUnsorted(false)
 		{}
 
 		bool isFull() {
 			return size == MaxRows;
 		}
 
-		Key leastKey(size_t pos) {
-			assert(size > pos);
-			Key min = GetKey()(rows[pos]);
-			for (size_t i = pos + 1; i < size; ++i) {
-				min = std::min(min, GetKey()(rows[i]));
+		Key greatestKey() {
+			assert(size > 0);
+			Key max = GetKey()(rows[0]);
+			for (size_t i = 1; i < size; ++i) {
+				max = std::max(max, GetKey()(rows[i]));
 			}
-			return min;
+			return max;
 		}
 
 		void insertionSort(size_t left, size_t right) {
@@ -54,6 +58,21 @@ template<class TIndex, class... TValues> class LazyTree {
 		}
 
 		size_t choosePivot(size_t left, size_t right) {
+			size_t middle = (left + right) / 2;
+
+			if (GetKey()(rows[left]) > GetKey()(rows[middle]))
+				swap(rows[left], rows[middle]);
+
+			if (GetKey()(rows[left]) > GetKey()(rows[right]))
+				swap(rows[left], rows[right]);
+
+			if (GetKey()(rows[middle]) > GetKey()(rows[right]))
+				swap(rows[middle], rows[right]);
+
+			return middle;
+		}
+
+		size_t choosePivotForSort(size_t left, size_t right) {
 			size_t middle = (left + right) / 2;
 
 			if (GetKey()(rows[left]) > GetKey()(rows[middle]))
@@ -102,25 +121,25 @@ template<class TIndex, class... TValues> class LazyTree {
 		}
 
 		void quickSort(int left, int right) {
-			if (right - left <= 24) {
+			if (right - left <= InsertionSortMax) {
 				insertionSort(left, right);
 				return;
 			}
-			auto pivotIndex = choosePivot(left, right);
+			auto pivotIndex = choosePivotForSort(left, right);
 			pivotIndex = quickPartitionHoare(left, right, pivotIndex);
 			quickSort(left, pivotIndex);
 			quickSort(pivotIndex + 1, right);
 		}
 
 		void sort() {
-			if (dirty && size > 0) {
+			if (isUnsorted && size > 0) {
 				quickSort(0, size - 1);
-				dirty = false;
+				isUnsorted = false;
 			}
 		}
 
 		size_t quickPrepare(int left, int right, size_t minLeft, size_t minRight) {
-			if (left == right)
+			if (left >= right)
 				return left;
 			auto pivotIndex = choosePivot(left, right);
 			pivotIndex = quickPartition(left, right, pivotIndex);
@@ -149,9 +168,20 @@ template<class TIndex, class... TValues> class LazyTree {
 			return quickPrepare(0, size - 1, minLeft, minRight);
 		}
 
-		size_t prepareSplit() {
-			assert(size != 0);
-			return quickPrepare(0, size - 1, MinRows, MinRows);
+		int findRow(Key key) {
+			size_t lower = 0;
+			size_t upper = size;
+			if (!isUnsorted)
+				while (upper - lower > LinearRowSearchMax) {
+					uint_fast8_t middle = (lower + upper) / 2; // This won't overflow
+					bool isLess = key < GetKey()(rows[middle]);
+					lower = isLess ? lower : middle;
+					upper = isLess ? middle : upper;
+				}
+			for (; lower < upper; ++lower)
+				if (GetKey()(rows[lower]) == key)
+					return lower;
+			return -1;
 		}
 	};
 	struct InnerNode {
@@ -164,15 +194,6 @@ template<class TIndex, class... TValues> class LazyTree {
 		bool isFull() {
 			return size == MaxKeys;
 		}
-	};
-
-	struct Path {
-		size_t rootSlot;
-		InnerNode* inner;
-		Key innerUpperBound;
-		size_t innerSlot;
-		LeafNode* leaf;
-		Key leafUpperBound;
 	};
 
 	class Iterator
@@ -232,6 +253,53 @@ template<class TIndex, class... TValues> class LazyTree {
 		}
 	};
 
+	struct Path {
+		using RowType = Row<TValues&...>;
+		using Iterator = Iterator;
+
+		MBPlusTree& tree;
+
+		size_t rootSlot;
+		InnerNode* inner;
+		Key innerUpperBound;
+		size_t innerSlot;
+		LeafNode* leaf;
+		Key leafUpperBound;
+		size_t leafPos;
+		Key rowKey;
+
+		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound { LeastKey } {}
+
+		void update(Key key) {
+			updateLeaf(key);
+			leafPos = leaf->findRow(key);
+			rowKey = key;
+		}
+
+		void updateLeaf(Key key) {
+			if (key >= innerUpperBound || key < rowKey)
+				goto FROM_ROOT;
+			if (key >= leafUpperBound)
+				goto FROM_INNER;
+			return;
+		FROM_ROOT:
+			tree.findInner(*this, key);
+		FROM_INNER:
+			tree.findLeaf(*this, key);
+		}
+
+		Iterator find(Key key) {
+			update(key);
+			if (leafPos >= 0)
+				return Iterator(leaf, leafPos);
+			else
+				return Iterator();
+		}
+
+		template<class TRow> Iterator find(TRow&& row) {
+			return find(GetKey()(row));
+		}
+	};
 
 	boost::pool<> leafPool;
 	boost::pool<> innerPool;
@@ -349,7 +417,7 @@ template<class TIndex, class... TValues> class LazyTree {
 
 	void splitLeaf(Path& path, Key key) {
 		LeafNode* leaf = path.leaf;
-		size_t toNextBegin = leaf->prepareSplit();
+		size_t toNextBegin = leaf->prepareBalance(MinRows, MinRows);
 
 		LeafNode* newLeaf = constructLeaf();
 		newLeaf->previous = leaf;
@@ -360,7 +428,7 @@ template<class TIndex, class... TValues> class LazyTree {
 		else
 			lastLeaf = newLeaf;
 		leaf->next = newLeaf;
-		newLeaf->dirty = leaf->dirty;
+		newLeaf->isUnsorted = leaf->isUnsorted;
 
 		auto toNext = leaf->size - toNextBegin;
 		for (size_t i = 0; i < toNext; ++i) {
@@ -371,7 +439,7 @@ template<class TIndex, class... TValues> class LazyTree {
 
 		auto insertAt = path.innerSlot + 1;
 
-		Key splitKey = getKey(newLeaf->rows[0]);
+		Key splitKey = GetKey()(newLeaf->rows[0]);
 		if (key < splitKey)
 			path.leafUpperBound = splitKey;
 		else {
@@ -382,10 +450,40 @@ template<class TIndex, class... TValues> class LazyTree {
 		innerInsert(path, splitKey, newLeaf, insertAt);
 	}
 
+	void unsafeSplitLeafUnbalanced(Path& path, Key key) {
+		LeafNode* leaf = path.leaf;
+
+		LeafNode* newLeaf = constructLeaf();
+		newLeaf->previous = leaf;
+		if (leaf->next) {
+			newLeaf->next = leaf->next;
+			leaf->next->previous = newLeaf;
+		}
+		else
+			lastLeaf = newLeaf;
+		leaf->next = newLeaf;
+
+		path.leaf = newLeaf;
+		++(path.innerSlot);
+
+		innerInsert(path, key, newLeaf, path.innerSlot);
+	}
+
+	void splitLeafUnbalanced(Path& path, Key key) {
+		Key maxKey = path.leaf->greatestKey();
+
+		if (key < maxKey) {
+			splitLeaf(path, key);
+			return;
+		}
+
+		unsafeSplitLeafUnbalanced(path, key);
+	}
+
 	template<class TRow> void leafInsert(LeafNode* leaf, const TRow& row) {
 		leaf->rows[leaf->size] |= row;
 		++(leaf->size);
-		leaf->dirty = true;
+		leaf->isUnsorted = true;
 	}
 
 	void rootErase(size_t pos) {
@@ -564,9 +662,9 @@ template<class TIndex, class... TValues> class LazyTree {
 			prev->size -= fromPrev;
 			leaf->size += fromPrev;
 
-			leaf->dirty = true;
+			leaf->isUnsorted = true;
 
-			parent->keys[slot - 1] = getKey(leaf->rows[oldEnd]);
+			parent->keys[slot - 1] = GetKey()(leaf->rows[oldEnd]);
 		}
 		if (fromNext > 0) {
 			for (uint_fast8_t i = 0; i < fromNext; ++i) {
@@ -578,9 +676,9 @@ template<class TIndex, class... TValues> class LazyTree {
 				next->rows[i] |= next->rows[i + fromNext];
 			}
 
-			leaf->dirty |= next->dirty;
+			leaf->isUnsorted |= next->isUnsorted;
 
-			Key newUpperBound = getKey(next->rows[0]);
+			Key newUpperBound = GetKey()(next->rows[0]);
 			path.leafUpperBound = newUpperBound;
 			parent->keys[slot] = newUpperBound;
 		}
@@ -603,7 +701,7 @@ template<class TIndex, class... TValues> class LazyTree {
 		if (lastLeaf == next)
 			lastLeaf = leaf;
 
-		next->dirty = true;
+		next->isUnsorted = true;
 
 		innerErase(path, path.innerSlot + 1);
 
@@ -623,7 +721,7 @@ template<class TIndex, class... TValues> class LazyTree {
 		if (lastLeaf == leaf)
 			lastLeaf = prev;
 
-		prev->dirty |= leaf->dirty;
+		prev->isUnsorted |= leaf->isUnsorted;
 
 		innerErase(path, path.innerSlot + 1);
 
@@ -631,20 +729,15 @@ template<class TIndex, class... TValues> class LazyTree {
 		return;
 	}
 
-	void leafErase(LeafNode* leaf, Key key) {
-		for (size_t i = 0; i < leaf->size; ++i) {
-			if (getKey(leaf->rows[i]) == key) {
-				leaf->rows[i] |= leaf->rows[leaf->size - 1];
-				--(leaf->size);
-
-				leaf->dirty = true;
-				return;
-			}
-		}
+	void leafErase(Path& path) {
+		assert(path.leafPos >= 0);
+		path.leaf->rows[path.leafPos] |= path.leaf->rows[path.leaf->size - 1];
+		--(path.leaf->size);
+		path.leaf->isUnsorted = true;
 	}
 
 public:
-	LazyTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), lastLeaf(&firstLeaf) {
+	MBPlusTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), lastLeaf(&firstLeaf) {
 		rootChildren.push_back(&firstInner);
 		firstInner.children[0] = &firstLeaf;
 	}
@@ -657,39 +750,109 @@ public:
 		return Iterator();
 	}
 
-	template<class TRow> void insert(const TRow& row) {
-		Key key = getKey(row);
-		Path path;
-		findInner(path, key);
-		findLeaf(path, key);
+	auto finder() {
+		return Path{ *this };
+	}
 
+	auto finderFail() {
+		return End{};
+	}
+
+	template<class TRow> void insert(const TRow& row) {
+		Path path{ *this };
+		Key key = GetKey()(row);
+		path.updateLeaf(key);
 		if (path.leaf->isFull())
 			splitLeaf(path, key);
-
 		leafInsert(path.leaf, row);
 	}
 
-	template<class TRow> void erase(const TRow& row) {
-		Key key = getKey(row);
-		Path path;
-		findInner(path, key);
-		findLeaf(path, key);
+	template<class TIter, class TSentinel> void insert(TIter rangeBegin, TSentinel rangeEnd) {
+		if (rangeBegin == rangeEnd) return;
+		TIter iter = rangeBegin;
+		Path path{ *this };
+		Key key = GetKey()(*iter);
+		for (;;) {
+			path.updateLeaf(key);
+			if (path.leaf->isFull())
+				splitLeafUnbalanced(path, key);
+			leafInsert(path.leaf, *iter);
+			++iter;
+			if (iter == rangeEnd) {
+				balanceLeaf(path);
+				return;
+			}
+			key = GetKey()(*iter);
+			if (path.leafUpperBound != LeastKey && key >= path.leafUpperBound)
+				balanceLeaf(path);
+		}
+	}
 
-		leafErase(path.leaf, key);
+	template<class TRow> void append(const TRow& row) {
+		Path path{ *this };
+		path.rootSlot = rootChildren.size() - 1;
+		path.inner = rootChildren.back();
+		path.innerUpperBound = LeastKey;
+		path.innerSlot = path.inner->size;
+		path.leafUpperBound = LeastKey;
+		path.leaf = lastLeaf;
+		if (path.leaf->isFull()) {
+			Key key = GetKey()(row);
+			unsafeSplitLeafUnbalanced(path, key);
+		}
+		leafInsert(path.leaf, row);
+	}
+
+	void erase(Key key) {
+		Path path{ *this };
+		path.update(key);
+		leafErase(path);
 		balanceLeaf(path);
+	}
 
-		//LeafNode* current = &firstLeaf;
-		//do {
-		//	assert(current->size >= MinRows);
-		//	current = current->next;
-		//} while (current);
+	template<class TRow> void erase(const TRow& row) {
+		erase(GetKey()(row));
+	}
 
-		//set<int> s;
-		//for (auto row : *this) {
-		//	int r = int(row);
-		//	assert(s.find(r) == ::end(s));
-		//	s.emplace(r);
-		//}
+	template<class TIter, class TSentinel> void erase(TIter rangeBegin, TSentinel rangeEnd) {
+		if (rangeBegin == rangeEnd) return;
+		TIter iter = rangeBegin;
+		Path path{ *this };
+		Key key = GetKey()(*iter);
+		for (;;) {
+			path.update(key);
+			leafErase(path);
+			++iter;
+			if (iter == rangeEnd) {
+				balanceLeaf(path);
+				return;
+			}
+			key = GetKey()(*iter);
+			if (key >= path.leafUpperBound)
+				balanceLeaf(path);
+		}
+	}
+
+	void clear() {
+		LeafNode* current = firstLeaf.next;
+		while (current) {
+			auto next = current->next;
+			destroyLeaf(current);
+			current = next;
+		}
+		firstLeaf.next = nullptr;
+		firstLeaf.size = 0;
+		firstLeaf.isUnsorted = false;
+		lastLeaf = &firstLeaf;
+
+		firstInner.size = 0;
+
+		for (size_t i = 1; i < rootChildren.size(); ++i) {
+			destroyInner(rootChildren[i]);
+		}
+		rootChildren.clear();
+		rootChildren.push_back(&firstInner);
+		rootKeys.clear();
 	}
 
 	size_t size() {
@@ -703,5 +866,5 @@ public:
 	}
 };
 
-template<class... Ts> inline auto begin(LazyTree<Ts...>& t) { return t.begin(); }
-template<class... Ts> inline auto end(LazyTree<Ts...>& t) { return t.end(); }
+template<class... Ts> inline auto begin(MBPlusTree<Ts...>& t) { return t.begin(); }
+template<class... Ts> inline auto end(MBPlusTree<Ts...>& t) { return t.end(); }

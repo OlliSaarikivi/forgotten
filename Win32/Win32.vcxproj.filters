@@ -62,10 +62,13 @@
     <ClInclude Include="ThreeLevelBTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LazyTree.h">
+    <ClInclude Include="SmoothSort.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SmoothSort.h">
+    <ClInclude Include="Table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MBPlusTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

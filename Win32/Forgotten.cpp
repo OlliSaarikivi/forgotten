@@ -9,7 +9,7 @@
 #include "FindJoin.h"
 
 #include "ThreeLevelBTree.h"
-#include "LazyTree.h"
+#include "MBPlusTree.h"
 
 class Timer
 {
@@ -77,17 +77,24 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	std::uniform_int_distribution<int> randomInt(0, INT_MAX - 1);
 
 	Columnar<int, uint64_t> randomInsert{};
+	Columnar<int, uint64_t> sortedInsert{};
+	Columnar<int, uint64_t> sortedInterleaved{};
 	for (int i = 0; i < ROWS; ++i) {
-		randomInsert.pushBack(makeRow(i, uint64_t(i)));
+		randomInsert.pushBack(makeRow(i*2, uint64_t(i)));
+		sortedInsert.pushBack(makeRow(i * 2, uint64_t(i)));
+		sortedInterleaved.pushBack(makeRow(i + 1, uint64_t(i)));
+	}
+	Columnar<int, uint64_t> randomSubset{};
+	Columnar<int, uint64_t> sortedSubset{};
+	for (int i = 0; i < ROWS; ++i) {
+		if ((randomInt(e1) % 1000) > 100) {
+			randomSubset.pushBack(sortedInsert[i]);
+			sortedSubset.pushBack(sortedInsert[i]);
+		}
 	}
 	for (int i = randomInsert.size() - 1; i > 0; --i) {
 		int j = randomInt(e1) % (i + 1);
 		swap(randomInsert[j], randomInsert[i]);
-	}
-	Columnar<int, uint64_t> randomSubset{};
-	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 900)
-			randomSubset.pushBack(randomInsert[i]);
 	}
 	for (int i = randomSubset.size() - 1; i > 0; --i) {
 		int j = randomInt(e1) % (i + 1);
@@ -95,6 +102,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	}
 
 	for (;;) {
+		uint64_t sum;
 
 		map<int, uint64_t> map{};
 
@@ -112,16 +120,54 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
-		LazyTree<IntColIndex, int, uint64_t> lazyTable{};
+		MBPlusTree<IntColIndex, int, uint64_t> lazyTable{};
 
-		Time("new insert", [&]() {
-			for (auto row : randomInsert) {
-				lazyTable.insert(row);
-			}
-		});
+		for (int i = 0; i < 3; ++i) {
+			Time("new insert", [&]() {
+				for (auto row : randomInsert) {
+					lazyTable.insert(row);
+				}
+			});
+			lazyTable.clear();
+		}
 
-		uint64_t sum;
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < 3; ++i) {
+			Time("new sorted insert", [&]() {
+				for (auto row : sortedInsert) {
+					lazyTable.insert(row);
+				}
+			});
+			lazyTable.clear();
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("new insert (one call)", [&]() {
+				lazyTable.insert(begin(randomInsert), end(randomInsert));
+			});
+			lazyTable.clear();
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("new sorted insert (one call)", [&]() {
+				lazyTable.insert(begin(sortedInsert), end(sortedInsert));
+			});
+			lazyTable.clear();
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("new append", [&]() {
+				for (auto row : sortedInsert) {
+					lazyTable.append(row);
+				}
+			});
+			lazyTable.clear();
+		}
+
+		for (auto row : randomInsert) {
+			lazyTable.insert(row);
+		}
+
+		for (int i = 0; i < 3; ++i) {
 			Time("map scan", [&]() {
 				for (auto row : map) {
 					sum += row.second;
@@ -129,7 +175,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			});
 		}
 
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < 3; ++i) {
 			Time("orig scan", [&]() {
 				for (auto row : table) {
 					sum += uint64_t(row);
@@ -137,10 +183,37 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			});
 		}
 
-		for (int i = 0; i < 5; ++i) {
+		for (int i = 0; i < 3; ++i) {
 			Time("lazy scan", [&]() {
 				for (auto row : lazyTable) {
 					sum += uint64_t(row);
+				}
+			});
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("lazy merge join", [&]() {
+				auto join = mergeJoin(sortedSubset, lazyTable);
+				while (join != End{}) {
+					sum += uint64_t(*join++);
+				}
+			});
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("lazy find join", [&]() {
+				auto join = findJoin(sortedSubset, lazyTable);
+				while (join != End{}) {
+					sum += uint64_t(*join++);
+				}
+			});
+		}
+
+		for (int i = 0; i < 3; ++i) {
+			Time("lazy random find join", [&]() {
+				auto join = findJoin(randomSubset, lazyTable);
+				while (join != End{}) {
+					sum += uint64_t(*join++);
 				}
 			});
 		}
@@ -157,13 +230,43 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
+		lazyTable.clear();
+		for (auto row : sortedInsert) {
+			lazyTable.insert(row);
+		}
 		Time("lazy erase", [&]() {
 			for (auto row : randomSubset) {
 				lazyTable.erase(row);
 			}
 		});
 
-		for (int i = 0; i < 5; ++i) {
+		lazyTable.clear();
+		for (auto row : sortedInsert) {
+			lazyTable.insert(row);
+		}
+		Time("lazy sorted erase", [&]() {
+			for (auto row : sortedSubset) {
+				lazyTable.erase(row);
+			}
+		});
+
+		lazyTable.clear();
+		for (auto row : sortedInsert) {
+			lazyTable.insert(row);
+		}
+		Time("lazy erase (one call)", [&]() {
+			lazyTable.erase(begin(randomSubset), end(randomSubset));
+		});
+
+		lazyTable.clear();
+		for (auto row : sortedInsert) {
+			lazyTable.insert(row);
+		}
+		Time("lazy sorted erase (one call)", [&]() {
+			lazyTable.erase(begin(sortedSubset), end(sortedSubset));
+		});
+
+		for (int i = 0; i < 3; ++i) {
 			Time("lazy scan", [&]() {
 				for (auto row : lazyTable) {
 					sum += uint64_t(row);

@@ -37,7 +37,7 @@ public:
 		return *this;
 	}
 	FindJoinIterator operator++(int) {
-		Iterator old = *this;
+		auto old = *this;
 		this->operator++();
 		return old;
 	}
@@ -66,9 +66,4 @@ public:
 template<class TLeft, class TRight> auto findJoin(TLeft& left, TRight& right) {
 	return FindJoinIterator<decltype(begin(left)), decltype(end(left)), decltype(right.finder()), decltype(right.finderFail())>
 		(begin(left), end(left), right.finder(), right.finderFail());
-}
-
-template<class TLeft, class TRight> auto sortedFindJoin(TLeft& left, TRight& right) {
-	return FindJoinIterator<decltype(begin(left)), decltype(end(left)), decltype(right.sortedFinder()), decltype(right.finderFail())>
-		(begin(left), end(left), right.sortedFinder(), right.finderFail());
 }
