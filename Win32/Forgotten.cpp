@@ -4,12 +4,12 @@
 
 #include <random>
 
-#include "BTree.h"
+#include "MBPlusTree.h"
 #include "MergeJoin.h"
 #include "FindJoin.h"
 
-#include "ThreeLevelBTree.h"
-#include "MBPlusTree.h"
+#include "SortedTable.h"
+#include "Query.h"
 
 class Timer
 {
@@ -46,7 +46,7 @@ struct IntColIndex {
 };
 
 template<class TFunc> void Time(string name, const TFunc& f) {
-	Timer tmr; tmr.reset(); f(); double t = tmr.elapsed(); std::cout << name << ": " << t << "s\n";
+	Timer tmr; tmr.reset(); f(); double t = tmr.elapsed(); std::cout << t << "s\t" << name << "\n";
 }
 
 template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
@@ -87,7 +87,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	Columnar<int, uint64_t> randomSubset{};
 	Columnar<int, uint64_t> sortedSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 100) {
+		if ((randomInt(e1) % 1000) > 900) {
 			randomSubset.pushBack(sortedInsert[i]);
 			sortedSubset.pushBack(sortedInsert[i]);
 		}
@@ -104,179 +104,23 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	for (;;) {
 		uint64_t sum;
 
-		map<int, uint64_t> map{};
+		SortedTable<IntColIndex, int, uint64_t> table{};
 
-		Time("map insert", [&]() {
+		Time("table insert", [&]() {
+			auto inserter = table.inserter();
 			for (auto row : randomInsert) {
-				map.emplace(int(row), uint64_t(row));
+				inserter.insert(row);
 			}
 		});
 
-		BTree<ExtractIntCol, int, uint64_t> table{};
+		auto query = from(sortedSubset).join(table).select();
 
-		Time("orig insert", [&]() {
-			for (auto row : randomInsert) {
-				table.insert(row);
-			}
-		});
-
-		MBPlusTree<IntColIndex, int, uint64_t> lazyTable{};
-
-		for (int i = 0; i < 3; ++i) {
-			Time("new insert", [&]() {
-				for (auto row : randomInsert) {
-					lazyTable.insert(row);
-				}
-			});
-			lazyTable.clear();
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("new sorted insert", [&]() {
-				for (auto row : sortedInsert) {
-					lazyTable.insert(row);
-				}
-			});
-			lazyTable.clear();
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("new insert (one call)", [&]() {
-				lazyTable.insert(begin(randomInsert), end(randomInsert));
-			});
-			lazyTable.clear();
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("new sorted insert (one call)", [&]() {
-				lazyTable.insert(begin(sortedInsert), end(sortedInsert));
-			});
-			lazyTable.clear();
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("new append", [&]() {
-				for (auto row : sortedInsert) {
-					lazyTable.append(row);
-				}
-			});
-			lazyTable.clear();
-		}
-
-		for (auto row : randomInsert) {
-			lazyTable.insert(row);
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("map scan", [&]() {
-				for (auto row : map) {
-					sum += row.second;
-				}
-			});
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("orig scan", [&]() {
-				for (auto row : table) {
-					sum += uint64_t(row);
-				}
-			});
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("lazy scan", [&]() {
-				for (auto row : lazyTable) {
-					sum += uint64_t(row);
-				}
-			});
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("lazy merge join", [&]() {
-				auto join = mergeJoin(sortedSubset, lazyTable);
-				while (join != End{}) {
-					sum += uint64_t(*join++);
-				}
-			});
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("lazy find join", [&]() {
-				auto join = findJoin(sortedSubset, lazyTable);
-				while (join != End{}) {
-					sum += uint64_t(*join++);
-				}
-			});
-		}
-
-		for (int i = 0; i < 3; ++i) {
-			Time("lazy random find join", [&]() {
-				auto join = findJoin(randomSubset, lazyTable);
-				while (join != End{}) {
-					sum += uint64_t(*join++);
-				}
-			});
-		}
-
-		Time("map erase", [&]() {
+		Time("table erase", [&]() {
+			auto eraser = table.eraser();
 			for (auto row : randomSubset) {
-				map.erase(int(row));
+				eraser.erase(row);
 			}
 		});
-
-		Time("orig erase", [&]() {
-			for (auto row : randomSubset) {
-				table.erase(row);
-			}
-		});
-
-		lazyTable.clear();
-		for (auto row : sortedInsert) {
-			lazyTable.insert(row);
-		}
-		Time("lazy erase", [&]() {
-			for (auto row : randomSubset) {
-				lazyTable.erase(row);
-			}
-		});
-
-		lazyTable.clear();
-		for (auto row : sortedInsert) {
-			lazyTable.insert(row);
-		}
-		Time("lazy sorted erase", [&]() {
-			for (auto row : sortedSubset) {
-				lazyTable.erase(row);
-			}
-		});
-
-		lazyTable.clear();
-		for (auto row : sortedInsert) {
-			lazyTable.insert(row);
-		}
-		Time("lazy erase (one call)", [&]() {
-			lazyTable.erase(begin(randomSubset), end(randomSubset));
-		});
-
-		lazyTable.clear();
-		for (auto row : sortedInsert) {
-			lazyTable.insert(row);
-		}
-		Time("lazy sorted erase (one call)", [&]() {
-			lazyTable.erase(begin(sortedSubset), end(sortedSubset));
-		});
-
-		for (int i = 0; i < 3; ++i) {
-			Time("lazy scan", [&]() {
-				for (auto row : lazyTable) {
-					sum += uint64_t(row);
-				}
-			});
-		}
-
-		checkSum(begin(table), end(table));
-		checkSum(begin(lazyTable), end(lazyTable));
-
 
 		string line;
 		std::cin >> line;

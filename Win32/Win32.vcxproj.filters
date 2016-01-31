@@ -44,12 +44,6 @@
     <ClInclude Include="Tuning.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="KeyCompressionBTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Sentinels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -59,16 +53,16 @@
     <ClInclude Include="FindJoin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ThreeLevelBTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SmoothSort.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Table.h">
+    <ClInclude Include="MBPlusTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MBPlusTree.h">
+    <ClInclude Include="SortedTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Query.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Columnar.h"
+#include "Sentinels.h"
 
 template<class TIndex, class... TValues> struct MBPlusTree {
 	using Index = TIndex;
@@ -173,7 +174,7 @@ private:
 			size_t upper = size;
 			if (!isUnsorted)
 				while (upper - lower > LinearRowSearchMax) {
-					uint_fast8_t middle = (lower + upper) / 2; // This won't overflow
+					size_t middle = (lower + upper) / 2; // This won't overflow
 					bool isLess = key < GetKey()(rows[middle]);
 					lower = isLess ? lower : middle;
 					upper = isLess ? middle : upper;
