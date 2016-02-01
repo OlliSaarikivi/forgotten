@@ -90,8 +90,3 @@ public:
 		swap(left.rightEnd, right.rightEnd);
 	}
 };
-
-template<class TLeft, class TRight> auto mergeJoin(TLeft& left, TRight& right) {
-	return MergeJoinIterator<typename TRight::Index, decltype(begin(left)), decltype(end(left)), decltype(begin(right)), decltype(end(right))>
-		(begin(left), end(left), begin(right), end(right));
-}
