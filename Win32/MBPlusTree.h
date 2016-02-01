@@ -16,8 +16,8 @@ private:
 	static const size_t MaxKeys = KeysInCacheLine < 4 ? 4 : KeysInCacheLine;
 	static const size_t MinKeys = MaxKeys / 2;
 
-	static const size_t MaxRows = 8;//MaxKeys;
-	static const size_t MinRows = 3;//MaxRows / 3;
+	static const size_t MaxRows = MaxKeys;
+	static const size_t MinRows = MaxRows / 3;
 
 	static const size_t InsertionSortMax = 24;
 	static const size_t LinearRowSearchMax = 24;
@@ -274,7 +274,6 @@ private:
 		void update(Key key) {
 			updateLeaf(key);
 			leafPos = leaf->findRow(key);
-			rowKey = key;
 		}
 
 		void updateLeaf(Key key) {
@@ -282,11 +281,13 @@ private:
 				goto FROM_ROOT;
 			if (key >= leafUpperBound)
 				goto FROM_INNER;
-			return;
+			goto FROM_LEAF;
 		FROM_ROOT:
 			tree.findInner(*this, key);
 		FROM_INNER:
 			tree.findLeaf(*this, key);
+		FROM_LEAF:
+			rowKey = key;
 		}
 
 		iterator find(Key key) {
@@ -769,34 +770,34 @@ public:
 		leafInsert(path.leaf, row);
 	}
 
-	void assertBounds() {
-		Key rootLower = LeastKey;
-		Key rootUpper = LeastKey;
-		for (int i = 0; i < rootKeys.size(); ++i) {
-			rootUpper = rootKeys[i];
-			assertInnerBounds(rootChildren[i], rootLower, rootUpper);
-			rootLower = rootUpper;
-		}
-		assertInnerBounds(rootChildren[rootKeys.size()], rootLower, LeastKey);
-	}
+	//void assertBounds() {
+	//	Key rootLower = LeastKey;
+	//	Key rootUpper = LeastKey;
+	//	for (int i = 0; i < rootKeys.size(); ++i) {
+	//		rootUpper = rootKeys[i];
+	//		assertInnerBounds(rootChildren[i], rootLower, rootUpper);
+	//		rootLower = rootUpper;
+	//	}
+	//	assertInnerBounds(rootChildren[rootKeys.size()], rootLower, LeastKey);
+	//}
 
-	void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
-		Key innerLower = lower;
-		Key innerUpper = upper;
-		for (int i = 0; i < inner->size; ++i) {
-			innerUpper = inner->keys[i];
-			assertLeafBounds(inner->children[i], innerLower, innerUpper);
-			innerLower = innerUpper;
-		}
-		assertLeafBounds(inner->children[inner->size], innerLower, LeastKey);
-	}
+	//void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
+	//	Key innerLower = lower;
+	//	Key innerUpper = upper;
+	//	for (int i = 0; i < inner->size; ++i) {
+	//		innerUpper = inner->keys[i];
+	//		assertLeafBounds(inner->children[i], innerLower, innerUpper);
+	//		innerLower = innerUpper;
+	//	}
+	//	assertLeafBounds(inner->children[inner->size], innerLower, LeastKey);
+	//}
 
-	void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
-		for (int i = 0; i < leaf->size; ++i) {
-			assert(GetKey()(leaf->rows[i]) >= lower);
-			assert(upper == LeastKey || GetKey()(leaf->rows[i]) < upper);
-		}
-	}
+	//void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
+	//	for (int i = 0; i < leaf->size; ++i) {
+	//		assert(GetKey()(leaf->rows[i]) >= lower);
+	//		assert(upper == LeastKey || GetKey()(leaf->rows[i]) < upper);
+	//	}
+	//}
 
 	template<class TIter, class TSentinel> void insert(TIter rangeBegin, TSentinel rangeEnd) {
 		if (rangeBegin == rangeEnd) return;
@@ -808,9 +809,6 @@ public:
 			if (path.leaf->isFull())
 				splitLeafUnbalanced(path, key);
 			leafInsert(path.leaf, *iter);
-
-			assertBounds();
-
 			++iter;
 			if (iter == rangeEnd) {
 				balanceLeaf(path);

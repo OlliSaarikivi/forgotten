@@ -104,12 +104,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		swap(randomSubset[j], randomSubset[i]);
 	}
 
-	int x = 3;
-	double y = 0.1;
-	NamedRows<SomeRow<Row<int&>>> a{ makeRow(x) };
-	NamedRows<OtherRow<Row<double&>>> b{ makeRow(y) };
-	auto c = concatNamedRows(a, b);
-
 	SortedTable<IntColIndex, int, uint64_t> table{};
 	auto query = from(sortedSubset).as<SomeRow>()
 		.join(from(table).as<OtherRow>().select())
@@ -119,16 +113,12 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		uint64_t sum;
 
 		table.clear();
-		std::cout << randomInsert.size() << "\n";
 		Time("table insert", [&]() {
 			auto inserter = table.inserter();
 			for (auto row : randomInsert) {
 				inserter.insert(row);
 			}
 		});
-		std::cout << table.size() << "\n";
-		checkSum(begin(table), end(table));
-		checkSum(begin(sortedInsert), end(sortedInsert));
 
 		Time("table merge join", [&]() {
 			auto iter = query.begin();
