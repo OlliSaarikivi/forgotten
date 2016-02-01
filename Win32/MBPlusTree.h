@@ -16,8 +16,8 @@ private:
 	static const size_t MaxKeys = KeysInCacheLine < 4 ? 4 : KeysInCacheLine;
 	static const size_t MinKeys = MaxKeys / 2;
 
-	static const size_t MaxRows = MaxKeys;
-	static const size_t MinRows = MaxRows / 3;
+	static const size_t MaxRows = 8;//MaxKeys;
+	static const size_t MinRows = 3;//MaxRows / 3;
 
 	static const size_t InsertionSortMax = 24;
 	static const size_t LinearRowSearchMax = 24;
@@ -205,7 +205,7 @@ private:
 		size_t pos;
 
 	public:
-		using RowType = Row<TValues&...>;
+		using reference = Row<TValues&...>;
 
 		Iterator() : current(nullptr), pos(0) {}
 		Iterator(LeafNode* beginLeaf, size_t beginPos) : current(beginLeaf), pos(beginPos) {
@@ -233,11 +233,11 @@ private:
 			return old;
 		}
 
-		RowType operator*() const {
+		reference operator*() const {
 			return current->rows[pos];
 		}
-		FauxPointer<RowType> operator->() const {
-			return FauxPointer<RowType>{ this->operator*() };
+		FauxPointer<reference> operator->() const {
+			return FauxPointer<reference>{ this->operator*() };
 		}
 
 		friend bool operator==(const Iterator& iter, const End& sentinel) {
@@ -255,8 +255,8 @@ private:
 	};
 
 	struct Path {
-		using RowType = Row<TValues&...>;
-		using Iterator = Iterator;
+		using reference = Row<TValues&...>;
+		using iterator = Iterator;
 
 		MBPlusTree& tree;
 
@@ -289,15 +289,15 @@ private:
 			tree.findLeaf(*this, key);
 		}
 
-		Iterator find(Key key) {
+		iterator find(Key key) {
 			update(key);
 			if (leafPos >= 0)
-				return Iterator(leaf, leafPos);
+				return iterator(leaf, leafPos);
 			else
-				return Iterator();
+				return iterator();
 		}
 
-		template<class TRow> Iterator find(TRow&& row) {
+		template<class TRow> iterator find(TRow&& row) {
 			return find(GetKey()(row));
 		}
 	};
@@ -325,7 +325,7 @@ private:
 		return leaf;
 	}
 	void destroyLeaf(LeafNode* node) {
-		leafPool.free(node);
+		//leafPool.free(node);
 	}
 
 	void findInner(Path& path, Key key) {
@@ -473,7 +473,7 @@ private:
 	void splitLeafUnbalanced(Path& path, Key key) {
 		Key maxKey = path.leaf->greatestKey();
 
-		if (key < maxKey) {
+		if (key <= maxKey) {
 			splitLeaf(path, key);
 			return;
 		}
@@ -731,6 +731,7 @@ private:
 	}
 
 	void leafErase(Path& path) {
+		assert(path.leaf->size > 0);
 		assert(path.leafPos >= 0);
 		path.leaf->rows[path.leafPos] |= path.leaf->rows[path.leaf->size - 1];
 		--(path.leaf->size);
@@ -768,6 +769,35 @@ public:
 		leafInsert(path.leaf, row);
 	}
 
+	void assertBounds() {
+		Key rootLower = LeastKey;
+		Key rootUpper = LeastKey;
+		for (int i = 0; i < rootKeys.size(); ++i) {
+			rootUpper = rootKeys[i];
+			assertInnerBounds(rootChildren[i], rootLower, rootUpper);
+			rootLower = rootUpper;
+		}
+		assertInnerBounds(rootChildren[rootKeys.size()], rootLower, LeastKey);
+	}
+
+	void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
+		Key innerLower = lower;
+		Key innerUpper = upper;
+		for (int i = 0; i < inner->size; ++i) {
+			innerUpper = inner->keys[i];
+			assertLeafBounds(inner->children[i], innerLower, innerUpper);
+			innerLower = innerUpper;
+		}
+		assertLeafBounds(inner->children[inner->size], innerLower, LeastKey);
+	}
+
+	void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
+		for (int i = 0; i < leaf->size; ++i) {
+			assert(GetKey()(leaf->rows[i]) >= lower);
+			assert(upper == LeastKey || GetKey()(leaf->rows[i]) < upper);
+		}
+	}
+
 	template<class TIter, class TSentinel> void insert(TIter rangeBegin, TSentinel rangeEnd) {
 		if (rangeBegin == rangeEnd) return;
 		TIter iter = rangeBegin;
@@ -778,6 +808,9 @@ public:
 			if (path.leaf->isFull())
 				splitLeafUnbalanced(path, key);
 			leafInsert(path.leaf, *iter);
+
+			assertBounds();
+
 			++iter;
 			if (iter == rangeEnd) {
 				balanceLeaf(path);

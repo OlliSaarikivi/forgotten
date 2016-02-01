@@ -165,6 +165,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Tuning.h" />
+    <ClInclude Include="NamedRows.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>

@@ -64,13 +64,16 @@ template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
 	std::cout << "Checksum: " << sum << "\t Orderless: " << orderless << "\tCount: " << count << "\n";
 }
 
-#define ROWS 100000
+#define ROWS 1000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
 COL(uint64_t, Bc2)
 COL(uint64_t, Bc3)
 COL(char, Cc)
+
+NAME(SomeRow)
+NAME(OtherRow)
 
 int _tmain(int argc, _TCHAR* argv[]) {
 	std::default_random_engine e1(0);
@@ -80,7 +83,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	Columnar<int, uint64_t> sortedInsert{};
 	Columnar<int, uint64_t> sortedInterleaved{};
 	for (int i = 0; i < ROWS; ++i) {
-		randomInsert.pushBack(makeRow(i*2, uint64_t(i)));
+		randomInsert.pushBack(makeRow(i * 2, uint64_t(i)));
 		sortedInsert.pushBack(makeRow(i * 2, uint64_t(i)));
 		sortedInterleaved.pushBack(makeRow(i + 1, uint64_t(i)));
 	}
@@ -101,31 +104,43 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		swap(randomSubset[j], randomSubset[i]);
 	}
 
+	int x = 3;
+	double y = 0.1;
+	NamedRows<SomeRow<Row<int&>>> a{ makeRow(x) };
+	NamedRows<OtherRow<Row<double&>>> b{ makeRow(y) };
+	auto c = concatNamedRows(a, b);
+
 	SortedTable<IntColIndex, int, uint64_t> table{};
-	auto query = from(sortedSubset).join(table).byMerge<IntColIndex>().select();
+	auto query = from(sortedSubset).as<SomeRow>()
+		.join(from(table).as<OtherRow>().select())
+			.byMerge<IntColIndex, SomeRow, OtherRow>().select();
 
 	for (;;) {
 		uint64_t sum;
 
 		table.clear();
+		std::cout << randomInsert.size() << "\n";
 		Time("table insert", [&]() {
 			auto inserter = table.inserter();
 			for (auto row : randomInsert) {
 				inserter.insert(row);
 			}
 		});
+		std::cout << table.size() << "\n";
+		checkSum(begin(table), end(table));
+		checkSum(begin(sortedInsert), end(sortedInsert));
 
 		Time("table merge join", [&]() {
 			auto iter = query.begin();
 			while (iter != query.end()) {
-				sum += uint64_t(*iter);
+				sum += uint64_t(iter->row<SomeRow>());
 				++iter;
 			}
 		});
 
 		Time("table erase", [&]() {
 			auto eraser = table.eraser();
-			for (auto row : randomSubset) {
+			for (auto row : sortedSubset) {
 				eraser.erase(row);
 			}
 		});

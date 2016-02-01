@@ -28,7 +28,7 @@ template<template<typename> class TIter, class... TValues> class RowIterator
 	tuple<TIter<TValues>...> iters;
 
 public:
-	using RowType = Row<TValues&...>;
+	using reference = Row<TValues&...>;
 
 	RowIterator() {}
 	RowIterator(TIter<TValues>... iters) : iters(std::make_tuple(iters...)) {}
@@ -80,13 +80,13 @@ public:
 		return get<FirstIter>(left.iters) - get<FirstIter>(right.iters);
 	}
 
-	RowType operator*() const {
+	reference operator*() const {
 		return makeRow(*std::get<TValues*>(iters)...);
 	}
-	FauxPointer<RowType> operator->() const {
-		return FauxPointer<RowType>{ this->operator*() };
+	FauxPointer<reference> operator->() const {
+		return FauxPointer<reference>{ this->operator*() };
 	}
-	RowType operator[](size_t n) const {
+	reference operator[](size_t n) const {
 		return *(*this + n);
 	}
 

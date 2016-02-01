@@ -14,7 +14,7 @@ template<class TLeft, class TLeftSentinel, class TFinder, class TFinderFail> cla
 	TFinderFail finderFail;
 
 public:
-	using RowType = typename RowUnion<typename TLeft::RowType, typename TFinder::RowType>::type;
+	using reference = typename NamedRowsConcat<typename TLeft::reference, typename TFinder::reference>::type;
 
 	FindJoinIterator(TLeft left, TLeftSentinel leftEnd, TFinder finder, TFinderFail finderFail) :
 		left(left), leftEnd(leftEnd), finder(finder), finderFail(finderFail) {
@@ -42,24 +42,15 @@ public:
 		return old;
 	}
 
-	RowType operator*() const {
-		return JoinRows<RowType>()(*left, *result);
+	reference operator*() const {
+		return concatNamedRows(*left, *result);
 	}
-	FauxPointer<RowType> operator->() const {
-		return FauxPointer<RowType>{ this->operator*() };
+	FauxPointer<reference> operator->() const {
+		return FauxPointer<reference>{ this->operator*() };
 	}
 
 	friend bool operator==(const FindJoinIterator& iter, const End& sentinel) {
 		return iter.left == iter.leftEnd;
-	}
-
-	friend void swap(FindJoinIterator& left, FindJoinIterator& right) {
-		using std::swap;
-		swap(left.left, right.left);
-		swap(left.leftEnd, right.leftEnd);
-		swap(left.finder, right.finder);
-		swap(left.result, right.result);
-		swap(left.finderFail, right.finderFail);
 	}
 };
 

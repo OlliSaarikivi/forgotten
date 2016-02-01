@@ -1,34 +1,35 @@
 #pragma once
 
+#include "NamedRows.h"
 #include "Utils.h"
 #include "Row.h"
 #include "Sentinels.h"
 
-template<class TIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
-	: boost::equality_comparable<MergeJoinIterator<TIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
-	using Index = TIndex;
+template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
+	: boost::equality_comparable<MergeJoinIterator<TLeftIndex, TRightIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
 
-private:
-	using Key = typename Index::Key;
-	using GetKey = typename Index::GetKey;
+	using LeftKey = typename TLeftIndex::Key;
+	using LeftGetKey = typename TLeftIndex::GetKey;
+	using RightKey = typename TRightIndex::Key;
+	using RightGetKey = typename TRightIndex::GetKey;
 
-	Key leftKey;
+	LeftKey leftKey;
 	TLeft left;
 	TLeftSentinel leftEnd;
-	Key rightKey;
+	RightKey rightKey;
 	TRight right;
 	TRightSentinel rightEnd;
 
 public:
-	using RowType = typename RowUnion<typename TLeft::RowType, typename TRight::RowType>::type;
+	using reference = typename NamedRowsConcat<typename TLeft::reference, typename TRight::reference>::type;
 
 	MergeJoinIterator(TLeft left, TLeftSentinel leftEnd, TRight right, TRightSentinel rightEnd) :
 		left(left), leftEnd(leftEnd),
 		right(right), rightEnd(rightEnd)
 	{
 		if (left != leftEnd && right != rightEnd) {
-			leftKey = GetKey()(*left);
-			rightKey = GetKey()(*right);
+			leftKey = LeftGetKey()(*left);
+			rightKey = RightGetKey()(*right);
 			findMatch();
 		}
 	}
@@ -38,7 +39,7 @@ public:
 			while (leftKey < rightKey) {
 				++left;
 				if (left != leftEnd)
-					leftKey = GetKey()(*left);
+					leftKey = LeftGetKey()(*left);
 				else
 					return;
 			}
@@ -47,7 +48,7 @@ public:
 			while (rightKey < leftKey) {
 				++right;
 				if (right != rightEnd)
-					rightKey = GetKey()(*right);
+					rightKey = RightGetKey()(*right);
 				else
 					return;
 			}
@@ -69,11 +70,11 @@ public:
 		return old;
 	}
 
-	RowType operator*() const {
-		return JoinRows<RowType>()(*left, *right);
+	reference operator*() const {
+		return concatNamedRows(*left, *right);
 	}
-	FauxPointer<RowType> operator->() const {
-		return FauxPointer<RowType>{ this->operator*() };
+	FauxPointer<reference> operator->() const {
+		return FauxPointer<reference>{ this->operator*() };
 	}
 
 	friend bool operator==(const MergeJoinIterator& iter, const End& sentinel) {
