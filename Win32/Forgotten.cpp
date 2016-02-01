@@ -64,7 +64,7 @@ template<class TIter> void checkSum(TIter rangeBegin, TIter rangeEnd) {
 	std::cout << "Checksum: " << sum << "\t Orderless: " << orderless << "\tCount: " << count << "\n";
 }
 
-#define ROWS 1000
+#define ROWS 1000000
 
 COL(int, Ac)
 COL(uint64_t, Bc)
@@ -90,7 +90,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	Columnar<int, uint64_t> randomSubset{};
 	Columnar<int, uint64_t> sortedSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 900) {
+		if ((randomInt(e1) % 1000) > 800) {
 			randomSubset.pushBack(sortedInsert[i]);
 			sortedSubset.pushBack(sortedInsert[i]);
 		}
@@ -120,11 +120,21 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
+		for (auto row : table) {
+			sum += uint64_t(row);
+		}
+
 		Time("table merge join", [&]() {
 			auto iter = query.begin();
 			while (iter != query.end()) {
 				sum += uint64_t(iter->row<SomeRow>());
 				++iter;
+			}
+		});
+
+		Time("table scan", [&]() {
+			for (auto row : table) {
+				sum += uint64_t(row);
 			}
 		});
 

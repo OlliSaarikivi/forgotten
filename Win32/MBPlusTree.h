@@ -745,6 +745,9 @@ public:
 		firstInner.children[0] = &firstLeaf;
 	}
 
+	MBPlusTree(const MBPlusTree&) = delete;
+	MBPlusTree& operator=(const MBPlusTree&) = delete;
+
 	auto begin() {
 		return Iterator(&firstLeaf, 0);
 	}

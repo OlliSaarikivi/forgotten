@@ -67,8 +67,8 @@ namespace impl {
 			return QueryBuilder<WithName<TName, TLeft>>{ { left } };
 		}
 
-		template<class TRight> auto join(TRight& right) {
-			return makeJoinBuilder(left, makeTableRef(right));
+		template<class TRight> auto join(TRight right) {
+			return makeJoinBuilder(left, right);
 		}
 
 		TLeft select() {
