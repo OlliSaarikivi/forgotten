@@ -152,6 +152,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="MBPlusTree.h" />
+    <ClInclude Include="Name.h" />
     <ClInclude Include="Query.h" />
     <ClInclude Include="SmoothSort.h" />
     <ClInclude Include="SortedTable.h" />

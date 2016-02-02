@@ -74,6 +74,7 @@ COL(char, Cc)
 
 NAME(SomeRow)
 NAME(OtherRow)
+NAME(YetAnotherRow)
 
 int _tmain(int argc, _TCHAR* argv[]) {
 	std::default_random_engine e1(0);
@@ -90,7 +91,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 	Columnar<int, uint64_t> randomSubset{};
 	Columnar<int, uint64_t> sortedSubset{};
 	for (int i = 0; i < ROWS; ++i) {
-		if ((randomInt(e1) % 1000) > 800) {
+		if ((randomInt(e1) % 1000) > 900) {
 			randomSubset.pushBack(sortedInsert[i]);
 			sortedSubset.pushBack(sortedInsert[i]);
 		}
@@ -104,10 +105,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		swap(randomSubset[j], randomSubset[i]);
 	}
 
-	SortedTable<IntColIndex, int, uint64_t> table{};
-	auto query = from(sortedSubset).as<SomeRow>()
-		.join(from(table).as<OtherRow>().select())
-			.byMerge<IntColIndex, SomeRow, OtherRow>().select();
+	SortedTable<SomeRow, IntColIndex, int, uint64_t> table{};
+	auto query = from(table).join(alias<OtherRow>().from(sortedSubset).index<IntColIndex>()).merge()
+		.on<SomeRow>().join(alias<YetAnotherRow>().from(sortedSubset).index<IntColIndex>()).merge();
 
 	for (;;) {
 		uint64_t sum;
@@ -120,27 +120,27 @@ int _tmain(int argc, _TCHAR* argv[]) {
 			}
 		});
 
-		for (auto row : table) {
+		forEach(table, [&](auto row) {
 			sum += uint64_t(row);
-		}
-
-		Time("table merge join", [&]() {
-			auto iter = query.begin();
-			while (iter != query.end()) {
-				sum += uint64_t(iter->row<SomeRow>());
-				++iter;
-			}
 		});
 
+		for (int i = 0; i < 3; ++i) {
+			Time("table merge join", [&]() {
+				forEach(query, [&](auto rows) {
+					sum += uint64_t(rows.row<SomeRow>());
+				});
+			});
+		}
+
 		Time("table scan", [&]() {
-			for (auto row : table) {
-				sum += uint64_t(row);
-			}
+			forEach(table, [&](auto row) {
+				sum += int(row);
+			});
 		});
 
 		Time("table erase", [&]() {
 			auto eraser = table.eraser();
-			for (auto row : sortedSubset) {
+			for (auto row : randomSubset) {
 				eraser.erase(row);
 			}
 		});

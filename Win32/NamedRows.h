@@ -1,14 +1,10 @@
 #pragma once
 
-#define NAME(N) template<class T> struct N : T { \
-	N(const T& t) : T(t) {} \
-};
-
 namespace impl {
-	template<template<typename...> class TTemplate>
+	template<template<typename> class TTemplate>
 	struct IsFromTemplate {
 		template<class T> struct Check : mpl::bool_<false> {};
-		template<class... TArgs> struct Check<TTemplate<TArgs...>> : mpl::bool_<true> {};
+		template<class TArg> struct Check<TTemplate<TArg>> : mpl::bool_<true> {};
 	};
 
 	template<class T> struct GetOnlyArgument;
@@ -65,20 +61,20 @@ template<class... TNames1, class... TNames2> auto concatNamedRows(const NamedRow
 	return NamedRows<TNames1..., TNames2...>(left.row<TNames1>()..., right.row<TNames2...>());
 }
 
-template<template<typename> class TName, class TIter> class NamingIterator {
+template<class TIter> class AsNamedRowsIterator {
 	TIter iter;
 
 public:
-	using reference = NamedRows<TName<typename TIter::reference>>;
+	using reference = NamedRows<typename TIter::reference>;
 
-	NamingIterator(TIter iter) : iter(iter) {}
+	AsNamedRowsIterator(TIter iter) : iter(iter) {}
 
-	NamingIterator& operator++()
+	AsNamedRowsIterator& operator++()
 	{
 		++iter;
 		return *this;
 	}
-	NamingIterator operator++(int) {
+	AsNamedRowsIterator operator++(int) {
 		auto old = *this;
 		this->operator++();
 		return old;
@@ -91,14 +87,14 @@ public:
 		return FauxPointer<reference>{ this->operator*() };
 	}
 
-	template<class TSentinel> friend bool operator==(const NamingIterator& iter, const TSentinel& sentinel) {
+	template<class TSentinel> friend bool operator==(const AsNamedRowsIterator& iter, const TSentinel& sentinel) {
 		return iter.iter == sentinel;
 	}
-	template<class TSentinel> friend bool operator!=(const NamingIterator& iter, const TSentinel& sentinel) {
+	template<class TSentinel> friend bool operator!=(const AsNamedRowsIterator& iter, const TSentinel& sentinel) {
 		return iter.iter != sentinel;
 	}
 
-	friend void swap(NamingIterator& left, NamingIterator& right) {
+	friend void swap(AsNamedRowsIterator& left, AsNamedRowsIterator& right) {
 		using std::swap;
 		swap(left.iter, right.iter);
 	}

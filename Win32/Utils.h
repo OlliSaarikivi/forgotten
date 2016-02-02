@@ -40,18 +40,12 @@ private:
 	T value;
 };
 
-template<unsigned Index, class T, class... Ts> struct PackGet
-{
-	auto operator()(T&& t, Ts&&... ts) {
-		return PackGet<Index - 1, Ts...>(std::forward<Ts>(ts)...);
-	}
-};
-template<class T, class... Ts> struct PackGet<0, T, Ts...>
-{
-	auto operator()(T&& t, Ts&&... ts) {
-		return t;
-	}
-};
+template<class TCollection, class TFunc> void forEach(TCollection& collection, TFunc func) {
+	auto iter = ::begin(collection);
+	auto end = ::end(collection);
+	for (; iter != end; ++iter)
+		func(*iter);
+}
 
 //namespace std
 //{
