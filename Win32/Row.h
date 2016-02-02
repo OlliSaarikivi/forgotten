@@ -1,11 +1,12 @@
 #pragma once
 
-#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D)
+#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D##_t) \
+static const TypeWrapper<D##_t> D;
 
 template<class TKey> struct LeastKey;
 
 #define KEY_COL(T, D, L) COL(T, D) \
-	template<> struct LeastKey<D> { D operator()(){ return D{ L }; } };
+	template<> struct LeastKey<D##_t> { D##_t operator()(){ return D##_t{ L }; } };
 
 template<class... TValues> class Row {
 public:
@@ -77,6 +78,11 @@ public:
 	template<class T, typename std::enable_if<mpl::contains<Types, T&>::type::value, int>::type = 0>
 	T& c() {
 		return get<StoredType<typename std::remove_reference<T>::type>>(refs);
+	}
+
+	template<class TCol>
+	auto& operator>>(const TCol& name) {
+		return c<TCol::type>();
 	}
 
 	template<class T>

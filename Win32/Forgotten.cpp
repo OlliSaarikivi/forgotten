@@ -49,11 +49,11 @@ NAME(OtherRow)
 NAME(YetAnotherRow)
 
 int _tmain(int argc, _TCHAR* argv[]) {
-	Universe<Eid, 
-		Physical<Row<PosX, PosY>>,
-		Stats<Row<Strength>>> entities;
+	Universe<Eid_t, 
+		Physical_t<Row<PosX_t, PosY_t>>,
+		Stats_t<Row<Strength_t>>> entities;
 
 	forEach(entities, [&](auto rows) {
-		(rows >> Physical_).c<PosX>() = 3.5;
+		(rows >> Physical >> PosX) = 3.5;
 	});
 }

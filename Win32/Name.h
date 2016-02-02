@@ -5,11 +5,11 @@ template<template<typename> class TName> struct NameWrapper {
 	using type = TName<T>;
 };
 
-#define NAME(N) template<class T> struct N : T { \
-	N(const T& t) : T(t) {} \
+#define NAME(N) template<class T> struct N##_t : T { \
+	N##_t(const T& t) : T(t) {} \
 }; \
-template<class T> struct NameOf<N<T>> { template<class T> using type = N<T>; }; \
-static const NameWrapper<N> N##_;
+template<class T> struct NameOf<N##_t<T>> { template<class T> using type = N##_t<T>; }; \
+static const NameWrapper<N##_t> N;
 
 template<template<typename> class TName, class TIter> class NamingIterator {
 	TIter iter;
