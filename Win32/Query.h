@@ -8,8 +8,8 @@ namespace impl {
 	template<class TTable> struct TableRef {
 		TTable& table;
 
-		auto begin() { return AsNamedRowsIterator<decltype(::begin(table))>(::begin(table)); }
-		auto end() { return ::end(table); }
+		auto begin() { using std::begin; return AsNamedRowsIterator<decltype(begin(table))>(begin(table)); }
+		auto end() { using std::end; return end(table); }
 	};
 
 	template<class TTable> auto makeTableRef(TTable& table) {
@@ -19,8 +19,8 @@ namespace impl {
 	template<template<typename> class TName, class TTable> struct AliasTableRef {
 		TTable& table;
 
-		auto begin() { return AsNamedRowsIterator<NamingIterator<TName, decltype(::begin(table))>>{ { ::begin(table) } }; }
-		auto end() { return ::end(table); }
+		auto begin() { using std::begin; return AsNamedRowsIterator<NamingIterator<TName, decltype(begin(table))>>{ { begin(table) } }; }
+		auto end() { using std::end; return end(table); }
 	};
 
 	template<template<typename> class TName, class T> struct WithName {
@@ -47,10 +47,8 @@ namespace impl {
 
 	template<template<typename> class TName, class TIndex> struct NamedIndex {
 		using Key = typename TIndex::Key;
-		using GetKey = NamedIndex;
-		static const Key LeastKey = TIndex::LeastKey;
 		template<class TNamedRows> Key operator()(const TNamedRows& rows) {
-			return typename TIndex::GetKey()(rows.row<TName>());
+			return TIndex()(rows.c<TName>());
 		}
 	};
 
@@ -83,11 +81,17 @@ namespace impl {
 		}
 
 		template<class TRight> auto join(TRight right) {
-			return makeJoinBuilder(left, right);
+			return makeJoinBuilder(*this, right);
 		}
 
 		auto begin() { return left.begin(); }
 		auto end() { return left.end(); }
+	};
+
+	struct QueryStart {
+		template<class TRight> auto join(TRight right) {
+			return Query<TRight>{ right };
+		}
 	};
 
 	template<template<typename> class TName, class T> struct Scope {
@@ -117,6 +121,10 @@ template<class TTable> auto from(TTable& table) {
 
 template<template<typename> class TName> auto alias() {
 	return impl::AliasBuilder<TName>{};
+}
+
+auto query() {
+	return impl::QueryStart{};
 }
 
 // NameOf specializations

@@ -2,6 +2,11 @@
 
 #define COL(T, D) BOOST_STRONG_TYPEDEF(T, D)
 
+template<class TKey> struct LeastKey;
+
+#define KEY_COL(T, D, L) COL(T, D) \
+	template<> struct LeastKey<D> { D operator()(){ return D{ L }; } };
+
 template<class... TValues> class Row {
 public:
 	using ValueTypes = typename mpl::vector<typename std::remove_reference<TValues>::type...>::type;
@@ -28,7 +33,7 @@ private:
 		const Row<Ts...>& from;
 		Row& to;
 		template<class T> void operator()(const T& type) {
-			to.col<T::type>() = from.col<T::type>();
+			to.c<T::type>() = from.c<T::type>();
 		}
 	};
 
@@ -51,12 +56,12 @@ public:
 	Row& operator=(const Row& other) = delete;
 
 	template<class T, typename std::enable_if<!std::is_reference<T>::value && mpl::contains<ValueTypes, T>::type::value, int>::type = 0>
-	explicit operator T() { return col<StoredType<T>>(); }
+	explicit operator T() { return c<StoredType<T>>(); }
 
 	template<class T, typename std::enable_if<HasCompatibleCol<T>::value, int>::type = 0>
 	Row& operator |=(T x) {
 		static_assert(NumCompatibleCols<T>::value == 1, "Ambiguous column assign. Value is implicitly convertible to multiple columns.");
-		col<typename mpl::deref<typename mpl::find_if<ValueTypes, IsConvertible<T, mpl::_1>>::type>::type>() = x; return *this;
+		c<typename mpl::deref<typename mpl::find_if<ValueTypes, IsConvertible<T, mpl::_1>>::type>::type>() = x; return *this;
 	}
 
 	template<class... Ts> Row& operator|=(const Row<Ts...>& other) {
@@ -66,11 +71,11 @@ public:
 		return *this;
 	}
 
-	template<class T> const T& col() const {
+	template<class T> const T& c() const {
 		return get<StoredType<typename std::remove_reference<T>::type>>(refs);
 	}
 	template<class T, typename std::enable_if<mpl::contains<Types, T&>::type::value, int>::type = 0>
-	T& col() {
+	T& c() {
 		return get<StoredType<typename std::remove_reference<T>::type>>(refs);
 	}
 
@@ -81,7 +86,7 @@ public:
 
 	template<class... Ts>
 	Row<StoredType<typename std::remove_reference<Ts>::type>...> cols() {
-		return Row<StoredType<typename std::remove_reference<Ts>::type>...>(col<Ts>()...);
+		return Row<StoredType<typename std::remove_reference<Ts>::type>...>(c<Ts>()...);
 	}
 
 	auto temp() {
@@ -127,7 +132,7 @@ template<class TRow> struct JoinRows;
 template<class... TValues> struct JoinRows<Row<TValues...>> {
 	template<class... TRows> Row<TValues...> operator()(TRows&&... params) {
 		return makeRow(impl::SelectRow<typename std::remove_reference<TValues>::type, TRows...>()(std::forward<TRows>(params)...)
-			.col<typename std::remove_reference<TValues>::type>()...);
+			.c<typename std::remove_reference<TValues>::type>()...);
 	}
 };
 

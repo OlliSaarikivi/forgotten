@@ -1,28 +1,17 @@
 #pragma once
 
-namespace impl {
-	template<template<typename> class TTemplate>
-	struct IsFromTemplate {
-		template<class T> struct Check : mpl::bool_<false> {};
-		template<class TArg> struct Check<TTemplate<TArg>> : mpl::bool_<true> {};
-	};
-
-	template<class T> struct GetOnlyArgument;
-	template<template<typename> class TTemplate, class TArg> struct GetOnlyArgument<TTemplate<TArg>> {
-		using type = TArg;
-	};
-}
+#include "Utils.h"
 
 template<class... TNames> class NamedRows {
 	using NameTypes = typename mpl::vector<TNames...>::type;
 
 	template<template<typename> class TName>
 	struct TypeForTemplate {
-		using type = typename mpl::deref<typename mpl::find_if<NameTypes, typename impl::IsFromTemplate<TName>::template Check<mpl::_1>>::type>::type;
+		using type = typename mpl::deref<typename mpl::find_if<NameTypes, typename IsFromTemplate1<TName>::template Check<mpl::_1>>::type>::type;
 	};
 
 	template<class TName>
-	using RowType = typename impl::GetOnlyArgument<TName>::type;
+	using RowType = typename GetOnlyArgument<TName>::type;
 	template<template<typename> class TName>
 	using RowForName = RowType<typename TypeForTemplate<TName>::type>;
 
@@ -36,19 +25,24 @@ public:
 	NamedRows(const RowType<TNames>&... rows)
 		: rowsTuple(asNamed<TNames, RowType<TNames>>(rows)...) {}
 
-	template<template<typename> class TName> auto& row() {
+	template<template<typename> class TName> auto& c() {
 		using Row = RowForName<TName>;
 		return static_cast<Row&>(get<TName<Row>>(rowsTuple));
 	}
 
-	template<template<typename> class TName> const auto& row() const {
+	template<template<typename> class TName> const auto& c() const {
 		using Row = RowForName<TName>;
 		return static_cast<const Row&>(get<TName<Row>>(rowsTuple));
 	}
 
-	template<class TName> const auto& row() const {
+	template<class TName> const auto& c() const {
 		using Row = RowType<TName>;
 		return static_cast<const Row&>(get<TName>(rowsTuple));
+	}
+
+	template<class TName>
+	auto& operator>>(const TName& name) {
+		return c<TName::type>();
 	}
 };
 
@@ -58,7 +52,7 @@ template<class... TNames1, class... TNames2> struct NamedRowsConcat<NamedRows<TN
 };
 
 template<class... TNames1, class... TNames2> auto concatNamedRows(const NamedRows<TNames1...>& left, const NamedRows<TNames2...>& right) {
-	return NamedRows<TNames1..., TNames2...>(left.row<TNames1>()..., right.row<TNames2...>());
+	return NamedRows<TNames1..., TNames2...>(left.c<TNames1>()..., right.c<TNames2...>());
 }
 
 template<class TIter> class AsNamedRowsIterator {

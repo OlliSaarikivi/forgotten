@@ -28,6 +28,17 @@ template<class T> struct TypeWrap {
 	using type = TypeWrapper<T>;
 };
 
+template<template<typename> class TTemplate>
+struct IsFromTemplate1 {
+	template<class T> struct Check : mpl::bool_<false> {};
+	template<class TArg> struct Check<TTemplate<TArg>> : mpl::bool_<true> {};
+};
+
+template<class T> struct GetOnlyArgument;
+template<template<typename> class TTemplate, class TArg> struct GetOnlyArgument<TTemplate<TArg>> {
+	using type = TArg;
+};
+
 template<class... T> void ignore(const T&... x) {}
 
 template<class T>
@@ -41,9 +52,9 @@ private:
 };
 
 template<class TCollection, class TFunc> void forEach(TCollection& collection, TFunc func) {
-	auto iter = ::begin(collection);
-	auto end = ::end(collection);
-	for (; iter != end; ++iter)
+	auto iter = begin(collection);
+	auto endIter = end(collection);
+	for (; iter != endIter; ++iter)
 		func(*iter);
 }
 

@@ -8,9 +8,7 @@ template<class TIndex, class... TValues> struct MBPlusTree {
 
 private:
 	using Key = typename Index::Key;
-	using GetKey = typename Index::GetKey;
-
-	static const Key LeastKey = Index::LeastKey;
+	using GetKey = Index;
 
 	static const size_t KeysInCacheLine = (CACHE_LINE_SIZE * 8) / sizeof(Key);
 	static const size_t MaxKeys = KeysInCacheLine < 4 ? 4 : KeysInCacheLine;
@@ -269,7 +267,7 @@ private:
 		size_t leafPos;
 		Key rowKey;
 
-		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound { LeastKey } {}
+		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound { LeastKey<Key>()() } {}
 
 		void update(Key key) {
 			updateLeaf(key);
@@ -343,7 +341,7 @@ private:
 		size_t i = lower;
 
 		if (i == rootKeys.size())
-			path.innerUpperBound = LeastKey;
+			path.innerUpperBound = LeastKey<Key>()();
 		else
 			path.innerUpperBound = rootKeys[i];
 		path.rootSlot = i;
@@ -367,8 +365,8 @@ private:
 
 	void rootInsert(Key key, InnerNode* inner, size_t pos) {
 		assert(pos != 0);
-		rootKeys.insert(::begin(rootKeys) + (pos - 1), key);
-		rootChildren.insert(::begin(rootChildren) + pos, inner);
+		rootKeys.insert(rootKeys.begin() + (pos - 1), key);
+		rootChildren.insert(rootChildren.begin() + pos, inner);
 	}
 
 	void innerInsert(Path& path, Key key, LeafNode* leaf, size_t pos) {
@@ -490,8 +488,8 @@ private:
 
 	void rootErase(size_t pos) {
 		assert(pos != 0);
-		rootKeys.erase(::begin(rootKeys) + (pos - 1));
-		rootChildren.erase(::begin(rootChildren) + pos);
+		rootKeys.erase(rootKeys.begin() + (pos - 1));
+		rootChildren.erase(rootChildren.begin() + pos);
 	}
 
 	void innerErase(Path& path, size_t pos) {
@@ -560,7 +558,7 @@ private:
 			if ((slot + 1) < rootKeys.size())
 				path.innerUpperBound = rootKeys[slot + 1];
 			else
-				path.innerUpperBound = LeastKey;
+				path.innerUpperBound = LeastKey<Key>()();
 
 			rootErase(slot + 1);
 
@@ -774,14 +772,14 @@ public:
 	}
 
 	//void assertBounds() {
-	//	Key rootLower = LeastKey;
-	//	Key rootUpper = LeastKey;
+	//	Key rootLower = LeastKey<Key>()();
+	//	Key rootUpper = LeastKey<Key>()();
 	//	for (int i = 0; i < rootKeys.size(); ++i) {
 	//		rootUpper = rootKeys[i];
 	//		assertInnerBounds(rootChildren[i], rootLower, rootUpper);
 	//		rootLower = rootUpper;
 	//	}
-	//	assertInnerBounds(rootChildren[rootKeys.size()], rootLower, LeastKey);
+	//	assertInnerBounds(rootChildren[rootKeys.size()], rootLower, LeastKey<Key>()());
 	//}
 
 	//void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
@@ -792,13 +790,13 @@ public:
 	//		assertLeafBounds(inner->children[i], innerLower, innerUpper);
 	//		innerLower = innerUpper;
 	//	}
-	//	assertLeafBounds(inner->children[inner->size], innerLower, LeastKey);
+	//	assertLeafBounds(inner->children[inner->size], innerLower, LeastKey<Key>()());
 	//}
 
 	//void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
 	//	for (int i = 0; i < leaf->size; ++i) {
 	//		assert(GetKey()(leaf->rows[i]) >= lower);
-	//		assert(upper == LeastKey || GetKey()(leaf->rows[i]) < upper);
+	//		assert(upper == LeastKey<Key>()() || GetKey()(leaf->rows[i]) < upper);
 	//	}
 	//}
 
@@ -818,7 +816,7 @@ public:
 				return;
 			}
 			key = GetKey()(*iter);
-			if (path.leafUpperBound != LeastKey && key >= path.leafUpperBound)
+			if (path.leafUpperBound != LeastKey<Key>()() && key >= path.leafUpperBound)
 				balanceLeaf(path);
 		}
 	}
@@ -827,9 +825,9 @@ public:
 		Path path{ *this };
 		path.rootSlot = rootChildren.size() - 1;
 		path.inner = rootChildren.back();
-		path.innerUpperBound = LeastKey;
+		path.innerUpperBound = LeastKey<Key>()();
 		path.innerSlot = path.inner->size;
-		path.leafUpperBound = LeastKey;
+		path.leafUpperBound = LeastKey<Key>()();
 		path.leaf = lastLeaf;
 		if (path.leaf->isFull()) {
 			Key key = GetKey()(row);

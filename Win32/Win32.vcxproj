@@ -151,11 +151,13 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FlatTable.h" />
+    <ClInclude Include="Index.h" />
     <ClInclude Include="MBPlusTree.h" />
     <ClInclude Include="Name.h" />
     <ClInclude Include="Query.h" />
     <ClInclude Include="SmoothSort.h" />
-    <ClInclude Include="SortedTable.h" />
+    <ClInclude Include="Table.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="Columnar.h" />
     <ClInclude Include="ElementSpriteShader.h" />
@@ -167,6 +169,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Tuning.h" />
     <ClInclude Include="NamedRows.h" />
+    <ClInclude Include="Universe.h" />
     <ClInclude Include="Usings.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>

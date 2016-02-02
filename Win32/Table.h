@@ -3,14 +3,14 @@
 #include "MBPlusTree.h"
 #include "Name.h"
 
-template<template<typename> class TName, class TIndex, class... TValues> class SortedTable {
+template<template<typename> class TName, class TIndex, class... TValues> class Table {
 
 	struct Inserter {
-		SortedTable& table;
+		Table& table;
 
-		Inserter(SortedTable& table) : table(table) {}
+		Inserter(Table& table) : table(table) {}
 		~Inserter() {
-			table.tree.insert(::begin(table.toInsert), ::end(table.toInsert));
+			table.tree.insert(table.toInsert.begin(), table.toInsert.end());
 			table.toInsert.clear();
 		}
 
@@ -20,11 +20,11 @@ template<template<typename> class TName, class TIndex, class... TValues> class S
 	};
 
 	struct Eraser {
-		SortedTable& table;
+		Table& table;
 
-		Eraser(SortedTable& table) : table(table) {}
+		Eraser(Table& table) : table(table) {}
 		~Eraser() {
-			table.tree.erase(::begin(table.toErase), ::end(table.toErase));
+			table.tree.erase(table.toErase.begin(), table.toErase.end());
 			table.toErase.clear();
 		}
 
@@ -54,12 +54,12 @@ public:
 	}
 };
 
-template<template<typename> class TName, class TIndex, class... TValues> struct NameOf<SortedTable<TName, TIndex, TValues...>> {
+template<template<typename> class TName, class TIndex, class... TValues> struct NameOf<Table<TName, TIndex, TValues...>> {
 	template<class T>
 	using type = TName<T>;
 };
 
 template<class T> struct IndexOf;
-template<template<typename> class TName, class TIndex, class... TValues> struct IndexOf<SortedTable<TName, TIndex, TValues...>> {
+template<template<typename> class TName, class TIndex, class... TValues> struct IndexOf<Table<TName, TIndex, TValues...>> {
 	using type = TIndex;
 };

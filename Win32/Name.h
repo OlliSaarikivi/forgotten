@@ -1,8 +1,15 @@
 #pragma once
 
+template<template<typename> class TName> struct NameWrapper {
+	template<class T>
+	using type = TName<T>;
+};
+
 #define NAME(N) template<class T> struct N : T { \
 	N(const T& t) : T(t) {} \
-};
+}; \
+template<class T> struct NameOf<N<T>> { template<class T> using type = N<T>; }; \
+static const NameWrapper<N> N##_;
 
 template<template<typename> class TName, class TIter> class NamingIterator {
 	TIter iter;

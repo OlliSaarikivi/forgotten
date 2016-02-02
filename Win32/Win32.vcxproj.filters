@@ -59,9 +59,6 @@
     <ClInclude Include="MBPlusTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SortedTable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Query.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -69,6 +66,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Name.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlatTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Table.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Universe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Index.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
