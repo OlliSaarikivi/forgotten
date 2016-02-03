@@ -40,6 +40,8 @@ public:
 
 	auto begin() { return NamingIterator<TName, decltype(tree.begin())>{ tree.begin() }; }
 	auto end() { return tree.end(); }
+	auto finder() { return NamingFinder<TName, decltype(tree.finder())>{ tree.finder() }; }
+	auto finderFail() { return tree.finderFail(); }
 
 	Inserter inserter() {
 		return Inserter{ *this };

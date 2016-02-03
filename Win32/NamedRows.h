@@ -62,6 +62,7 @@ public:
 	using reference = NamedRows<typename TIter::reference>;
 
 	AsNamedRowsIterator(TIter iter) : iter(iter) {}
+	AsNamedRowsIterator() = default;
 
 	AsNamedRowsIterator& operator++()
 	{
@@ -91,5 +92,18 @@ public:
 	friend void swap(AsNamedRowsIterator& left, AsNamedRowsIterator& right) {
 		using std::swap;
 		swap(left.iter, right.iter);
+	}
+};
+
+template<class TFinder> class AsNamedRowsFinder {
+	TFinder finder;
+
+public:
+	using iterator = AsNamedRowsIterator<typename TFinder::iterator>;
+
+	AsNamedRowsFinder(TFinder finder) : finder(finder) {}
+
+	template<class TRow> auto find(TRow&& row) {
+		return iterator{ finder.find(row) };
 	}
 };

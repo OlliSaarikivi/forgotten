@@ -4,24 +4,25 @@
 #include "Utils.h"
 #include "Row.h"
 #include "Sentinels.h"
+#include "MaybeRow.h"
 
-template<class TNamedRows> struct AsOptional;
-template<template<typename> class TName, class T> struct AsOptional<TName<T>> {
-	using type = TName<optional<T>>;
+template<class TNamedRows> struct AsMaybeRow;
+template<template<typename> class TName, class T> struct AsMaybeRow<TName<T>> {
+	using type = TName<MaybeRow<T>>;
 };
-template<class... TNames> struct AsOptional<NamedRows<TNames...>> {
-	using type = NamedRows<typename AsOptional<TNames>::type...>;
+template<class... TNames> struct AsMaybeRow<NamedRows<TNames...>> {
+	using type = NamedRows<typename AsMaybeRow<TNames>::type...>;
 };
 
 template<class TNamedRows> struct NoneNamedRows;
 template<template<typename> class... TNames, class... Ts> struct NoneNamedRows<NamedRows<TNames<Ts>...>> {
 	auto operator()() {
-		return NamedRows<TNames<optional<Ts>>...>{ TNames<optional<Ts>>{ none }... };
+		return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ none }... };
 	}
 };
 
 template<template<typename> class... TNames, class... Ts> auto someNamedRows(NamedRows<TNames<Ts>...> rows) {
-	return NamedRows<TNames<optional<Ts>>...>{ TNames<optional<Ts>>{ rows.c<TNames>() }... };
+	return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ rows.c<TNames>() }... };
 }
 
 template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeOuterJoinIterator
@@ -38,7 +39,7 @@ template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, 
 	TRightSentinel rightEnd;
 
 public:
-	using reference = typename NamedRowsConcat<typename TLeft::reference, typename AsOptional<typename TRight::reference>::type>::type;
+	using reference = typename NamedRowsConcat<typename TLeft::reference, typename AsMaybeRow<typename TRight::reference>::type>::type;
 
 	MergeOuterJoinIterator(TLeft left, TLeftSentinel leftEnd, TRight right, TRightSentinel rightEnd) :
 		left(left), leftEnd(leftEnd),

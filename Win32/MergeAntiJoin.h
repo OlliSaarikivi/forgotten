@@ -5,8 +5,8 @@
 #include "Row.h"
 #include "Sentinels.h"
 
-template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeExcludeIterator
-	: boost::equality_comparable<MergeExcludeIterator<TLeftIndex, TRightIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
+template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeAntiJoinIterator
+	: boost::equality_comparable<MergeAntiJoinIterator<TLeftIndex, TRightIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
 
 	using LeftKey = typename TLeftIndex::Key;
 	using LeftGetKey = TLeftIndex;
@@ -21,7 +21,7 @@ template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, 
 public:
 	using reference = typename TLeft::reference;
 
-	MergeExcludeIterator(TLeft left, TLeftSentinel leftEnd, TRight right, TRightSentinel rightEnd) :
+	MergeAntiJoinIterator(TLeft left, TLeftSentinel leftEnd, TRight right, TRightSentinel rightEnd) :
 		left(left), leftEnd(leftEnd),
 		right(right), rightEnd(rightEnd)
 	{
@@ -45,13 +45,13 @@ public:
 		}
 	}
 
-	MergeExcludeIterator& operator++()
+	MergeAntiJoinIterator& operator++()
 	{
 		++left;
 		findMatch();
 		return *this;
 	}
-	MergeExcludeIterator operator++(int) {
+	MergeAntiJoinIterator operator++(int) {
 		auto old = *this;
 		this->operator++();
 		return old;
@@ -64,11 +64,11 @@ public:
 		return FauxPointer<reference>{ this->operator*() };
 	}
 
-	friend bool operator==(const MergeExcludeIterator& iter, const End& sentinel) {
+	friend bool operator==(const MergeAntiJoinIterator& iter, const End& sentinel) {
 		return iter.left == iter.leftEnd;
 	}
 
-	friend void swap(MergeExcludeIterator& left, MergeExcludeIterator& right) {
+	friend void swap(MergeAntiJoinIterator& left, MergeAntiJoinIterator& right) {
 		using std::swap;
 		swap(left.left, right.left);
 		swap(left.leftEnd, right.leftEnd);

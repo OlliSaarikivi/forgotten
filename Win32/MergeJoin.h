@@ -9,9 +9,7 @@
 template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeJoinIterator
 	: boost::equality_comparable<MergeJoinIterator<TLeftIndex, TRightIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {
 
-	using LeftKey = typename TLeftIndex::Key;
 	using LeftGetKey = TLeftIndex;
-	using RightKey = typename TRightIndex::Key;
 	using RightGetKey = TRightIndex;
 
 	TLeft left;

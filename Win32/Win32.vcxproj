@@ -151,10 +151,13 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FindAntiJoin.h" />
+    <ClInclude Include="FindOuterJoin.h" />
     <ClInclude Include="FlatTable.h" />
     <ClInclude Include="Index.h" />
+    <ClInclude Include="MaybeRow.h" />
     <ClInclude Include="MBPlusTree.h" />
-    <ClInclude Include="MergeExclude.h" />
+    <ClInclude Include="MergeAntiJoin.h" />
     <ClInclude Include="MergeOuterJoin.h" />
     <ClInclude Include="Name.h" />
     <ClInclude Include="Query.h" />

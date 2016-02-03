@@ -18,6 +18,7 @@ public:
 	using reference = TName<typename TIter::reference>;
 
 	NamingIterator(TIter iter) : iter(iter) {}
+	NamingIterator() = default;
 
 	NamingIterator& operator++()
 	{
@@ -51,3 +52,16 @@ public:
 };
 
 template<class T> struct NameOf;
+
+template<template<typename> class TName, class TFinder> class NamingFinder {
+	TFinder finder;
+
+public:
+	using iterator = NamingIterator<TName, typename TFinder::iterator>;
+
+	NamingFinder(TFinder finder) : finder(finder) {}
+
+	template<class TKey> auto find(TKey key) {
+		return iterator{ finder.find(key) };
+	}
+};

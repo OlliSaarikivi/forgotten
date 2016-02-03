@@ -3,10 +3,15 @@
 #define COL(T, D) BOOST_STRONG_TYPEDEF(T, D) \
 static const TypeWrapper<D> D##_;
 
-template<class TKey> struct LeastKey;
+template<class TKey> struct MinKey;
 
-#define KEY_COL(T, D, L) COL(T, D) \
-	template<> struct LeastKey<D> { D operator()(){ return D{ L }; } };
+template<class TKey> struct MaxKey;
+
+#define KEY_COL(T, D, L, G) COL(T, D) \
+	template<> struct MinKey<D> { D operator()(){ return D{ L }; } }; \
+	template<> struct MaxKey<D> { D operator()() { return D{ G }; } };
+
+#define NUMERIC_COL(T, D) KEY_COL(T, D, std::numeric_limits<T>::min(), std::numeric_limits<T>::max())
 
 template<class... TValues> class Row {
 public:
@@ -103,10 +108,6 @@ public:
 		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(SwapColumn{ left, right });
 	}
 };
-
-template<class... TValues, class TCol> auto& operator>>(optional<Row<TValues...>> someRow, const TCol& name) {
-	return (*someRow) >> name;
-}
 
 namespace impl {
 	template<class... TParams> struct MakerRow {

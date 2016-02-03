@@ -83,7 +83,16 @@
     <ClInclude Include="MergeOuterJoin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MergeExclude.h">
+    <ClInclude Include="MergeAntiJoin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MaybeRow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FindOuterJoin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FindAntiJoin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

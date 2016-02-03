@@ -1,10 +1,19 @@
 #pragma once
 
+#include "FindJoin.h"
+#include "FindOuterJoin.h"
+#include "FindAntiJoin.h"
 #include "MergeJoin.h"
 #include "MergeOuterJoin.h"
-#include "MergeExclude.h"
+#include "MergeAntiJoin.h"
 #include "NamedRows.h"
 #include "FindJoin.h"
+
+#define QUERY_PASSTHROUGH(Q) \
+	auto begin() { return Q.begin(); } \
+	auto end() { return Q.end(); } \
+	auto finder() { return Q.finder(); } \
+	auto finderFail() { return Q.finderFail(); }
 
 namespace impl {
 	template<class TTable> struct TableRef {
@@ -12,36 +21,29 @@ namespace impl {
 
 		auto begin() { using std::begin; return AsNamedRowsIterator<decltype(begin(table))>(begin(table)); }
 		auto end() { using std::end; return end(table); }
+		auto finder() { return AsNamedRowsFinder<decltype(table.finder())>(table.finder()); }
+		auto finderFail() { return table.finderFail(); }
 	};
-
-	template<class TTable> auto makeTableRef(TTable& table) {
-		return TableRef<TTable>{ table };
-	}
 
 	template<template<typename> class TName, class TTable> struct AliasTableRef {
 		TTable& table;
 
 		auto begin() { using std::begin; return AsNamedRowsIterator<NamingIterator<TName, decltype(begin(table))>>{ { begin(table) } }; }
 		auto end() { using std::end; return end(table); }
+		auto finder() { return AsNamedRowsFinder<NamingFinder<TName, decltype(table.finder())>>{ { table.finder() } }; }
+		auto finderFail() { return table.finderFail(); }
 	};
 
-	template<template<typename> class TName, class T> struct WithName {
-		T query;
-
-		auto begin() { return AsNamedRowsIterator<TName, decltype(source.begin())>{ query.begin() }; }
-		auto end() { return query.end(); }
-	};
-
-	// Joins
-
-	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeJoin {
+	template<class TLeftIndex, class TLeft, class TRight,
+		template<typename, typename, typename, typename, typename> class TIter>
+	struct FindJoin {
 		TLeft left;
 		TRight right;
 
 		auto begin() {
-			return MergeJoinIterator
-				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
-				(left.begin(), left.end(), right.begin(), right.end());
+			return TIter
+				<TLeftIndex, decltype(left.begin()), decltype(left.end()), decltype(right.finder()), decltype(right.finderFail())>
+				(left.begin(), left.end(), right.finder(), right.finderFail());
 		}
 
 		auto end() {
@@ -49,27 +51,14 @@ namespace impl {
 		}
 	};
 
-	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeOuterJoin {
+	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight,
+		template<typename, typename, typename, typename, typename, typename> class TIter>
+	struct MergeJoin {
 		TLeft left;
 		TRight right;
 
 		auto begin() {
-			return MergeOuterJoinIterator
-				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
-				(left.begin(), left.end(), right.begin(), right.end());
-		}
-
-		auto end() {
-			return End{};
-		}
-	};
-
-	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeExclude {
-		TLeft left;
-		TRight right;
-
-		auto begin() {
-			return MergeExcludeIterator
+			return TIter
 				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
 				(left.begin(), left.end(), right.begin(), right.end());
 		}
@@ -86,60 +75,28 @@ namespace impl {
 		}
 	};
 
-	template<class TLeft, class TRight> struct JoinBuilder {
-		TLeft left_;
-		TRight right_;
+	template<class TLeft, class TRight,
+		template<typename, typename, typename, typename, typename> class TFindJoin,
+		template<typename, typename, typename, typename, typename, typename> class TMergeJoin>
+	struct JoinBuilder {
+		TLeft left;
+		TRight right;
 
 		auto merge() {
 			return Query<MergeJoin<
 				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
 				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
-				TLeft, TRight >>
-			{ { left_, right_ } };
+				TLeft, TRight, TMergeJoin>>
+			{ { left, right } };
 		}
 
-		auto left() {
-			return OuterJoinBuilder<TLeft, TRight>{ left_, right_ };
-		}
-
-		auto right() {
-			return OuterJoinBuilder<TRight, TLeft>{ right_, left_ };
-		}
-	};
-
-	template<class TLeft, class TRight> struct OuterJoinBuilder {
-		TLeft left;
-		TRight right;
-
-		auto merge() {
-			return Query<MergeOuterJoin<
+		auto find() {
+			return Query<FindJoin<
 				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
-				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
-				TLeft, TRight >>
+				TLeft, TRight, TFindJoin>>
 			{ { left, right } };
 		}
 	};
-
-	template<class TLeft, class TRight> auto makeJoinBuilder(TLeft left, TRight right) {
-		return JoinBuilder<TLeft, TRight>{ left, right };
-	}
-
-	template<class TLeft, class TRight> struct ExcludeBuilder {
-		TLeft left;
-		TRight right;
-
-		auto merge() {
-			return Query<MergeExclude<
-				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
-				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
-				TLeft, TRight >>
-			{ { left, right } };
-		}
-	};
-
-	template<class TLeft, class TRight> auto makeExcludeBuilder(TLeft left, TRight right) {
-		return ExcludeBuilder<TLeft, TRight>{ left, right };
-	}
 
 	template<class TLeft> struct Query {
 		TLeft left;
@@ -155,54 +112,43 @@ namespace impl {
 		}
 
 		template<class TRight> auto join(TRight right) {
-			return makeJoinBuilder(*this, right);
+			return JoinBuilder<TLeft, TRight, FindJoinIterator, MergeJoinIterator>{ left, right };
 		}
 
-		template<class TRight> auto exclude(TRight right) {
-			return makeExcludeBuilder(*this, right);
+		template<class TRight> auto outerJoin(TRight right) {
+			return JoinBuilder<TLeft, TRight, FindOuterJoinIterator, MergeOuterJoinIterator>{ left, right };
 		}
 
-		auto begin() { return left.begin(); }
-		auto end() { return left.end(); }
-	};
-
-	struct QueryStart {
-		template<class TRight> auto join(TRight right) {
-			return Query<TRight>{ right };
+		template<class TRight> auto antiJoin(TRight right) {
+			return JoinBuilder<TLeft, TRight, FindAntiJoinIterator, MergeAntiJoinIterator>{ left, right };
 		}
+
+		QUERY_PASSTHROUGH(left)
 	};
 
 	template<template<typename> class TName, class T> struct Scope {
 		T query;
-
-		auto begin() { return query.begin(); }
-		auto end() { return query.end(); }
+		QUERY_PASSTHROUGH(query)
 	};
 
 	template<class TIndex, class T> struct IndexAssumption {
 		T query;
-
-		auto begin() { return query.begin(); }
-		auto end() { return query.end(); }
+		QUERY_PASSTHROUGH(query)
 	};
 
 	template<template<typename> class TName> struct AliasBuilder {
-		template<class TTable> auto from(TTable& table) {
+		template<class TTable> auto operator()(TTable& table) {
 			return impl::Query<impl::AliasTableRef<TName, TTable>>{ { table } };
 		}
 	};
 }
 
 template<class TTable> auto from(TTable& table) {
-	return impl::Query<impl::TableRef<TTable>>{ impl::makeTableRef(table) };
+	return impl::Query<impl::TableRef<TTable>>{ { table } };
 }
 
 template<template<typename> class TName> auto alias() {
 	return impl::AliasBuilder<TName>{};
-}
-
-auto query() {
-	return impl::QueryStart{};
 }
 
 // NameOf specializations
@@ -213,8 +159,17 @@ template<template<typename> class TName, class TTable> struct NameOf<impl::Alias
 	using type = TName<T>;
 };
 
+template<class TLeftIndex, class TLeft, class TRight, template<typename, typename, typename, typename, typename> class TIter>
+struct NameOf<impl::FindJoin<TLeftIndex, TLeft, TRight, TIter>> : NameOf<TLeft> {};
+
 template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
-struct NameOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight>> : NameOf<TRight> {};
+struct NameOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeJoinIterator>> : NameOf<TRight> {};
+
+template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
+struct NameOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeOuterJoinIterator>> : NameOf<TLeft> {};
+
+template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
+struct NameOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeAntiJoinIterator>> : NameOf<TLeft> {};
 
 template<class TLeft> struct NameOf<impl::Query<TLeft>> : NameOf<TLeft> {};
 
@@ -230,8 +185,17 @@ template<class TTable> struct IndexOf<impl::TableRef<TTable>> : IndexOf<TTable> 
 
 template<template<typename> class TName, class TTable> struct IndexOf<impl::AliasTableRef<TName, TTable>> : IndexOf<TTable> {};
 
+template<class TLeftIndex, class TLeft, class TRight, template<typename, typename, typename, typename, typename> class TIter>
+struct IndexOf<impl::FindJoin<TLeftIndex, TLeft, TRight, TIter>> : IndexOf<TLeft> {};
+
 template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
-struct IndexOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight>> : IndexOf<TRight> {};
+struct IndexOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeJoinIterator>> : IndexOf<TRight> {};
+
+template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
+struct IndexOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeOuterJoinIterator>> : IndexOf<TLeft> {};
+
+template<class TLeftIndex, class TRightIndex, class TLeft, class TRight>
+struct IndexOf<impl::MergeJoin<TLeftIndex, TRightIndex, TLeft, TRight, MergeAntiJoinIterator>> : IndexOf<TLeft> {};
 
 template<class TLeft> struct IndexOf<impl::Query<TLeft>> : IndexOf<TLeft> {};
 

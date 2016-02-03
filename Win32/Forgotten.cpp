@@ -33,9 +33,9 @@ template<class TFunc> void Time(string name, const TFunc& f) {
 	Timer tmr; tmr.reset(); f(); double t = tmr.elapsed(); std::cout << t << "s\t" << name << "\n";
 }
 
-#define ROWS 1000000
+#define ROWS 10000000
 
-KEY_COL(uint32_t, Eid, 0u)
+NUMERIC_COL(uint32_t, Eid)
 
 COL(double, PosX)
 COL(double, PosY)
@@ -56,15 +56,25 @@ int _tmain(int argc, _TCHAR* argv[]) {
 		auto insertStat = entities.component<Stats>().inserter();
 		auto insertPhysical = entities.component<Physical>().inserter();
 		for (Eid i(0u); i < ROWS; ++i) {
-			insertStat(makeRow(i, Strength(10)));
+			auto id = entities.newId();
+			insertStat(makeRow(id, Strength(10)));
 			if (i % 2 == 0)
-				insertPhysical(makeRow(i, PosX(0.0), PosY(0.0)));
+				insertPhysical(makeRow(id, PosX(i * 0.1), PosY(1.0 / (i + 1))));
 		}
 	});
 
+	auto query = from(entities.component<Stats>()).join(alias<Stats>()(entities.component<Physical>())).find();
+	auto blah = query.begin();
+
 	int allTheStrength = 0;
 	Time("exclude", [&]() {
-		forEach(entities.require<Stats>().exclude(from(entities.component<Physical>())).merge(), [&](auto entity) {
+		forEach(entities.require<Stats>().exclude<Physical>(), [&](auto entity) {
+			allTheStrength += (entity >> Stats_ >> Strength_);
+		});
+	});
+
+	Time("exclude", [&]() {
+		forEach(entities.require<Stats>().exclude<Physical>(), [&](auto entity) {
 			allTheStrength += (entity >> Stats_ >> Strength_);
 		});
 	});

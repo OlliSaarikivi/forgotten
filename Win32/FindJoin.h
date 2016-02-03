@@ -4,26 +4,30 @@
 #include "Row.h"
 #include "Sentinels.h"
 
-template<class TLeft, class TLeftSentinel, class TFinder, class TFinderFail> class FindJoinIterator
-	: boost::equality_comparable<FindJoinIterator<TLeft, TLeftSentinel, TFinder, TFinderFail>, End> {
+template<class TLeftIndex, class TLeft, class TLeftSentinel, class TFinder, class TFinderFail> class FindJoinIterator
+	: boost::equality_comparable<FindJoinIterator<TLeftIndex, TLeft, TLeftSentinel, TFinder, TFinderFail>, End> {
+
+	using LeftGetKey = TLeftIndex;
 
 	TLeft left;
 	TLeftSentinel leftEnd;
 	TFinder finder;
-	typename TFinder::Iterator result;
+	using ResultIterator = typename TFinder::iterator;
+	ResultIterator result;
 	TFinderFail finderFail;
 
 public:
-	using reference = typename NamedRowsConcat<typename TLeft::reference, typename TFinder::reference>::type;
+	using reference = typename NamedRowsConcat<typename TLeft::reference, typename TFinder::iterator::reference>::type;
 
 	FindJoinIterator(TLeft left, TLeftSentinel leftEnd, TFinder finder, TFinderFail finderFail) :
 		left(left), leftEnd(leftEnd), finder(finder), finderFail(finderFail) {
 
 		findMatch();
 	}
+
 	void findMatch() {
 		while (left != leftEnd) {
-			result = finder.find(*left);
+			result = finder.find(LeftGetKey()(*left));
 			if (result != finderFail)
 				break;
 			++left;
@@ -53,8 +57,3 @@ public:
 		return iter.left == iter.leftEnd;
 	}
 };
-
-template<class TLeft, class TRight> auto findJoin(TLeft& left, TRight& right) {
-	return FindJoinIterator<decltype(begin(left)), decltype(end(left)), decltype(right.finder()), decltype(right.finderFail())>
-		(begin(left), end(left), right.finder(), right.finderFail());
-}

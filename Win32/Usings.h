@@ -20,9 +20,6 @@ using std::tuple;
 using std::get;
 using std::stack;
 
-using boost::optional;
-using boost::none;
-
 namespace mpl = boost::mpl;
 
 //using glm::vec2;

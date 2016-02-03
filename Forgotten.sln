@@ -4,21 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Win32", "Win32\Win32.vcxproj", "{F4BCEF8A-4E6F-439D-9EAA-EBE717802993}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6} = {B930EE19-8AFC-41E5-AC35-D54F30136DE6}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Profiler", "Profiler\Profiler.csproj", "{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}"
-	ProjectSection(ProjectDependencies) = postProject
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8} = {13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolingService", "ToolingService\ToolingService.csproj", "{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolingConnection", "ToolingConnection\ToolingConnection.csproj", "{B930EE19-8AFC-41E5-AC35-D54F30136DE6}"
-	ProjectSection(ProjectDependencies) = postProject
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8} = {13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Archive", "Archive\Archive.vcxproj", "{A025DDB5-8B02-4273-BC64-AE6F6DAFDE3A}"
 EndProject
@@ -65,79 +50,6 @@ Global
 		{F4BCEF8A-4E6F-439D-9EAA-EBE717802993}.Release|x64.ActiveCfg = Release|Win32
 		{F4BCEF8A-4E6F-439D-9EAA-EBE717802993}.Release|x86.ActiveCfg = Release|Win32
 		{F4BCEF8A-4E6F-439D-9EAA-EBE717802993}.Release|x86.Build.0 = Release|Win32
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|x86.ActiveCfg = Debug|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Debug|x86.Build.0 = Debug|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Mixed Platforms.ActiveCfg = Profiling|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Mixed Platforms.Build.0 = Profiling|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Win32.ActiveCfg = Profiling|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|Win32.Build.0 = Profiling|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|x64.ActiveCfg = Profiling|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|x86.ActiveCfg = Profiling|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Profiling|x86.Build.0 = Profiling|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|Win32.ActiveCfg = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|x64.ActiveCfg = Release|Any CPU
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|x86.ActiveCfg = Release|x86
-		{DBA49C6C-A856-43D6-A0CF-BB91E98CDA22}.Release|x86.Build.0 = Release|x86
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Debug|x86.Build.0 = Debug|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Mixed Platforms.ActiveCfg = Profiling|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Mixed Platforms.Build.0 = Profiling|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Win32.ActiveCfg = Profiling|x86
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|Win32.Build.0 = Profiling|x86
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|x64.ActiveCfg = Profiling|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|x86.ActiveCfg = Profiling|x86
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Profiling|x86.Build.0 = Profiling|x86
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|Win32.ActiveCfg = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|x64.ActiveCfg = Release|Any CPU
-		{13A66DC0-9C51-45CE-BFFE-A4C89600A3C8}.Release|x86.ActiveCfg = Release|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|x86.ActiveCfg = Debug|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Debug|x86.Build.0 = Debug|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Any CPU.ActiveCfg = Profiling|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Any CPU.Build.0 = Profiling|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Mixed Platforms.ActiveCfg = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Mixed Platforms.Build.0 = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Win32.ActiveCfg = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|Win32.Build.0 = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|x64.ActiveCfg = Profiling|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|x86.ActiveCfg = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Profiling|x86.Build.0 = Profiling|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|Mixed Platforms.Build.0 = Release|x86
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|Win32.ActiveCfg = Release|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|x64.ActiveCfg = Release|Any CPU
-		{B930EE19-8AFC-41E5-AC35-D54F30136DE6}.Release|x86.ActiveCfg = Release|Any CPU
 		{A025DDB5-8B02-4273-BC64-AE6F6DAFDE3A}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{A025DDB5-8B02-4273-BC64-AE6F6DAFDE3A}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{A025DDB5-8B02-4273-BC64-AE6F6DAFDE3A}.Debug|Mixed Platforms.Build.0 = Debug|Win32

@@ -44,12 +44,25 @@ template<class TId, class... TComponents> class Universe {
 	template<> struct MakeOuterJoin<> {};
 	template<size_t Index> struct MakeOuterJoin<Index> {
 		template<class TQuery> auto make(TQuery query, tuple<typename ComponentTable<TComponents>::type...>& tables) {
-			return query.join(from(get<Index>(tables))).left().merge();
+			return query.outerJoin(from(get<Index>(tables))).merge();
 		}
 	};
 	template<size_t Index1, size_t Index2, size_t... Indices> struct MakeOuterJoin<Index1, Index2, Indices...> {
 		template<class TQuery> auto make(TQuery query, tuple<typename ComponentTable<TComponents>::type...>& tables) {
-			return MakeOuterJoin<Index2, Indices...>().make(query, tables).join(from(get<Index1>(tables))).left().merge();
+			return MakeOuterJoin<Index2, Indices...>().make(query, tables).outerJoin(from(get<Index1>(tables))).merge();
+		}
+	};
+
+	template<size_t... Indices> struct MakeAntiJoin;
+	template<> struct MakeAntiJoin<> {};
+	template<size_t Index> struct MakeAntiJoin<Index> {
+		template<class TQuery> auto make(TQuery query, tuple<typename ComponentTable<TComponents>::type...>& tables) {
+			return query.antiJoin(from(get<Index>(tables))).merge();
+		}
+	};
+	template<size_t Index1, size_t Index2, size_t... Indices> struct MakeAntiJoin<Index1, Index2, Indices...> {
+		template<class TQuery> auto make(TQuery query, tuple<typename ComponentTable<TComponents>::type...>& tables) {
+			return MakeAntiJoin<Index2, Indices...>().make(query, tables).antiJoin(from(get<Index1>(tables))).merge();
 		}
 	};
 
@@ -63,12 +76,28 @@ template<class TId, class... TComponents> class Universe {
 		using type = MakeOuterJoin<Indices..., T::value>;
 	};
 
+	template<class TMakeJoin, class T> struct ExtendMakeAntiJoin;
+	template<size_t... Indices, class T> struct ExtendMakeAntiJoin<MakeAntiJoin<Indices...>, T> {
+		using type = MakeAntiJoin<Indices..., T::value>;
+	};
+
 	template<template<typename> class... TNames> struct ComponentIncludes {
 		Universe& universe;
 
 		template<class TQuery> auto in(TQuery outerQuery) {
 			using Indices = typename mpl::vector<typename NameToIndex<TNames>::type...>::type;
 			using ThisJoin = typename mpl::fold<Indices, MakeOuterJoin<>, ExtendMakeOuterJoin<mpl::_1, mpl::_2>>::type;
+			auto query = ThisJoin().make(outerQuery, universe.tables);
+			return impl::UniverseQuery<Universe, decltype(query)>{ universe, query };
+		}
+	};
+
+	template<template<typename> class... TNames> struct ComponentExcludes {
+		Universe& universe;
+
+		template<class TQuery> auto in(TQuery outerQuery) {
+			using Indices = typename mpl::vector<typename NameToIndex<TNames>::type...>::type;
+			using ThisJoin = typename mpl::fold<Indices, MakeAntiJoin<>, ExtendMakeAntiJoin<mpl::_1, mpl::_2>>::type;
 			auto query = ThisJoin().make(outerQuery, universe.tables);
 			return impl::UniverseQuery<Universe, decltype(query)>{ universe, query };
 		}
@@ -99,8 +128,11 @@ template<class TId, class... TComponents> class Universe {
 
 	tuple<typename ComponentTable<TComponents>::type...> tables;
 	Columnar<TId> toErase;
+	TId nextId;
 
 public:
+	Universe() : nextId(MinKey<TId>()()) {}
+
 	template<template<typename> class... TNames> auto require() {
 		using Indices = typename mpl::vector<typename NameToIndex<TNames>::type...>::type;
 		using ThisJoin = typename mpl::fold<Indices, MakeJoin<>, ExtendMakeJoin<mpl::_1, mpl::_2>>::type;
@@ -119,12 +151,21 @@ public:
 		return ComponentIncludes<TNames...>{ *this };
 	}
 
+	template<template<typename> class... TNames> auto exclude() {
+		return ComponentExcludes<TNames...>{ *this };
+	}
+
 	template<template<typename> class TName> auto& component() {
 		return get<NameToIndex<TName>::type::value>(tables);
 	}
 
 	auto eraser() {
 		return Eraser{ *this };
+	}
+
+	TId newId() {
+		assert(nextId != MaxKey<TId>()());
+		return TId(nextId++);
 	}
 };
 
@@ -136,6 +177,10 @@ namespace impl {
 
 		template<template<typename> class... TNames> auto include() {
 			return universe.include<TNames...>().in(left);
+		}
+
+		template<template<typename> class... TNames> auto exclude() {
+			return universe.exclude<TNames...>().in(left);
 		}
 	};
 }
