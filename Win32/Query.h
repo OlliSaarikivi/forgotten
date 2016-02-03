@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MergeJoin.h"
+#include "MergeOuterJoin.h"
+#include "MergeExclude.h"
 #include "NamedRows.h"
 #include "FindJoin.h"
 
@@ -30,12 +32,44 @@ namespace impl {
 		auto end() { return query.end(); }
 	};
 
+	// Joins
+
 	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeJoin {
 		TLeft left;
 		TRight right;
 
 		auto begin() {
 			return MergeJoinIterator
+				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
+				(left.begin(), left.end(), right.begin(), right.end());
+		}
+
+		auto end() {
+			return End{};
+		}
+	};
+
+	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeOuterJoin {
+		TLeft left;
+		TRight right;
+
+		auto begin() {
+			return MergeOuterJoinIterator
+				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
+				(left.begin(), left.end(), right.begin(), right.end());
+		}
+
+		auto end() {
+			return End{};
+		}
+	};
+
+	template<class TLeftIndex, class TRightIndex, class TLeft, class TRight> struct MergeExclude {
+		TLeft left;
+		TRight right;
+
+		auto begin() {
+			return MergeExcludeIterator
 				<TLeftIndex, TRightIndex, decltype(left.begin()), decltype(left.end()), decltype(right.begin()), decltype(right.end())>
 				(left.begin(), left.end(), right.begin(), right.end());
 		}
@@ -53,14 +87,35 @@ namespace impl {
 	};
 
 	template<class TLeft, class TRight> struct JoinBuilder {
-		TLeft left;
-		TRight right;
+		TLeft left_;
+		TRight right_;
 
 		auto merge() {
 			return Query<MergeJoin<
 				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
 				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
-				TLeft, TRight>>
+				TLeft, TRight >>
+			{ { left_, right_ } };
+		}
+
+		auto left() {
+			return OuterJoinBuilder<TLeft, TRight>{ left_, right_ };
+		}
+
+		auto right() {
+			return OuterJoinBuilder<TRight, TLeft>{ right_, left_ };
+		}
+	};
+
+	template<class TLeft, class TRight> struct OuterJoinBuilder {
+		TLeft left;
+		TRight right;
+
+		auto merge() {
+			return Query<MergeOuterJoin<
+				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
+				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
+				TLeft, TRight >>
 			{ { left, right } };
 		}
 	};
@@ -69,8 +124,27 @@ namespace impl {
 		return JoinBuilder<TLeft, TRight>{ left, right };
 	}
 
+	template<class TLeft, class TRight> struct ExcludeBuilder {
+		TLeft left;
+		TRight right;
+
+		auto merge() {
+			return Query<MergeExclude<
+				NamedIndex<NameOf<TLeft>::type, IndexOf<TLeft>::type>,
+				NamedIndex<NameOf<TRight>::type, IndexOf<TRight>::type>,
+				TLeft, TRight >>
+			{ { left, right } };
+		}
+	};
+
+	template<class TLeft, class TRight> auto makeExcludeBuilder(TLeft left, TRight right) {
+		return ExcludeBuilder<TLeft, TRight>{ left, right };
+	}
+
 	template<class TLeft> struct Query {
 		TLeft left;
+
+		Query(TLeft left) : left(left) {}
 
 		template<template<typename> class TName> auto on() {
 			return Query<Scope<TName, TLeft>>{ { left } };
@@ -82,6 +156,10 @@ namespace impl {
 
 		template<class TRight> auto join(TRight right) {
 			return makeJoinBuilder(*this, right);
+		}
+
+		template<class TRight> auto exclude(TRight right) {
+			return makeExcludeBuilder(*this, right);
 		}
 
 		auto begin() { return left.begin(); }

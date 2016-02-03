@@ -52,9 +52,13 @@ private:
 };
 
 template<class TCollection, class TFunc> void forEach(TCollection& collection, TFunc func) {
-	auto iter = begin(collection);
-	auto endIter = end(collection);
-	for (; iter != endIter; ++iter)
+	using std::begin; using std::end;
+	forEach(begin(collection), end(collection), func);
+}
+
+template<class TIter, class TSentinel, class TFunc> void forEach(TIter rangeBegin, TSentinel rangeEnd, TFunc func) {
+	auto iter = rangeBegin;
+	for (; iter != rangeEnd; ++iter)
 		func(*iter);
 }
 

@@ -47,7 +47,7 @@ private:
 			for (size_t i = left + 1; i <= right; ++i) {
 				auto value = rows[i].temp();
 				auto key = GetKey()(value);
-				auto j = i - 1;
+				int j = i - 1;
 				while (j >= 0 && GetKey()(rows[j]) > key) {
 					rows[j + 1] |= rows[j];
 					--j;
@@ -264,7 +264,7 @@ private:
 		size_t innerSlot;
 		LeafNode* leaf;
 		Key leafUpperBound;
-		size_t leafPos;
+		int leafPos;
 		Key rowKey;
 
 		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound { LeastKey<Key>()() } {}
@@ -730,11 +730,11 @@ private:
 	}
 
 	void leafErase(Path& path) {
-		assert(path.leaf->size > 0);
-		assert(path.leafPos >= 0);
-		path.leaf->rows[path.leafPos] |= path.leaf->rows[path.leaf->size - 1];
-		--(path.leaf->size);
-		path.leaf->isUnsorted = true;
+		if (path.leafPos >= 0) {
+			path.leaf->rows[path.leafPos] |= path.leaf->rows[path.leaf->size - 1];
+			--(path.leaf->size);
+			path.leaf->isUnsorted = true;
+		}
 	}
 
 public:

@@ -154,6 +154,8 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="FlatTable.h" />
     <ClInclude Include="Index.h" />
     <ClInclude Include="MBPlusTree.h" />
+    <ClInclude Include="MergeExclude.h" />
+    <ClInclude Include="MergeOuterJoin.h" />
     <ClInclude Include="Name.h" />
     <ClInclude Include="Query.h" />
     <ClInclude Include="SmoothSort.h" />

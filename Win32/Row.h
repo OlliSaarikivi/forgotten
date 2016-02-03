@@ -1,12 +1,12 @@
 #pragma once
 
-#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D##_t) \
-static const TypeWrapper<D##_t> D;
+#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D) \
+static const TypeWrapper<D> D##_;
 
 template<class TKey> struct LeastKey;
 
 #define KEY_COL(T, D, L) COL(T, D) \
-	template<> struct LeastKey<D##_t> { D##_t operator()(){ return D##_t{ L }; } };
+	template<> struct LeastKey<D> { D operator()(){ return D{ L }; } };
 
 template<class... TValues> class Row {
 public:
@@ -103,6 +103,10 @@ public:
 		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(SwapColumn{ left, right });
 	}
 };
+
+template<class... TValues, class TCol> auto& operator>>(optional<Row<TValues...>> someRow, const TCol& name) {
+	return (*someRow) >> name;
+}
 
 namespace impl {
 	template<class... TParams> struct MakerRow {

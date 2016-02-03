@@ -14,7 +14,7 @@ template<template<typename> class TName, class TIndex, class... TValues> class T
 			table.toInsert.clear();
 		}
 
-		template<class TRow> void insert(const TRow& row) {
+		template<class TRow> void operator()(const TRow& row) {
 			table.toInsert.pushBack(row);
 		}
 	};
@@ -28,7 +28,7 @@ template<template<typename> class TName, class TIndex, class... TValues> class T
 			table.toErase.clear();
 		}
 
-		template<class TRow> void erase(const TRow& row) {
+		template<class TRow> void operator()(const TRow& row) {
 			table.toErase.insert(row);
 		}
 	};
@@ -47,6 +47,10 @@ public:
 
 	Eraser eraser() {
 		return Eraser{ *this };
+	}
+
+	auto& rows() {
+		return tree;
 	}
 
 	void clear() {

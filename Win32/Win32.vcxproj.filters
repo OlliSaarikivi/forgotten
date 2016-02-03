@@ -80,6 +80,12 @@
     <ClInclude Include="Index.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MergeOuterJoin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeExclude.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

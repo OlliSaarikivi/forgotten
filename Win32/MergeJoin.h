@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "NamedRows.h"
@@ -13,10 +14,8 @@ template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, 
 	using RightKey = typename TRightIndex::Key;
 	using RightGetKey = TRightIndex;
 
-	LeftKey leftKey;
 	TLeft left;
 	TLeftSentinel leftEnd;
-	RightKey rightKey;
 	TRight right;
 	TRightSentinel rightEnd;
 
@@ -27,32 +26,25 @@ public:
 		left(left), leftEnd(leftEnd),
 		right(right), rightEnd(rightEnd)
 	{
-		if (left != leftEnd && right != rightEnd) {
-			leftKey = LeftGetKey()(*left);
-			rightKey = RightGetKey()(*right);
-			findMatch();
-		}
+		findMatch();
 	}
 	void findMatch()
 	{
+		if (left == leftEnd || right == rightEnd) return;
 		for (;;) {
-			while (leftKey < rightKey) {
+			while (LeftGetKey()(*left) < RightGetKey()(*right)) {
 				++left;
-				if (left != leftEnd)
-					leftKey = LeftGetKey()(*left);
-				else
+				if (left == leftEnd)
 					return;
 			}
-			if (rightKey == leftKey)
+			if (RightGetKey()(*right) == LeftGetKey()(*left))
 				return;
-			while (rightKey < leftKey) {
+			while (RightGetKey()(*right) < LeftGetKey()(*left)) {
 				++right;
-				if (right != rightEnd)
-					rightKey = RightGetKey()(*right);
-				else
+				if (right == rightEnd)
 					return;
 			}
-			if (leftKey == rightKey)
+			if (LeftGetKey()(*left) == RightGetKey()(*right))
 				return;
 		}
 	}
@@ -83,10 +75,8 @@ public:
 
 	friend void swap(MergeJoinIterator& left, MergeJoinIterator& right) {
 		using std::swap;
-		swap(left.leftKey, right.leftKey);
 		swap(left.left, right.left);
 		swap(left.leftEnd, right.leftEnd);
-		swap(left.rightKey, right.rightKey);
 		swap(left.right, right.right);
 		swap(left.rightEnd, right.rightEnd);
 	}

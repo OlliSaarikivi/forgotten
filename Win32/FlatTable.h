@@ -13,7 +13,7 @@ template<template<typename> class TName, class TIndex, class... TValues> class F
 
 		Inserter(FlatTable& table) : table(table) {}
 
-		template<class TRow> void insert(const TRow& row) {
+		template<class TRow> void operator()(const TRow& row) {
 			table.insert(row);
 		}
 	};

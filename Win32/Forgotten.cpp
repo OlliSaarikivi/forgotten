@@ -44,16 +44,52 @@ COL(uint16_t, Strength)
 NAME(Physical)
 NAME(Stats)
 
-NAME(SomeRow)
-NAME(OtherRow)
-NAME(YetAnotherRow)
-
 int _tmain(int argc, _TCHAR* argv[]) {
-	Universe<Eid_t, 
-		Physical_t<Row<PosX_t, PosY_t>>,
-		Stats_t<Row<Strength_t>>> entities;
+	Universe<Eid, 
+		Component<Physical, PosX, PosY>,
+		Component<Stats, Strength>> entities;
 
-	forEach(entities, [&](auto rows) {
-		(rows >> Physical >> PosX) = 3.5;
+	auto& stats = entities.component<Stats>();
+	auto& physicals = entities.component<Physical>();
+
+	Time("component insert", [&]() {
+		auto insertStat = entities.component<Stats>().inserter();
+		auto insertPhysical = entities.component<Physical>().inserter();
+		for (Eid i(0u); i < ROWS; ++i) {
+			insertStat(makeRow(i, Strength(10)));
+			if (i % 2 == 0)
+				insertPhysical(makeRow(i, PosX(0.0), PosY(0.0)));
+		}
 	});
+
+	int allTheStrength = 0;
+	Time("exclude", [&]() {
+		forEach(entities.require<Stats>().exclude(from(entities.component<Physical>())).merge(), [&](auto entity) {
+			allTheStrength += (entity >> Stats_ >> Strength_);
+		});
+	});
+
+	Time("require both", [&]() {
+		forEach(entities.require<Stats, Physical>(), [&](auto entity) {
+			allTheStrength += (entity >> Stats_ >> Strength_);
+		});
+	});
+
+	Time("include", [&]() {
+		auto eraseEntity = entities.eraser();
+		forEach(entities.require<Stats>().include<Physical>(), [&](auto entity) {
+			allTheStrength += (entity >> Stats_ >> Strength_);
+		});
+	});
+
+	Time("just require", [&]() {
+		auto eraseEntity = entities.eraser();
+		forEach(entities.require<Stats>(), [&](auto entity) {
+			allTheStrength += (entity >> Stats_ >> Strength_);
+		});
+	});
+
+	string line;
+	std::cin >> line;
+	std::cout << allTheStrength;
 }
