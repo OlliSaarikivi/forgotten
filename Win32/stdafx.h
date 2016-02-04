@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define NOMINMAX
+
 #include "targetver.h"
 
 #include <iostream>
@@ -39,6 +41,8 @@
 
 #include <boost/integer/static_log2.hpp>
 
+#include <boost/fiber/all.hpp>
+
 #include <boost/mpl/vector.hpp>
 #include <boost/mpl/set.hpp>
 #include <boost/mpl/arithmetic.hpp>
@@ -56,7 +60,6 @@
 #include <boost/mpl/remove_if.hpp>
 #include <boost/mpl/copy_if.hpp>
 
-#define NOMINMAX
 #include <windows.h>
 //#define GLEW_STATIC
 //#include <gl/glew.h>

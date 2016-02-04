@@ -22,6 +22,8 @@ using std::stack;
 
 namespace mpl = boost::mpl;
 
+namespace fibers = boost::fibers;
+
 //using glm::vec2;
 //using glm::vec3;
 //
