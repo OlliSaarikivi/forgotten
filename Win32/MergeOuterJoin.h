@@ -1,29 +1,8 @@
 #pragma once
 
 #include "NamedRows.h"
-#include "Utils.h"
 #include "Row.h"
 #include "Sentinels.h"
-#include "MaybeRow.h"
-
-template<class TNamedRows> struct AsMaybeRow;
-template<template<typename> class TName, class T> struct AsMaybeRow<TName<T>> {
-	using type = TName<MaybeRow<T>>;
-};
-template<class... TNames> struct AsMaybeRow<NamedRows<TNames...>> {
-	using type = NamedRows<typename AsMaybeRow<TNames>::type...>;
-};
-
-template<class TNamedRows> struct NoneNamedRows;
-template<template<typename> class... TNames, class... Ts> struct NoneNamedRows<NamedRows<TNames<Ts>...>> {
-	auto operator()() {
-		return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ none }... };
-	}
-};
-
-template<template<typename> class... TNames, class... Ts> auto someNamedRows(NamedRows<TNames<Ts>...> rows) {
-	return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ rows.c<TNames>() }... };
-}
 
 template<class TLeftIndex, class TRightIndex, class TLeft, class TLeftSentinel, class TRight, class TRightSentinel> class MergeOuterJoinIterator
 	: boost::equality_comparable<MergeOuterJoinIterator<TLeftIndex, TRightIndex, TLeft, TLeftSentinel, TRight, TRightSentinel>, End> {

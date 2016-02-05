@@ -1,7 +1,6 @@
 #pragma once
 
 #include "NamedRows.h"
-#include "Utils.h"
 #include "Row.h"
 #include "Sentinels.h"
 

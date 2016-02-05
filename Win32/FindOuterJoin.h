@@ -1,6 +1,8 @@
 #pragma once
 
-#include "MergeOuterJoin.h"
+#include "NamedRows.h"
+#include "Row.h"
+#include "Sentinels.h"
 
 template<class TLeftIndex, class TLeft, class TLeftSentinel, class TFinder, class TFinderFail> class FindOuterJoinIterator
 	: boost::equality_comparable<FindOuterJoinIterator<TLeftIndex, TLeft, TLeftSentinel, TFinder, TFinderFail>, End> {

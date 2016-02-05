@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utils.h"
+#include "MaybeRow.h"
 
 template<class... TNames> class NamedRows {
 	using NameTypes = typename mpl::vector<TNames...>::type;
@@ -54,6 +54,27 @@ template<class... TNames1, class... TNames2> struct NamedRowsConcat<NamedRows<TN
 template<class... TNames1, class... TNames2> auto concatNamedRows(const NamedRows<TNames1...>& left, const NamedRows<TNames2...>& right) {
 	return NamedRows<TNames1..., TNames2...>(left.c<TNames1>()..., right.c<TNames2...>());
 }
+
+template<class TNamedRows> struct AsMaybeRow;
+template<template<typename> class TName, class T> struct AsMaybeRow<TName<T>> {
+	using type = TName<MaybeRow<T>>;
+};
+template<class... TNames> struct AsMaybeRow<NamedRows<TNames...>> {
+	using type = NamedRows<typename AsMaybeRow<TNames>::type...>;
+};
+
+template<class TNamedRows> struct NoneNamedRows;
+template<template<typename> class... TNames, class... Ts> struct NoneNamedRows<NamedRows<TNames<Ts>...>> {
+	auto operator()() {
+		return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ none }... };
+	}
+};
+
+template<template<typename> class... TNames, class... Ts> auto someNamedRows(NamedRows<TNames<Ts>...> rows) {
+	return NamedRows<TNames<MaybeRow<Ts>>...>{ TNames<MaybeRow<Ts>>{ rows.c<TNames>() }... };
+}
+
+// Iterator and finder
 
 template<class TIter> class AsNamedRowsIterator {
 	TIter iter;

@@ -15,6 +15,12 @@
     <Filter Include="Content">
       <UniqueIdentifier>{2b14cdac-55f2-45e6-8259-6cb15b912776}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Synchronization">
+      <UniqueIdentifier>{462e5a4c-00b4-475b-95b5-4d4d187fec4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Queries">
+      <UniqueIdentifier>{a4b3db92-5000-47b8-9f80-19f17cbe0f00}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -47,22 +53,7 @@
     <ClInclude Include="Sentinels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MergeJoin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FindJoin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SmoothSort.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MBPlusTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Query.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NamedRows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Name.h">
@@ -80,19 +71,37 @@
     <ClInclude Include="Index.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MergeOuterJoin.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="FindAntiJoin.h">
+      <Filter>Header Files\Queries</Filter>
     </ClInclude>
-    <ClInclude Include="MergeAntiJoin.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MaybeRow.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="FindJoin.h">
+      <Filter>Header Files\Queries</Filter>
     </ClInclude>
     <ClInclude Include="FindOuterJoin.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Queries</Filter>
     </ClInclude>
-    <ClInclude Include="FindAntiJoin.h">
+    <ClInclude Include="MergeAntiJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeOuterJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="Query.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="NamedRows.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MaybeRow.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="Phase.h">
+      <Filter>Header Files\Synchronization</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

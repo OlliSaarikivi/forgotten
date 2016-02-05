@@ -161,8 +161,8 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="MergeAntiJoin.h" />
     <ClInclude Include="MergeOuterJoin.h" />
     <ClInclude Include="Name.h" />
+    <ClInclude Include="Phase.h" />
     <ClInclude Include="Query.h" />
-    <ClInclude Include="SmoothSort.h" />
     <ClInclude Include="Table.h" />
     <ClInclude Include="MergeJoin.h" />
     <ClInclude Include="Columnar.h" />
@@ -173,6 +173,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="SingleSpriteShader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Timer.h" />
     <ClInclude Include="Tuning.h" />
     <ClInclude Include="NamedRows.h" />
     <ClInclude Include="Universe.h" />

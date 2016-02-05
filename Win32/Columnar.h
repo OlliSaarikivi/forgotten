@@ -6,8 +6,6 @@ template<template<typename> class TIter, class... TValues> class RowIterator
 	: public boost::totally_ordered<RowIterator<TIter, TValues...>> {
 
 	using Values = typename mpl::vector<TValues...>::type;
-	using Distinct = typename mpl::unique<Values, std::is_same<mpl::_1, mpl::_2>>::type;
-	BOOST_MPL_ASSERT((mpl::equal<Values, Distinct>));
 
 	using FirstIter = TIter<typename Values::begin::type>;
 
@@ -81,7 +79,7 @@ public:
 	}
 
 	reference operator*() const {
-		return makeRow(*std::get<TValues*>(iters)...);
+		return row(*std::get<TValues*>(iters)...);
 	}
 	FauxPointer<reference> operator->() const {
 		return FauxPointer<reference>{ this->operator*() };
@@ -102,34 +100,11 @@ public:
 	}
 };
 
-namespace impl {
-	template<class TTypes, class T> struct SizeOfPreceding
-	{
-		using End = typename mpl::find<TTypes, T>::type;
-		using Preceding = typename mpl::iterator_range<typename TTypes::begin, End>::type;
-		using Sum = typename mpl::accumulate<Preceding, mpl::int_<0>, mpl::plus<mpl::_1, mpl::sizeof_<mpl::_2>>>::type;
-		static const ::size_t value = Sum::value;
-	};
-
-	template<class TTypes> struct SizeOfAll
-	{
-		using Sum = typename mpl::accumulate<TTypes, mpl::int_<0>, mpl::plus<mpl::_1, mpl::sizeof_<mpl::_2>>>::type;
-		static const ::size_t value = Sum::value;
-	};
-
-	template<class T> struct AlignmentOf {
-		using type = mpl::int_<std::alignment_of<T>::value>;
-	};
-}
-
 template<class... TValues> class Columnar {
 	using ValueTypes = typename mpl::vector<TValues...>::type;
 	template<class TValue> using AsPointer = TValue*;
 
 public:
-	static const size_t alignment = mpl::max_element<
-		typename mpl::transform<ValueTypes, impl::AlignmentOf<mpl::_1>>::type>::type::type::value;
-
 	template<class... Ts> using Iterator = RowIterator<AsPointer, Ts...>;
 	using iterator = Iterator<TValues...>;
 
@@ -143,6 +118,16 @@ private:
 	size_t size_ = 0;
 	size_t capacity_ = 0;
 	tuple<TValues*...> columns;
+
+	struct FreeColumn {
+		Columnar& columnar;
+		template<class T> void operator()(const T& type) {
+			using PointerType = AsPointer<T::type>;
+			auto& column = get<PointerType>(columnar.columns);
+			free(column);
+			column = nullptr;
+		}
+	};
 
 	struct ReallocColumn {
 		Columnar& columnar;
@@ -160,28 +145,21 @@ private:
 public:
 	Columnar() : size_(0), capacity_(0), columns((AsPointer<TValues>)nullptr...) {}
 	~Columnar() {
-		//free(data);
-		//data = nullptr;
+		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(FreeColumn{ *this });
 	}
 
 	template<class T> auto colBegin() const {
 		return get<T*>(columns);
 	}
-	template<class T, class... Ts> auto begin() {
-		return Iterator<T, Ts...>{ colBegin<T>(), colBegin<Ts>()... };
-	}
 	auto begin() {
-		return begin<TValues...>();
+		return Iterator<TValues...>{ colBegin<TValues>()... };
 	}
 
 	template<class T> auto colEnd() const {
 		return colBegin<T>() + size_;
 	}
-	template<class T, class... Ts> auto end() {
-		return Iterator<T, Ts...>{ colEnd<T>(), colEnd<Ts>()... };
-	}
 	auto end() {
-		return end<TValues...>();
+		return Iterator<TValues...>{ colEnd<TValues>()... };
 	}
 
 	Row<TValues&...> operator[](size_t pos) {
@@ -303,9 +281,6 @@ public:
 	}
 };
 
-template<class... Ts> inline auto begin(Columnar<Ts...>& c) { return c.begin(); }
-template<class... Ts> inline auto end(Columnar<Ts...>& c) { return c.end(); }
-
 template<int N, class... TValues> class ColumnarArray {
 	using ValueTypes = typename mpl::vector<TValues...>::type;
 	template<class TValue> using AsPointer = TValue*;
@@ -347,6 +322,3 @@ public:
 		return begin()[pos];
 	}
 };
-
-template<int N, class... Ts> inline auto begin(ColumnarArray<N, Ts...>& c) { return c.begin(); }
-template<int N, class... Ts> inline auto end(ColumnarArray<N, Ts...>& c) { return c.end(); }

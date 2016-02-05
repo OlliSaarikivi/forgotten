@@ -2,92 +2,61 @@
 
 #include <tchar.h>
 
-#include <random>
+#include "Phase.h"
 
-#include "MBPlusTree.h"
-#include "MergeJoin.h"
-#include "FindJoin.h"
+namespace phase {
+	enum Phases {
+		ReadWorld,
+		Everything,
+		NumPhases
+		// NumPhases will have the correct value
+	};
+}
 
-#include "Table.h"
-#include "FlatTable.h"
-#include "Query.h"
-#include "Universe.h"
+static int dx = 0;
+static int x = 0;
 
-class Timer
-{
-public:
-	Timer() : beg_(clock_::now()) {}
-	void reset() { beg_ = clock_::now(); }
-	double elapsed() const {
-		return boost::chrono::duration_cast<second_>
-			(clock_::now() - beg_).count();
-	}
-
-private:
-	typedef boost::chrono::high_resolution_clock clock_;
-	typedef boost::chrono::duration<double, boost::ratio<1> > second_;
-	boost::chrono::time_point<clock_> beg_;
+struct FrameConfig {
+	array<PhaseConfig, phase::NumPhases> phases;
 };
 
-template<class TFunc> void Time(string name, const TFunc& f) {
-	Timer tmr; tmr.reset(); f(); double t = tmr.elapsed(); std::cout << t << "s\t" << name << "\n";
+struct Frame {
+	future<float> dt;
+	array<Phase, phase::NumPhases> phases;
+};
+
+Frame& getFrame(uint64_t frameNum) {
+
 }
 
-#define ROWS 100
+void simulate() {
+	uint64_t frameNum = 0;
 
-NUMERIC_COL(uint32_t, Eid)
+	for (;;) {
+		auto& frame = getFrame(frameNum);
+		frame.dt.wait();
+		auto dt = frame.dt.get();
 
-COL(double, PosX)
-COL(double, PosY)
-COL(uint16_t, Strength)
-
-NAME(Physical)
-NAME(Stats)
-
-static Universe<Eid,
-	Component<Physical, PosX, PosY>,
-	Component<Stats, Strength >> entities;
-
-fibers::condition_variable cond;
-fibers::mutex mtx;
-static bool entitiesAdded = false;
-
-void addEntities() {
-	auto insertStat = entities.component<Stats>().inserter();
-	auto insertPhysical = entities.component<Physical>().inserter();
-	for (Eid i(0u); i < ROWS; ++i) {
-		auto id = entities.newId();
-		insertStat(makeRow(id, Strength(10)));
-		if (i % 2 == 0)
-			insertPhysical(makeRow(id, PosX(i * 0.1), PosY(1.0 / (i + 1))));
+		x = x + dx * dt;
 	}
-	{
-		std::unique_lock<fibers::mutex> lk(mtx);
-		entitiesAdded = true;
-	}
-	cond.notify_all();
 }
 
-void updateEntities() {
-	{
-		std::unique_lock<fibers::mutex> lk(mtx);
-		while (!entitiesAdded) {
-			cond.wait(lk);
-		}
+void configureAct(FrameConfig& config) {
+	config.phases[phase::ReadWorld].required += 1;
+}
+
+void act() {
+	uint64_t frameNum = 0;
+
+	for (;;) {
+		auto& frame = getFrame(frameNum);
+
+		frame.phases[phase::ReadWorld].waitStart();
+		dx = (dx + 1) % 10; // nonsense
+		frame.phases[phase::ReadWorld].notifyDone();
 	}
-	forEach(entities.require<Stats, Physical>(), [&](auto entity) {
-		(entity >> Stats_ >> Strength_) *= 2;
-		std::cout << "Entity " << (entity >> Stats_ >> Eid_) << " updated\n";
-	});
 }
 
 int _tmain(int argc, _TCHAR* argv[]) {
 
-	fibers::fiber f1(addEntities);
-	fibers::fiber f2(updateEntities);
-
-	f2.join();
-
-	string line;
-	std::cin >> line;
 }

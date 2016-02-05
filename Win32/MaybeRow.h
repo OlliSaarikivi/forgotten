@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Row.h"
-#include "Utils.h"
 
 struct NoRow {};
 static const NoRow none;

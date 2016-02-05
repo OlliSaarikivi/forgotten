@@ -152,17 +152,6 @@ private:
 				return quickPrepare(pivotIndex + 1, right, minLeft, minRight);
 		}
 
-		void leonardoPrepareBalance(size_t toRight) {
-			while (heapSize < size) {
-				++heapSize;
-				leonardo::heapPush(::begin(rows), heapSize, size, heapShape, GetKey());
-			}
-			for (int i = 0; i < toRight; ++i) {
-				--heapSize;
-				leonardo::heapPop(::begin(rows), heapSize, heapShape, GetKey());
-			}
-		}
-
 		size_t prepareBalance(size_t minLeft, size_t minRight) {
 			return quickPrepare(0, size - 1, minLeft, minRight);
 		}
@@ -298,8 +287,8 @@ private:
 
 	boost::pool<> leafPool;
 	boost::pool<> innerPool;
-	vector<Key> rootKeys;
-	vector<InnerNode*> rootChildren;
+	std::vector<Key> rootKeys;
+	std::vector<InnerNode*> rootChildren;
 	InnerNode firstInner;
 	LeafNode firstLeaf;
 	LeafNode* lastLeaf;
@@ -732,6 +721,35 @@ private:
 		}
 	}
 
+	void assertBounds() {
+		Key rootLower = MinKey<Key>()();
+		Key rootUpper = MinKey<Key>()();
+		for (int i = 0; i < rootKeys.size(); ++i) {
+			rootUpper = rootKeys[i];
+			assertInnerBounds(rootChildren[i], rootLower, rootUpper);
+			rootLower = rootUpper;
+		}
+		assertInnerBounds(rootChildren[rootKeys.size()], rootLower, MinKey<Key>()());
+	}
+
+	void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
+		Key innerLower = lower;
+		Key innerUpper = upper;
+		for (int i = 0; i < inner->size; ++i) {
+			innerUpper = inner->keys[i];
+			assertLeafBounds(inner->children[i], innerLower, innerUpper);
+			innerLower = innerUpper;
+		}
+		assertLeafBounds(inner->children[inner->size], innerLower, MinKey<Key>()());
+	}
+
+	void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
+		for (int i = 0; i < leaf->size; ++i) {
+			assert(GetKey()(leaf->rows[i]) >= lower);
+			assert(upper == MinKey<Key>()() || GetKey()(leaf->rows[i]) < upper);
+		}
+	}
+
 public:
 	MBPlusTree() : innerPool(sizeof(InnerNode)), leafPool(sizeof(LeafNode)), lastLeaf(&firstLeaf) {
 		rootChildren.push_back(&firstInner);
@@ -765,35 +783,6 @@ public:
 			splitLeaf(path, key);
 		leafInsert(path.leaf, row);
 	}
-
-	//void assertBounds() {
-	//	Key rootLower = MinKey<Key>()();
-	//	Key rootUpper = MinKey<Key>()();
-	//	for (int i = 0; i < rootKeys.size(); ++i) {
-	//		rootUpper = rootKeys[i];
-	//		assertInnerBounds(rootChildren[i], rootLower, rootUpper);
-	//		rootLower = rootUpper;
-	//	}
-	//	assertInnerBounds(rootChildren[rootKeys.size()], rootLower, MinKey<Key>()());
-	//}
-
-	//void assertInnerBounds(InnerNode* inner, Key lower, Key upper) {
-	//	Key innerLower = lower;
-	//	Key innerUpper = upper;
-	//	for (int i = 0; i < inner->size; ++i) {
-	//		innerUpper = inner->keys[i];
-	//		assertLeafBounds(inner->children[i], innerLower, innerUpper);
-	//		innerLower = innerUpper;
-	//	}
-	//	assertLeafBounds(inner->children[inner->size], innerLower, MinKey<Key>()());
-	//}
-
-	//void assertLeafBounds(LeafNode* leaf, Key lower, Key upper) {
-	//	for (int i = 0; i < leaf->size; ++i) {
-	//		assert(GetKey()(leaf->rows[i]) >= lower);
-	//		assert(upper == MinKey<Key>()() || GetKey()(leaf->rows[i]) < upper);
-	//	}
-	//}
 
 	template<class TIter, class TSentinel> void insert(TIter rangeBegin, TSentinel rangeEnd) {
 		if (rangeBegin == rangeEnd) return;
@@ -893,6 +882,3 @@ public:
 		return size;
 	}
 };
-
-template<class... Ts> inline auto begin(MBPlusTree<Ts...>& t) { return t.begin(); }
-template<class... Ts> inline auto end(MBPlusTree<Ts...>& t) { return t.end(); }

@@ -101,7 +101,7 @@ public:
 	}
 
 	auto temp() {
-		return makeRow(std::remove_reference<TValues>::type(*this)...);
+		return row(std::remove_reference<TValues>::type(*this)...);
 	}
 
 	friend void swap(Row&& left, Row&& right) {
@@ -113,52 +113,8 @@ namespace impl {
 	template<class... TParams> struct MakerRow {
 		using type = Row<typename std::conditional<std::is_const<typename std::remove_reference<TParams>::type>::value || std::is_rvalue_reference<TParams>::value, typename std::remove_const<typename std::remove_reference<TParams>::type>::type, typename std::remove_reference<TParams>::type&>::type...>;
 	};
-
-	template<class TCol, class... TRows> struct SelectRow;
-	template<class TCol, class TRow> struct SelectRow<TCol, TRow>
-	{
-		auto operator()(TRow&& t) {
-			return std::forward<TRow>(t);
-		}
-	};
-	template<class TCol, class TRow, class TRow2, class... TRows> struct SelectRow<TCol, TRow, TRow2, TRows...>
-	{
-		auto operator()(TRow&& t, TRow2&& t2, TRows&&... ts) {
-			return mpl::contains<typename TRow::ValueTypeSet, TCol>::type::value ? t :
-				SelectRow<TCol, TRow2, TRows...>()(std::forward<TRow2>(t2), std::forward<TRows>(ts)...);
-		}
-	};
-
-	template<class TRow, class T> struct ExtendRow;
-	template<class... TValues, class T> struct ExtendRow<Row<TValues...>, T> {
-		using type = Row<TValues..., T>;
-	};
 }
 
-template<class... Ts> auto makeRow(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
+template<class... Ts> auto row(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
 	return impl::MakerRow<decltype(params)...>::type(std::forward<Ts>(params)...);
 }
-
-template<class TRow> struct JoinRows;
-template<class... TValues> struct JoinRows<Row<TValues...>> {
-	template<class... TRows> Row<TValues...> operator()(TRows&&... params) {
-		return makeRow(impl::SelectRow<typename std::remove_reference<TValues>::type, TRows...>()(std::forward<TRows>(params)...)
-			.c<typename std::remove_reference<TValues>::type>()...);
-	}
-};
-
-template<class TRow1, class TRow2> struct RowUnion;
-template<class... TValues1, class... TValues2> class RowUnion<Row<TValues1...>, Row<TValues2...>> {
-	using Values = typename mpl::set<typename std::remove_reference<TValues1>::type..., typename std::remove_reference<TValues2>::type...>::type;
-	using All = typename mpl::set<TValues1..., TValues2...>::type;
-	template<class T> struct IsNotRef {
-		using type = mpl::bool_<!std::is_reference<T>::value>;
-	};
-	using NonRefValues = typename mpl::copy_if<All, IsNotRef<mpl::_1>>::type;
-	template<class T> struct ColType {
-		using type = typename std::conditional<mpl::contains<NonRefValues, T>::type::value, T, T&>::type;
-	};
-	using Fixed = typename mpl::transform< Values, ColType<mpl::_1>, mpl::inserter<mpl::set<>::type, mpl::insert<mpl::_1, mpl::_2>> >::type;
-public:
-	using type = typename mpl::fold<Fixed, Row<>, impl::ExtendRow<mpl::_1, mpl::_2>>::type;
-};
