@@ -12,7 +12,7 @@ class Phase {
 	int numDone;
 
 public:
-	Phase(PhaseConfig cfg) : cfg(cfg), numDone(0) {}
+	Phase(PhaseConfig cfg) : cfg(cfg), numDone(cfg.required) {}
 
 	void waitStart() {
 		std::unique_lock<fibers::mutex> lk(mtx);
@@ -23,14 +23,14 @@ public:
 	void notifyDone() {
 		std::unique_lock<fibers::mutex> lk(mtx);
 		++numDone;
-		assert(numDone <= numParticipants);
+		assert(numDone <= cfg.required);
 		if (numDone == cfg.required)
 			ended.notify_all();
 	}
 
 	void start() {
 		std::unique_lock<fibers::mutex> lk(mtx);
-		assert(numDone == numParticipants);
+		assert(numDone == cfg.required);
 		numDone = 0;
 		started.notify_all();
 	}

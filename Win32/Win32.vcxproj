@@ -87,8 +87,7 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);SDL2.lib;SDL2main.lib;Box2D.lib;OpenGL32.lib;glew32s.lib;libpng16.lib;zdll.lib</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"
-xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Command>
+      <Command>xcopy /y "$(SolutionDir)lib\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <PreLinkEvent>
       <Command>
@@ -152,9 +151,11 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Eventual.h" />
     <ClInclude Include="FindAntiJoin.h" />
     <ClInclude Include="FindOuterJoin.h" />
     <ClInclude Include="FlatTable.h" />
+    <ClInclude Include="Frame.h" />
     <ClInclude Include="Index.h" />
     <ClInclude Include="MaybeRow.h" />
     <ClInclude Include="MBPlusTree.h" />
@@ -162,6 +163,7 @@ xcopy /y "$(SolutionDir)ToolingConnection\bin\x86\Debug\*.dll" "$(OutDir)"</Comm
     <ClInclude Include="MergeOuterJoin.h" />
     <ClInclude Include="Name.h" />
     <ClInclude Include="Phase.h" />
+    <ClInclude Include="Process.h" />
     <ClInclude Include="Query.h" />
     <ClInclude Include="Table.h" />
     <ClInclude Include="MergeJoin.h" />

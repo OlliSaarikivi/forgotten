@@ -21,6 +21,9 @@
     <Filter Include="Header Files\Queries">
       <UniqueIdentifier>{a4b3db92-5000-47b8-9f80-19f17cbe0f00}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Tables">
+      <UniqueIdentifier>{e5cc6d79-0b65-4b3b-b2cb-0f2b7eced377}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -41,34 +44,7 @@
     <ClInclude Include="ElementSpriteShader.h">
       <Filter>Shaders</Filter>
     </ClInclude>
-    <ClInclude Include="Row.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Columnar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Tuning.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Sentinels.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MBPlusTree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Name.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlatTable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Table.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Universe.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Index.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FindAntiJoin.h">
@@ -102,6 +78,42 @@
       <Filter>Header Files\Synchronization</Filter>
     </ClInclude>
     <ClInclude Include="Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Eventual.h">
+      <Filter>Header Files\Synchronization</Filter>
+    </ClInclude>
+    <ClInclude Include="Columnar.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="FlatTable.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Index.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="MBPlusTree.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Name.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Row.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Sentinels.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Table.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Universe.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Process.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

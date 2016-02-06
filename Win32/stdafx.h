@@ -22,9 +22,8 @@
 #include <assert.h>
 #include <limits>
 #include <tuple>
+#include <chrono>
 
-#include <boost/chrono/chrono.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/pool/pool.hpp>
 

@@ -3,60 +3,63 @@
 #include <tchar.h>
 
 #include "Phase.h"
+#include "Eventual.h"
+#include "Process.h"
 
-namespace phase {
-	enum Phases {
-		ReadWorld,
-		Everything,
-		NumPhases
-		// NumPhases will have the correct value
-	};
+static float dx = 0;
+static float x = 0;
+
+void configureSimulate(FrameConfig& cfg) {
 }
 
-static int dx = 0;
-static int x = 0;
-
-struct FrameConfig {
-	array<PhaseConfig, phase::NumPhases> phases;
-};
-
-struct Frame {
-	future<float> dt;
-	array<Phase, phase::NumPhases> phases;
-};
-
-Frame& getFrame(uint64_t frameNum) {
-
-}
-
-void simulate() {
-	uint64_t frameNum = 0;
-
+void simulate(Frames frames) {
 	for (;;) {
-		auto& frame = getFrame(frameNum);
-		frame.dt.wait();
-		auto dt = frame.dt.get();
-
+		auto dt = frames.current->dt.await();
+		frames.current->phases[ReadWorld].start();
+		frames.current->phases[ReadWorld].waitAllDone();
 		x = x + dx * dt;
+		std::cout << "x is " << x << "\n";
+		frames.frameDone();
 	}
 }
 
-void configureAct(FrameConfig& config) {
-	config.phases[phase::ReadWorld].required += 1;
+void configureUpdate(FrameConfig& cfg) {
+	cfg.phases[ReadWorld].required += 1;
 }
 
-void act() {
-	uint64_t frameNum = 0;
-
+void update(Frames frames) {
 	for (;;) {
-		auto& frame = getFrame(frameNum);
+		frames.current->phases[ReadWorld].waitStart();
+		dx = dx == 0 ? 1 : 0;
+		frames.current->phases[ReadWorld].notifyDone();
+		frames.frameDone();
+	}
+}
 
-		frame.phases[phase::ReadWorld].waitStart();
-		dx = (dx + 1) % 10; // nonsense
-		frame.phases[phase::ReadWorld].notifyDone();
+void configureTimeFrames(FrameConfig& cfg) {
+}
+
+void timeFrames(Frames frames) {
+	for (;;) {
+		frames.current->dt.set(0.016f);
+		frames.frameDone();
+		boost::this_fiber::sleep_for(16ms);
 	}
 }
 
 int _tmain(int argc, _TCHAR* argv[]) {
+	FrameConfig cfg;
+	configureSimulate(cfg);
+	configureUpdate(cfg);
+	configureTimeFrames(cfg);
 
+	Frames frames{ cfg, std::make_shared<Frame>(cfg) };
+
+	fibers::fiber simulateFiber{ simulate, frames };
+	fibers::fiber updateFiber{ update, frames };
+	fibers::fiber timeFramesFiber{ timeFrames, frames };
+
+	simulateFiber.join();
+	updateFiber.join();
+	timeFramesFiber.join();
 }

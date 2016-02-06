@@ -12,10 +12,14 @@ using std::make_pair;
 using std::tuple;
 using std::get;
 
-namespace mpl = boost::mpl;
+namespace chrono = std::chrono;
+using namespace std::chrono_literals;
 
+namespace mpl = boost::mpl;
 namespace fibers = boost::fibers;
+
 using fibers::future;
+using fibers::promise;
 
 //using glm::vec2;
 //using glm::vec3;
