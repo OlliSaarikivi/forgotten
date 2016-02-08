@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Phase.h"
+#include "Eventual.h"
+
 enum Phases {
 	ReadWorld,
 	Everything,

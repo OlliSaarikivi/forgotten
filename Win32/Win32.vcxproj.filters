@@ -124,6 +124,9 @@
     <ClCompile Include="Forgotten.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Process.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="data\shaders\SingleSprite.fs.glsl">

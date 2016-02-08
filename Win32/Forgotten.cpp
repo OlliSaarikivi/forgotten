@@ -47,19 +47,20 @@ void timeFrames(Frames frames) {
 	}
 }
 
+static RegisterProcess<StaticProcess<configureSimulate, simulate>> X1 = {};
+static RegisterProcess<StaticProcess<configureUpdate, update>> X2 = {};
+static RegisterProcess<StaticProcess<configureTimeFrames, timeFrames>> X3 = {};
+
 int _tmain(int argc, _TCHAR* argv[]) {
 	FrameConfig cfg;
-	configureSimulate(cfg);
-	configureUpdate(cfg);
-	configureTimeFrames(cfg);
-
+	std::vector<fibers::fiber> fibers;
+	for (auto& process : processes())
+		process->configure(cfg);
 	Frames frames{ cfg, std::make_shared<Frame>(cfg) };
-
-	fibers::fiber simulateFiber{ simulate, frames };
-	fibers::fiber updateFiber{ update, frames };
-	fibers::fiber timeFramesFiber{ timeFrames, frames };
-
-	simulateFiber.join();
-	updateFiber.join();
-	timeFramesFiber.join();
+	for (auto& process : processes()) {
+		auto fiber = process->start(frames);
+		fibers.emplace_back(std::move(fiber));
+	}
+	for (auto& fiber : fibers)
+		fiber.join();
 }
