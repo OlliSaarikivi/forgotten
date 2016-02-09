@@ -5,7 +5,7 @@
 
 enum Phases {
 	ReadWorld,
-	Everything,
+	ReadForces,
 	NumPhases
 	// NumPhases will have the correct value
 };
@@ -60,7 +60,7 @@ struct Frames {
 
 	Frames(const FrameConfig& cfg, shared_ptr<Frame> initialFrame) : cfg(cfg), current(initialFrame) {}
 
-	void frameDone() {
+	void done() {
 		previous = std::move(current);
 		current = previous->nextFrame(cfg);
 	}

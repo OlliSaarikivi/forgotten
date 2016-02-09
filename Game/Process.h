@@ -1,25 +1,29 @@
 #pragma once
 
 #include "Frame.h"
+#include "State.h"
 
-struct Process {
+struct ProcessEntry {
 	virtual void configure(FrameConfig& cfg) = 0;
-	virtual fibers::fiber start(Frames frames) = 0;
+	virtual fibers::fiber start(Frames frames, State* state) = 0;
 };
 
-template<void (*TConfigure)(FrameConfig&), void (*TRun)(Frames)> struct StaticProcess : Process {
-	virtual void configure(FrameConfig& cfg) override {
-		TConfigure(cfg);
-	}
-	virtual fibers::fiber start(Frames frames) override {
-		return fibers::fiber{ TRun, frames };
-	}
-};
+std::vector<unique_ptr<ProcessEntry>>& processes();
 
-std::vector<unique_ptr<Process>>& processes();
-
-template<class TProcess> struct RegisterProcess {
-	template<class... TArgs> RegisterProcess(TArgs&&... args) {
-		processes().push_back(unique_ptr<Process>(new TProcess{ std::forward<TArgs>(args)... }));
+template<void(*TRun)(Frames, State&), void(*TConfigure)(FrameConfig&) = nullptr> struct Process {
+	static void CallRun(Frames frames, State* state) {
+		TRun(frames, *state);
+	}
+	struct Entry : ProcessEntry {
+		virtual void configure(FrameConfig& cfg) override {
+			if (TConfigure)
+				TConfigure(cfg);
+		}
+		virtual fibers::fiber start(Frames frames, State* state) override {
+			return fibers::fiber{ CallRun, frames, state };
+		}
+	};
+	Process() {
+		processes().push_back(std::make_unique<Entry>());
 	}
 };

@@ -1,10 +1,28 @@
 #pragma once
 
-#define COL(T, D) BOOST_STRONG_TYPEDEF(T, D) \
+// Adapted from boost's BOOST_STRONG_TYPEDEF
+#define COL(R, D) \
+template<class T> \
+struct D##_T_ \
+    : boost::totally_ordered1< D##_T_<T> \
+    , boost::totally_ordered2< D##_T_<T>, T \
+    > > \
+{ \
+    T t; \
+    explicit D##_T_(const T t_) : t(t_) {}; \
+    D##_T_(): t() {}; \
+    D##_T_(const D##_T_ & t_) : t(t_.t){} \
+    D##_T_ & operator=(const D##_T_ & rhs) { t = rhs.t; return *this;} \
+    D##_T_ & operator=(const T & rhs) { t = rhs; return *this;} \
+    operator const T & () const {return t; } \
+    operator T & () { return t; } \
+    bool operator==(const D##_T_ & rhs) const { return t == rhs.t; } \
+    bool operator<(const D##_T_ & rhs) const { return t < rhs.t; } \
+}; \
+using D = D##_T_<R>; \
 static const TypeWrapper<D> D##_;
 
 template<class TKey> struct MinKey;
-
 template<class TKey> struct MaxKey;
 
 #define KEY_COL(T, D, L, G) COL(T, D) \

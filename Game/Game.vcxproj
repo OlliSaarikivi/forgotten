@@ -18,6 +18,43 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Columnar.h" />
+    <ClInclude Include="State.h" />
+    <ClInclude Include="Eventual.h" />
+    <ClInclude Include="FindAntiJoin.h" />
+    <ClInclude Include="FindJoin.h" />
+    <ClInclude Include="FindOuterJoin.h" />
+    <ClInclude Include="FlatTable.h" />
+    <ClInclude Include="Frame.h" />
+    <ClInclude Include="Index.h" />
+    <ClInclude Include="MaybeRow.h" />
+    <ClInclude Include="MBPlusTree.h" />
+    <ClInclude Include="MergeAntiJoin.h" />
+    <ClInclude Include="MergeJoin.h" />
+    <ClInclude Include="MergeOuterJoin.h" />
+    <ClInclude Include="Name.h" />
+    <ClInclude Include="NamedRows.h" />
+    <ClInclude Include="Phase.h" />
+    <ClInclude Include="Process.h" />
+    <ClInclude Include="Query.h" />
+    <ClInclude Include="Row.h" />
+    <ClInclude Include="Sentinels.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Table.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Timer.h" />
+    <ClInclude Include="Tuning.h" />
+    <ClInclude Include="Universe.h" />
+    <ClInclude Include="Usings.h" />
+    <ClInclude Include="Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Box2DProcess.cpp" />
+    <ClCompile Include="Forgotten.cpp" />
+    <ClCompile Include="Process.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D5718C16-5B46-403B-AA3C-2976B99C345A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -74,14 +111,18 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(Boost_Includes);$(SolutionDir)Box2d\Box2d</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(Boost_Libraries)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(Boost_Includes)</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(Boost_Libraries)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(Boost_Includes)</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(Boost_Libraries)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(Boost_Includes);$(SolutionDir)Box2d\Box2d</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(Boost_Libraries);$(SolutionDir)Box2d\Box2d\Build\vs2015\bin\x64\Release</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -107,6 +148,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);Box2D.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -141,6 +183,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);Box2D.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

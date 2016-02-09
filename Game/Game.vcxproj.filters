@@ -13,5 +13,120 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Queries">
+      <UniqueIdentifier>{10281fa0-8fad-4b3b-8e62-4c6ef4e49743}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Tables">
+      <UniqueIdentifier>{6a4e387a-a0b7-4ff8-8d7d-8040a6d5918c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Synchronization">
+      <UniqueIdentifier>{3b8ee696-a109-4f5e-869f-913c79b47d50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Processes">
+      <UniqueIdentifier>{46d14415-8447-43d8-ba89-34fd09989254}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tuning.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Usings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Query.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="FindAntiJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="FindJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="FindOuterJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeAntiJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeOuterJoin.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="Columnar.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="FlatTable.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Index.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="MaybeRow.h">
+      <Filter>Header Files\Queries</Filter>
+    </ClInclude>
+    <ClInclude Include="NamedRows.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Name.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Eventual.h">
+      <Filter>Header Files\Synchronization</Filter>
+    </ClInclude>
+    <ClInclude Include="Phase.h">
+      <Filter>Header Files\Synchronization</Filter>
+    </ClInclude>
+    <ClInclude Include="Row.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Sentinels.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Table.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Universe.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="MBPlusTree.h">
+      <Filter>Header Files\Tables</Filter>
+    </ClInclude>
+    <ClInclude Include="Process.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="State.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Frame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Forgotten.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Process.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Box2DProcess.cpp">
+      <Filter>Source Files\Processes</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
