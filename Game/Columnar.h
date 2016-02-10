@@ -79,7 +79,7 @@ public:
 	}
 
 	reference operator*() const {
-		return row(*std::get<TValues*>(iters)...);
+		return makeRow(*std::get<TValues*>(iters)...);
 	}
 	FauxPointer<reference> operator->() const {
 		return FauxPointer<reference>{ this->operator*() };

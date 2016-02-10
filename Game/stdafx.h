@@ -42,21 +42,12 @@
 #include <boost/mpl/remove_if.hpp>
 
 #include <windows.h>
-//#define GLEW_STATIC
-//#include <gl/glew.h>
-//#include <sdl/sdl.h>
-//#include <glm/glm.hpp>
-//#include <glm/gtc/constants.hpp>
-//#include <glm/gtc/matrix_transform.hpp>
-//
-//#include <oglplus/all.hpp>
-//#include <oglplus/opt/smart_enums.hpp>
-//#include <oglplus/bound/texture.hpp>
-//#include <oglplus/images/png.hpp>
-//#include <oglplus/interop/glm.hpp>
-//
-//#include <Box2D/Box2D.h>
+
+#include <Box2D\Box2D.h>
+
+#include <cml/cml.h>
 
 #include "Usings.h"
+#include "Math.h"
 #include "Utils.h"
 #include "Tuning.h"

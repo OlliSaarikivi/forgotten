@@ -1,5 +1,7 @@
 #pragma once
 
+template<class T> struct ColActualType { using type = T; };
+
 // Adapted from boost's BOOST_STRONG_TYPEDEF
 #define COL(R, D) \
 template<class T> \
@@ -18,9 +20,11 @@ struct D##_T_ \
     operator T & () { return t; } \
     bool operator==(const D##_T_ & rhs) const { return t == rhs.t; } \
     bool operator<(const D##_T_ & rhs) const { return t < rhs.t; } \
+	auto operator->() const { return t; } \
 }; \
 using D = D##_T_<R>; \
-static const TypeWrapper<D> D##_;
+static const TypeWrapper<D> D##_; \
+template<> struct ColActualType<D> { using type = R; };
 
 template<class TKey> struct MinKey;
 template<class TKey> struct MaxKey;
@@ -104,7 +108,7 @@ public:
 	}
 
 	template<class TCol>
-	auto& operator>>(const TCol& name) {
+	auto& operator|(const TCol& name) {
 		return c<TCol::type>();
 	}
 
@@ -119,11 +123,16 @@ public:
 	}
 
 	auto temp() {
-		return row(std::remove_reference<TValues>::type(*this)...);
+		return makeRow(std::remove_reference<TValues>::type(*this)...);
 	}
 
 	friend void swap(Row&& left, Row&& right) {
 		mpl::for_each<ValueTypes, TypeWrap<mpl::_1>>(SwapColumn{ left, right });
+	}
+
+	template<class TCol, class... TCols> auto vec() {
+		using Vec = cml::vector<typename ColActualType<TCol>::type, cml::VecCols<Row, TCol, TCols...>>;
+		return Vec(*this);
 	}
 };
 
@@ -133,6 +142,6 @@ namespace impl {
 	};
 }
 
-template<class... Ts> auto row(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
+template<class... Ts> auto makeRow(Ts&&... params) -> typename impl::MakerRow<decltype(params)...>::type {
 	return impl::MakerRow<decltype(params)...>::type(std::forward<Ts>(params)...);
 }

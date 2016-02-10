@@ -51,6 +51,10 @@
 //static Process<update, configureUpdate> X2 = {};
 //static Process<timeFrames, configureTimeFrames> X3 = {};
 
+COL(float, X)
+COL(float, Y)
+COL(float, Z)
+
 int _tmain(int argc, _TCHAR* argv[]) {
 	State state;
 

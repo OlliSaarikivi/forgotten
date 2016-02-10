@@ -41,7 +41,7 @@ public:
 	}
 
 	template<class TName>
-	auto& operator>>(const TName& name) {
+	auto& operator|(const TName& name) {
 		return c<TName::type>();
 	}
 };

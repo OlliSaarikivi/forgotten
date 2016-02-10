@@ -21,8 +21,6 @@ namespace fibers = boost::fibers;
 using fibers::future;
 using fibers::promise;
 
-//using glm::vec2;
-//using glm::vec3;
-
-//namespace gl = oglplus;
 namespace fs = boost::filesystem;
+
+using namespace cml;

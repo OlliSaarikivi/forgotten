@@ -51,6 +51,10 @@ public:
 		return Eraser{ *this };
 	}
 
+	template<class TRow> void append(const TRow& row) {
+		tree.append(row);
+	}
+
 	auto& rows() {
 		return tree;
 	}

@@ -1,24 +1,23 @@
 #pragma once
 
-#include <Box2D\Box2D.h>
-
 #include "Universe.h"
 
 NUMERIC_COL(uint32_t, Eid)
 
-NAME(Bodies)
-COL(b2Body*, Body)
+NAME(Position)
+COL(b2Vec2, Point)
+COL(float, Angle)
+
+NAME(Body)
+COL(b2Body*, BodyHandle)
 
 NAME(ApplyForce)
 COL(b2Vec2, Force)
-COL(b2Vec2, Point)
 
 struct State {
-	b2World world;
 	Universe<Eid,
-		Component<Bodies, Body>,
+		Component<Position, Point, Angle>,
+		Component<Body, BodyHandle>,
 		Component<ApplyForce, Force, Point>
 	> entities;
-
-	State() : world(b2Vec2(0,0)) {}
 };

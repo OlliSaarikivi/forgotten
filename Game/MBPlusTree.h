@@ -47,7 +47,7 @@ private:
 			for (size_t i = left + 1; i <= right; ++i) {
 				auto value = rows[i].temp();
 				auto key = GetKey()(value);
-				int j = i - 1;
+				int j = int(i) - 1;
 				while (j >= 0 && GetKey()(rows[j]) > key) {
 					rows[j + 1] |= rows[j];
 					--j;
@@ -87,7 +87,7 @@ private:
 			return right - 1;
 		}
 
-		size_t quickPartition(int left, int right, int pivotIndex) {
+		size_t quickPartition(int left, int right, size_t pivotIndex) {
 			auto pivotKey = GetKey()(rows[pivotIndex]);
 			swap(rows[pivotIndex], rows[right]);
 			auto storeIndex = left;
@@ -101,7 +101,7 @@ private:
 			return storeIndex;
 		}
 
-		size_t quickPartitionHoare(int left, int right, int pivotIndex) {
+		size_t quickPartitionHoare(int left, int right, size_t pivotIndex) {
 			auto pivotKey = GetKey()(rows[pivotIndex]);
 			auto i = left - 1;
 			auto j = right + 1;
@@ -126,13 +126,13 @@ private:
 			}
 			auto pivotIndex = choosePivotForSort(left, right);
 			pivotIndex = quickPartitionHoare(left, right, pivotIndex);
-			quickSort(left, pivotIndex);
-			quickSort(pivotIndex + 1, right);
+			quickSort(left, int(pivotIndex));
+			quickSort(int(pivotIndex) + 1, right);
 		}
 
 		void sort() {
 			if (isUnsorted && size > 0) {
-				quickSort(0, size - 1);
+				quickSort(0, int(size - 1));
 				isUnsorted = false;
 			}
 		}
@@ -255,7 +255,7 @@ private:
 		int leafPos;
 		Key rowKey;
 
-		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound { MinKey<Key>()() } {}
+		Path(MBPlusTree& tree) : tree{ tree }, innerUpperBound{ MinKey<Key>()() } {}
 
 		void update(Key key) {
 			updateLeaf(key);
