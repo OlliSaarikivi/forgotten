@@ -14,24 +14,26 @@ private:
 	static const size_t MaxKeys = KeysInCacheLine < 4 ? 4 : KeysInCacheLine;
 	static const size_t MinKeys = MaxKeys / 2;
 
-	static const size_t MaxRows = MaxKeys;
-	static const size_t MinRows = MaxRows / 3;
+	static const size_t LeafMaxKeys = MaxKeys;
+	static const size_t LeafMinKeys = LeafMaxKeys / 3;
 
 	static const size_t InsertionSortMax = 24;
 	static const size_t LinearRowSearchMax = 24;
 
 	struct LeafNode {
 		LeafNode* next;
+		size_t size;
 		bool isUnsorted;
+		array<Key, LeafMaxKeys> keys;
 		Columnar<TValues...> rows;
 		LeafNode* previous;
 
 		LeafNode() : next(nullptr), previous(nullptr), isUnsorted(false)
 		{}
 
-		//bool isFull() {
-		//	return size == MaxRows;
-		//}
+		bool isFull() {
+			return size == LeafMaxKeys;
+		}
 
 		Key greatestKey() {
 			assert(size > 0);
@@ -394,7 +396,7 @@ private:
 
 	void splitLeaf(Path& path, Key key) {
 		LeafNode* leaf = path.leaf;
-		size_t toNextBegin = leaf->prepareBalance(MinRows, MinRows);
+		size_t toNextBegin = leaf->prepareBalance(LeafMinKeys, LeafMinKeys);
 
 		LeafNode* newLeaf = constructLeaf();
 		newLeaf->previous = leaf;
@@ -411,7 +413,7 @@ private:
 		for (size_t i = 0; i < toNext; ++i) {
 			newLeaf->rows[i] |= leaf->rows[toNextBegin + i];
 		}
-		leaf->size = MaxRows - toNext;
+		leaf->size = LeafMaxKeys - toNext;
 		newLeaf->size = toNext;
 
 		auto insertAt = path.innerSlot + 1;
@@ -571,7 +573,7 @@ private:
 	}
 	void balanceLeaf(Path& path) {
 		LeafNode* leaf = path.leaf;
-		if (leaf->size >= MinRows || &firstLeaf == lastLeaf)
+		if (leaf->size >= LeafMinKeys || &firstLeaf == lastLeaf)
 			return;
 
 		InnerNode* parent = path.inner;
@@ -583,25 +585,25 @@ private:
 		size_t fromNext = 0;
 		if (prev) {
 			if (next) {
-				auto prevAvailable = prev->size - MinRows;
-				if (prevAvailable + leaf->size >= MinRows) {
-					fromPrev = prev->size - prev->prepareBalance(MinRows, MinRows - leaf->size);
+				auto prevAvailable = prev->size - LeafMinKeys;
+				if (prevAvailable + leaf->size >= LeafMinKeys) {
+					fromPrev = prev->size - prev->prepareBalance(LeafMinKeys, LeafMinKeys - leaf->size);
 				}
 				else {
-					auto nextAvailable = next->size - MinRows;
-					if (nextAvailable + leaf->size >= MinRows) {
-						fromNext = next->prepareBalance(MinRows - leaf->size, MinRows);
+					auto nextAvailable = next->size - LeafMinKeys;
+					if (nextAvailable + leaf->size >= LeafMinKeys) {
+						fromNext = next->prepareBalance(LeafMinKeys - leaf->size, LeafMinKeys);
 					}
 					else {
-						if (prevAvailable + nextAvailable + leaf->size >= MinRows) {
+						if (prevAvailable + nextAvailable + leaf->size >= LeafMinKeys) {
 							if (prevAvailable > 0) {
-								auto prevRequired = nextAvailable + leaf->size < MinRows ?
-									MinRows - (nextAvailable + leaf->size) :
+								auto prevRequired = nextAvailable + leaf->size < LeafMinKeys ?
+									LeafMinKeys - (nextAvailable + leaf->size) :
 									0;
-								fromPrev = prev->size - prev->prepareBalance(MinRows, prevRequired);
+								fromPrev = prev->size - prev->prepareBalance(LeafMinKeys, prevRequired);
 							}
-							if (fromPrev + leaf->size < MinRows)
-								fromNext = next->prepareBalance(MinRows - (fromPrev + leaf->size), MinRows);
+							if (fromPrev + leaf->size < LeafMinKeys)
+								fromNext = next->prepareBalance(LeafMinKeys - (fromPrev + leaf->size), LeafMinKeys);
 						}
 						else
 							goto MERGE_WITH_PREV;
@@ -609,9 +611,9 @@ private:
 				}
 			}
 			else {
-				auto prevAvailable = prev->size - MinRows;
-				if (prevAvailable + leaf->size >= MinRows) {
-					fromPrev = prev->size - prev->prepareBalance(MinRows, MinRows - leaf->size);
+				auto prevAvailable = prev->size - LeafMinKeys;
+				if (prevAvailable + leaf->size >= LeafMinKeys) {
+					fromPrev = prev->size - prev->prepareBalance(LeafMinKeys, LeafMinKeys - leaf->size);
 				}
 				else
 					goto MERGE_WITH_PREV;
@@ -619,9 +621,9 @@ private:
 		}
 		else {
 			if (next) {
-				auto nextAvailable = next->size - MinRows;
-				if (nextAvailable + leaf->size >= MinRows) {
-					fromNext = next->prepareBalance(MinRows - leaf->size, MinRows);
+				auto nextAvailable = next->size - LeafMinKeys;
+				if (nextAvailable + leaf->size >= LeafMinKeys) {
+					fromNext = next->prepareBalance(LeafMinKeys - leaf->size, LeafMinKeys);
 				}
 				else
 					goto MERGE_WITH_NEXT;
@@ -629,7 +631,7 @@ private:
 			else
 				assert(false); // Should have neighbors
 		}
-		assert(leaf->size + fromPrev + fromNext >= MinRows);
+		assert(leaf->size + fromPrev + fromNext >= LeafMinKeys);
 
 		if (fromPrev > 0) {
 			for (uint_fast8_t i = 0; i < fromPrev; ++i) {
