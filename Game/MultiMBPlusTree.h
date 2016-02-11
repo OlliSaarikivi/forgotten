@@ -3,7 +3,7 @@
 #include "Columnar.h"
 #include "Sentinels.h"
 
-template<class TIndex, class... TValues> struct MBPlusTree {
+template<class TIndex, class... TValues> struct MultiMBPlusTree {
 	using Index = TIndex;
 
 private:
@@ -22,17 +22,16 @@ private:
 
 	struct LeafNode {
 		LeafNode* next;
-		size_t size;
 		bool isUnsorted;
-		ColumnarArray<MaxRows, TValues...> rows;
+		Columnar<TValues...> rows;
 		LeafNode* previous;
 
-		LeafNode() : size(0), next(nullptr), previous(nullptr), isUnsorted(false)
+		LeafNode() : next(nullptr), previous(nullptr), isUnsorted(false)
 		{}
 
-		bool isFull() {
-			return size == MaxRows;
-		}
+		//bool isFull() {
+		//	return size == MaxRows;
+		//}
 
 		Key greatestKey() {
 			assert(size > 0);
@@ -745,13 +744,13 @@ private:
 	}
 
 public:
-	MBPlusTree() : lastLeaf(&firstLeaf) {
+	MultiMBPlusTree() : lastLeaf(&firstLeaf) {
 		rootChildren.push_back(&firstInner);
 		firstInner.children[0] = &firstLeaf;
 	}
 
-	MBPlusTree(const MBPlusTree&) = delete;
-	MBPlusTree& operator=(const MBPlusTree&) = delete;
+	MultiMBPlusTree(const MultiMBPlusTree&) = delete;
+	MultiMBPlusTree& operator=(const MultiMBPlusTree&) = delete;
 
 	auto begin() {
 		return Iterator(&firstLeaf, 0);

@@ -5,6 +5,7 @@
 #include "Phase.h"
 #include "Eventual.h"
 #include "Process.h"
+#include "Timer.h"
 
 //static float dx = 0;
 //static float x = 0;
@@ -55,18 +56,32 @@ COL(float, X)
 COL(float, Y)
 COL(float, Z)
 
-int _tmain(int argc, _TCHAR* argv[]) {
-	State state;
+NUMERIC_COL(int, A)
 
-	FrameConfig cfg;
-	std::vector<fibers::fiber> fibers;
-	for (auto& process : processes())
-		process->configure(cfg);
-	Frames frames{ cfg, std::make_shared<Frame>(cfg) };
-	for (auto& process : processes()) {
-		auto fiber = process->start(frames, &state);
-		fibers.emplace_back(std::move(fiber));
+int _tmain(int argc, _TCHAR* argv[]) {
+	MBPlusTree<ColIndex<A>, A> tree;
+
+	for (int i = 0; i < 20; ++i) {
+		Time("append", [&]() {
+			for (int i = 0; i < 1000000; ++i)
+				tree.append(makeRow(A(i)));
+		});
+		tree.clear();
 	}
-	for (auto& fiber : fibers)
-		fiber.join();
+	string line;
+	std::cin >> line;
+
+	//State state;
+
+	//FrameConfig cfg;
+	//std::vector<fibers::fiber> fibers;
+	//for (auto& process : processes())
+	//	process->configure(cfg);
+	//Frames frames{ cfg, std::make_shared<Frame>(cfg) };
+	//for (auto& process : processes()) {
+	//	auto fiber = process->start(frames, &state);
+	//	fibers.emplace_back(std::move(fiber));
+	//}
+	//for (auto& fiber : fibers)
+	//	fiber.join();
 }
