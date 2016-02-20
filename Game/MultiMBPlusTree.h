@@ -37,9 +37,9 @@ private:
 
 		Key greatestKey() {
 			assert(size > 0);
-			Key max = GetKey()(rows[0]);
+			Key max = keys[0];
 			for (size_t i = 1; i < size; ++i) {
-				max = std::max(max, GetKey()(rows[i]));
+				max = std::max(max, keys[i]);
 			}
 			return max;
 		}
@@ -132,29 +132,10 @@ private:
 		}
 
 		void sort() {
-			if (isUnsorted && size > 0) {
-				quickSort(0, int(size - 1));
+			if (isUnsorted && rows.size() > 0) {
+				quickSort(0, int(rows.size() - 1));
 				isUnsorted = false;
 			}
-		}
-
-		size_t quickPrepare(int left, int right, size_t minLeft, size_t minRight) {
-			if (left >= right)
-				return left;
-			auto pivotIndex = choosePivot(left, right);
-			pivotIndex = quickPartition(left, right, pivotIndex);
-			if (pivotIndex >= minLeft) {
-				if (size - pivotIndex >= minRight)
-					return pivotIndex;
-				else
-					return quickPrepare(left, pivotIndex - 1, minLeft, minRight);
-			}
-			else
-				return quickPrepare(pivotIndex + 1, right, minLeft, minRight);
-		}
-
-		size_t prepareBalance(size_t minLeft, size_t minRight) {
-			return quickPrepare(0, size - 1, minLeft, minRight);
 		}
 
 		int findRow(Key key) {
