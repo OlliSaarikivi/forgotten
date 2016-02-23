@@ -21,7 +21,6 @@
   <ItemGroup>
     <ClInclude Include="Columnar.h" />
     <ClInclude Include="Math.h" />
-    <ClInclude Include="MultiMBPlusTree.h" />
     <ClInclude Include="State.h" />
     <ClInclude Include="Eventual.h" />
     <ClInclude Include="FindAntiJoin.h" />
