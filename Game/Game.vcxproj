@@ -56,6 +56,9 @@
     <ClCompile Include="Process.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Db.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D5718C16-5B46-403B-AA3C-2976B99C345A}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

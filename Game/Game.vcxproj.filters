@@ -132,4 +132,7 @@
       <Filter>Source Files\Processes</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="Db.txt" />
+  </ItemGroup>
 </Project>
