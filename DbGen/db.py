@@ -1,15 +1,16 @@
-table('body',
+table('embodied',
       ('id', 'uint32_t'),
-      ('ptr', 'b2Body*'),
-      primary_key='id')
+      ('body', 'b2Body*'),
+      key='id')
 
-table('target',
+table('targeter',
       ('id', 'uint32_t'),
       ('target', 'uint32_t'))
 
 view('bodyAndTarget',
-     select(('id', 'body.id'), #TODO
-        merge_join_using('id', 'body', 'target')))
+     ('targeterBody', 'embodied.body'),
+     ('target', 'targeter.target'),
+     merge_join_using('id', 'embodied', 'targeter'))
 
 index('bodyAndTarget', 'target')
 
