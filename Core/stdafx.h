@@ -28,6 +28,7 @@
 #include <variant>
 #include <mutex>
 #include <utility>
+#include <random>
 
 #include <boost/serialization/strong_typedef.hpp>
 

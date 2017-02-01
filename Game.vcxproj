@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)CML;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -87,7 +87,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)CML;$(ProjectDir);$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\$(ProjectName)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -115,7 +115,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>fmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>fmt.lib;Box2D.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -150,12 +150,14 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>fmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>fmt.lib;Box2D.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Concurrency\Event.h" />
+    <ClInclude Include="Concurrency\Promise.h" />
+    <ClInclude Include="Concurrency\Mutex.h" />
     <ClInclude Include="Concurrency\Scheduler.h" />
-    <ClInclude Include="Concurrency\Spinlock.h" />
     <ClInclude Include="Concurrency\Task.h" />
     <ClInclude Include="Concurrency\Thread.h" />
     <ClInclude Include="Core\Frame.h" />
@@ -184,8 +186,9 @@
     <ClInclude Include="Core\Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Concurrency\Event.cpp" />
+    <ClCompile Include="Concurrency\Mutex.cpp" />
     <ClCompile Include="Concurrency\Scheduler.cpp" />
-    <ClCompile Include="Concurrency\Spinlock.cpp" />
     <ClCompile Include="Concurrency\Task.cpp" />
     <ClCompile Include="Core\Forgotten.cpp" />
     <ClCompile Include="Core\stdafx.cpp" />

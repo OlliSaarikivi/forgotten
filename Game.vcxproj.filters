@@ -24,9 +24,6 @@
     <ClInclude Include="Concurrency\Scheduler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Concurrency\Spinlock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Database\FindAntiJoin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -99,12 +96,18 @@
     <ClInclude Include="Concurrency\Task.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Concurrency\Mutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Concurrency\Event.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Concurrency\Promise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Concurrency\Scheduler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Concurrency\Spinlock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Core\Forgotten.cpp">
@@ -117,6 +120,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Core\Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Concurrency\Mutex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Concurrency\Event.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

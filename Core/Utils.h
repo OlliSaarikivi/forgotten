@@ -19,10 +19,6 @@ std::wstring formatLastWin32Error(std::wstring file, int line);
 
 std::wstring formatError(std::wstring file, int line, std::wstring message);
 
-inline void checkWin32(bool check, std::wstring file, int line) {
-	if (check) breakWithMessage(formatLastWin32Error(file, line));
-}
-
 void exitWithMessage(std::wstring message);
 
 inline void breakWithMessage(std::wstring message) {
@@ -30,9 +26,13 @@ inline void breakWithMessage(std::wstring message) {
 	DebugBreak();
 }
 
-#define ERROR(MESSAGE) do { breakWithMessage(formatError(TEXT(__FILE__), __LINE__, MESSAGE)); } while(false)
+inline void checkWin32(bool check, std::wstring file, int line) {
+	if (check) breakWithMessage(formatLastWin32Error(file, line));
+}
 
-#define CHECK(x) do { checkWin32(x, TEXT(__FILE__), __LINE__); } while(false)
+#define FORGOTTEN_ERROR(MESSAGE) do { breakWithMessage(formatError(TEXT(__FILE__), __LINE__, MESSAGE)); } while(false)
+
+#define CHECK_WIN32(x) do { checkWin32(x, TEXT(__FILE__), __LINE__); } while(false)
 
 // The same as boost::hash_combine except hasher agnostic
 inline void hash_combine(size_t& seed, size_t hash) {

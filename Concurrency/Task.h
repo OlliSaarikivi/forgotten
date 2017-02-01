@@ -1,7 +1,30 @@
 #pragma once
 
 #include <Core\Utils.h>
-#include "Spinlock.h"
+
+template<class T>
+struct TaggedPointer {
+	TaggedPointer(T* ptr) : ptr{ ptr } {}
+	TaggedPointer(T* ptr, uintptr_t tag) : ptr{ ptr | (tag & 0x3F) } {}
+
+	uintptr_t tag() {
+		return (ptr & 0x3F);
+	}
+
+	T* get() const {
+		return reinterpret_cast<T*>(ptr & ~0x3F);
+	}
+
+	friend bool operator==(const TaggedPointer& v1, const TaggedPointer& v2) {
+		return v1.ptr == v2.ptr;
+	}
+	friend bool operator!=(const TaggedPointer& v1, const TaggedPointer& v2) {
+		return !(v1 == v2);
+	}
+
+private:
+	uintptr_t ptr;
+};
 
 template<size_t CurrentByte, class... Types>
 struct MemberPosHelper;
@@ -19,58 +42,35 @@ constexpr size_t lastMemberStartPos() {
 	return MemberPosHelper<0, Types...>::value;
 }
 
-template<class T>
-struct TaggedPointer {
-	T* ptr;
-	uintptr_t tag;
-};
-
 // Still need to use _aligned_malloc
 struct alignas(CACHE_LINE_SIZE)Task {
 	Task(void(*func)(void*));
 
-	std::atomic<Task*> left;
-	std::atomic<Task*> right;
-	PUMS_CONTEXT context;
-	void(*func)(void*);
+	union {
+		std::atomic<TaggedPointer<Task>> leftTagged;
+		Task* left;
+	};
+	union {
+		std::atomic<TaggedPointer<Task>> rightTagged;
+		Task* right;
+	};
+	union {
+		PUMS_CONTEXT context;
+		void(*func)(void*);
+	};
 
-	static const int dataStartByte = lastMemberStartPos<std::atomic<Task*>, std::atomic<Task*>, PUMS_CONTEXT, void*, char[1]>();
-	static const int dataSize = CACHE_LINE_SIZE - dataStartByte;
+	static const auto dataStartByte = lastMemberStartPos<std::atomic<Task*>, std::atomic<Task*>, void*, char[1]>();
+	static const auto dataSize = CACHE_LINE_SIZE - dataStartByte;
 	static_assert(dataSize > sizeof(void*));
 
 	char data[dataSize];
 };
-static const size_t taskSize = sizeof(Task);
+static const auto taskSize = sizeof(Task);
 static_assert(taskSize == CACHE_LINE_SIZE);
 
-template<class T>
-struct FlaggedPointer {
-	FlaggedPointer(T* ptr) : ptr{ ptr } {}
-	FlaggedPointer(T* ptr, uintptr_t flag) : ptr{ ptr | flag } {}
-
-	uintptr_t flag() {
-		return (ptr & 1);
-	}
-
-	void clearFlag() {
-		ptr = ptr & -2;
-	}
-
-	void toggleFlag() {
-		ptr = ptr ^ 1;
-	}
-
-	T* get() const {
-		return reinterpret_cast<T*>(ptr & -2);
-	}
-
-private:
-	uintptr_t ptr;
-};
-
 struct alignas(16) Anchor {
-	FlaggedPointer<Task> left = nullptr;
-	FlaggedPointer<Task> right = nullptr;
+	TaggedPointer<Task> left = nullptr;
+	TaggedPointer<Task> right = nullptr;
 
 	friend bool operator==(const Anchor& v1, const Anchor& v2) {
 		return v1.left == v2.left && v1.right == v2.right;
@@ -82,122 +82,29 @@ struct alignas(16) Anchor {
 static const size_t anchorSize = sizeof(Anchor);
 static_assert(anchorSize == 16); // Make sure we can use DWCAS
 
-// ABA problem is ignored. Instead we'll be VERY careful with Task allocation.
-struct ConcurrentQueueStack {
-	ConcurrentQueueStack() : anchor{ Anchor() } {
-		if (!anchor.is_lock_free())
-			ERROR(L"ConcurrentQueueStack is not lock-free on this architecture. DWCAS not supported?");
-	}
+// Memory reuse problem is handled by only deallocating Tasks at quiescent states,
+// e.g., deallocate frame N tasks when all threads have started on N+1.
 
-	Task* popLeft() {
-		for (;;) {
-			auto current = anchor.load();
-			auto left = current.left.get();
-			if (!left) return nullptr;
-			if (left == current.right.get()) {
-				if (anchor.compare_exchange_strong(current, Anchor{ nullptr, nullptr }))
-					return left;
-			} else if (current.left.flag()) {
-				stabilizeLeft(current);
-			} else if (current.right.flag()) {
-				stabilizeRight(current);
-			} else {
-				auto next = left->right.load();
-				if (anchor.compare_exchange_strong(current, Anchor{ next, current.right }))
-					return left;
-			}
-		}
-	}
+struct ConcurrentTaskDeque {
+	void assertLockFree();
 
-	Task* popRight() {
-		for (;;) {
-			auto current = anchor.load();
-			auto right = current.right.get();
-			if (!right) return nullptr;
-			if (right == current.left.get()) {
-				if (anchor.compare_exchange_strong(current, Anchor{ nullptr, nullptr }))
-					return right;
-			} else if (current.left.flag()) {
-				stabilizeLeft(current);
-			} else if (current.right.flag()) {
-				stabilizeRight(current);
-			} else {
-				auto prev = right->left.load();
-				if (anchor.compare_exchange_strong(current, Anchor{ current.left, prev }))
-					return right;
-			}
-		}
-	}
+	Task* popLeft();
+	Task* popRight();
+	void pushLeft(Task* task);
+	void pushRight(Task* task);
 
-	void pushLeft(Task* task) {
-		for (;;) {
-			auto current = anchor.load();
-			if (!current.left.get()) {
-				if (anchor.compare_exchange_strong(current, Anchor{ task, task })) return;
-			} else if (current.left.flag()) {
-				stabilizeLeft(current);
-			} else if (current.right.flag()) {
-				stabilizeRight(current);
-			} else {
-				task->right = current.left.get();
-				Anchor update{ { task, true }, current.right };
-				if (anchor.compare_exchange_strong(current, update)) {
-					stabilizeRight(update);
-					return;
-				}
-			}
-		}
-	}
-
-	void pushRight(Task* task) {
-		for (;;) {
-			auto current = anchor.load();
-			if (!current.right.get()) {
-				if (anchor.compare_exchange_strong(current, Anchor{ task, task })) return;
-			} else if (current.left.flag()) {
-				stabilizeLeft(current);
-			} else if (current.right.flag()) {
-				stabilizeRight(current);
-			} else {
-				task->left = current.right.get();
-				Anchor update{ current.left, { task, true } };
-				if (anchor.compare_exchange_strong(current, update)) {
-					stabilizeLeft(update);
-					return;
-				}
-			}
-		}
-	}
-
-	void stabilizeLeft(Anchor& current) {
-		auto next = current.left.get()->right.load();
-		if (anchor.load() != current) return;
-		auto nextprev = next->left.load();
-		if (nextprev != current.left.get()) {
-			if (anchor.load() != current) return;
-			if (!next->left.compare_exchange_strong(nextprev, current.left.get())) return;
-		}
-		anchor.compare_exchange_strong(current, Anchor{ current.left.get(), current.right.get() });
-	}
-
-	void stabilizeRight(Anchor& current) {
-		auto prev = current.right.get()->left.load();
-		if (anchor.load() != current) return;
-		auto prevnext = prev->right.load();
-		if (prevnext != current.right.get()) {
-			if (anchor.load() != current) return;
-			if (!prev->right.compare_exchange_strong(prevnext, current.right.get())) return;
-		}
-		anchor.compare_exchange_strong(current, Anchor{ current.left.get(), current.right.get() });
-	}
-
+	void stabilizeLeft(Anchor& current);
+	void stabilizeRight(Anchor& current);
 private:
-	std::atomic<Anchor> anchor;
+	std::atomic<Anchor> anchor = Anchor();
 };
 
-struct ScalableQueueStack {
+struct ConcurrentTaskStack {
+	void assertLockFree();
 
-
+	Task* pop();
+	void push(Task* task);
+	Task* peek();
 private:
-	unsigned numThreads;
+	std::atomic<TaggedPointer<Task>> top = nullptr;
 };
