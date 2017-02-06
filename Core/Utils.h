@@ -15,24 +15,30 @@
 #endif
 #endif
 
-std::wstring formatLastWin32Error(std::wstring file, int line);
+std::wstring formatLastWin32Error(std::wstring file, int line, std::wstring function);
 
 std::wstring formatError(std::wstring file, int line, std::wstring message);
 
 void exitWithMessage(std::wstring message);
 
+inline void debugOutput(std::wstring message) {
+	OutputDebugString((message + L'\n').c_str());
+}
+
 inline void breakWithMessage(std::wstring message) {
-	OutputDebugString(message.c_str());
+	debugOutput(message);
 	DebugBreak();
 }
 
-inline void checkWin32(bool check, std::wstring file, int line) {
-	if (check) breakWithMessage(formatLastWin32Error(file, line));
+template<class T>
+inline T checkWin32(T check, std::wstring file, int line, std::wstring function) {
+	if (!check) breakWithMessage(formatLastWin32Error(file, line, function));
+	return check;
 }
 
 #define FORGOTTEN_ERROR(MESSAGE) do { breakWithMessage(formatError(TEXT(__FILE__), __LINE__, MESSAGE)); } while(false)
 
-#define CHECK_WIN32(x) do { checkWin32(x, TEXT(__FILE__), __LINE__); } while(false)
+#define CHECK_WIN32(m, x) checkWin32(x, TEXT(__FILE__), __LINE__, m);
 
 // The same as boost::hash_combine except hasher agnostic
 inline void hash_combine(size_t& seed, size_t hash) {
@@ -79,6 +85,15 @@ template<class TIter, class TSentinel, class TFunc> void forEach(TIter rangeBegi
 	auto iter = rangeBegin;
 	for (; iter != rangeEnd; ++iter)
 		func(*iter);
+}
+
+template<class Function>
+auto benchmark(const Function& func) {
+	auto start = chrono::steady_clock::now();
+	func();
+	auto end = chrono::steady_clock::now();
+	auto diff = end - start;
+	std::cout << chrono::duration <double, std::milli>(diff).count() << " ms\n";
 }
 
 //namespace std

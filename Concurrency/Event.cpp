@@ -16,7 +16,7 @@ void Event::wait() {
 					executeContext(nextTask);
 			}
 		});
-		CHECK_WIN32(UmsThreadYield(&yieldContinuation));
+		CHECK_WIN32(L"UmsThreadYield", UmsThreadYield(&yieldContinuation));
 	}
 }
 

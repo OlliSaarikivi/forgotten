@@ -13,12 +13,12 @@ void Mutex::lock() {
 			waiting.push(currentTask);
 			auto old = handOff.load();
 			if (old.thread != NotASchedulerThread && waiting.peek())
-				if (handOff.compare_exchange_strong(old, { NotASchedulerThread, old.version + 1 })) {
+				if (handOff.compare_exchange_strong(old, { NotASchedulerThread, static_cast<uint16_t>(old.version + 1) })) {
 					auto nextTask = waiting.pop();
 					executeContext(nextTask);
 				}
 		});
-		CHECK_WIN32(UmsThreadYield(&yieldContinuation));
+		CHECK_WIN32(L"UmsThreadYield", UmsThreadYield(&yieldContinuation));
 	}
 }
 
@@ -30,7 +30,7 @@ bool Mutex::tryLock() {
 		auto old = handOff.load();
 		if (old.thread == NotASchedulerThread)
 			return false;
-		if (handOff.compare_exchange_strong(old, { NotASchedulerThread, old.version + 1 })) {
+		if (handOff.compare_exchange_strong(old, { NotASchedulerThread, static_cast<uint16_t>(old.version + 1) })) {
 			count.fetch_add(1);
 			return true;
 		}
@@ -47,11 +47,11 @@ void Mutex::unlock() {
 				enqueueContext(nextTask);
 				return;
 			} else {
-				auto newHandOff = TaggedSchedulerThreadIndex{ currentSchedulerThread(), handOff.load().version + 1 };
+				auto newHandOff = TaggedSchedulerThreadIndex{ currentSchedulerThread(), static_cast<uint16_t>(handOff.load().version + 1) };
 				handOff.store(newHandOff);
 				if (!waiting.peek())
 					return;
-				if (!handOff.compare_exchange_strong(newHandOff, { NotASchedulerThread, newHandOff.version + 1 }))
+				if (!handOff.compare_exchange_strong(newHandOff, { NotASchedulerThread, static_cast<uint16_t>(newHandOff.version + 1) }))
 					return;
 			}
 		}

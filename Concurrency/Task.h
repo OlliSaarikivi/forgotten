@@ -1,11 +1,13 @@
 #pragma once
 
 #include <Core\Utils.h>
+#include "DWAtomic.h"
 
 template<class T>
 struct TaggedPointer {
-	TaggedPointer(T* ptr) : ptr{ ptr } {}
-	TaggedPointer(T* ptr, uintptr_t tag) : ptr{ ptr | (tag & 0x3F) } {}
+	TaggedPointer() {}
+	TaggedPointer(T* ptr) : ptr{ reinterpret_cast<uintptr_t>(ptr) } {}
+	TaggedPointer(T* ptr, uintptr_t tag) : ptr{ reinterpret_cast<uintptr_t>(ptr) | (tag & 0x3F) } {}
 
 	uintptr_t tag() {
 		return (ptr & 0x3F);
@@ -46,27 +48,19 @@ constexpr size_t lastMemberStartPos() {
 struct alignas(CACHE_LINE_SIZE)Task {
 	Task(void(*func)(void*));
 
-	union {
-		std::atomic<TaggedPointer<Task>> leftTagged;
-		Task* left;
-	};
+	void * operator new(std::size_t size);
+	void operator delete(void* ptr);
+
+	std::atomic<TaggedPointer<Task>> leftTagged;
 	union {
 		std::atomic<TaggedPointer<Task>> rightTagged;
 		Task* right;
 	};
-	union {
-		PUMS_CONTEXT context;
-		void(*func)(void*);
-	};
-
-	static const auto dataStartByte = lastMemberStartPos<std::atomic<Task*>, std::atomic<Task*>, void*, char[1]>();
-	static const auto dataSize = CACHE_LINE_SIZE - dataStartByte;
-	static_assert(dataSize > sizeof(void*));
-
-	char data[dataSize];
+	PUMS_CONTEXT context;
+	void(*func)(void*);
+	char data[CACHE_LINE_SIZE - lastMemberStartPos<void*, void*, void*, void*, char[1]>()];
 };
-static const auto taskSize = sizeof(Task);
-static_assert(taskSize == CACHE_LINE_SIZE);
+static_assert(sizeof(Task) == CACHE_LINE_SIZE);
 
 struct alignas(16) Anchor {
 	TaggedPointer<Task> left = nullptr;
@@ -96,7 +90,7 @@ struct ConcurrentTaskDeque {
 	void stabilizeLeft(Anchor& current);
 	void stabilizeRight(Anchor& current);
 private:
-	std::atomic<Anchor> anchor = Anchor();
+	DWAtomic<Anchor> anchor = Anchor();
 };
 
 struct ConcurrentTaskStack {
@@ -107,4 +101,12 @@ struct ConcurrentTaskStack {
 	Task* peek();
 private:
 	std::atomic<TaggedPointer<Task>> top = nullptr;
+};
+
+struct TaskStack {
+	Task* pop();
+	void push(Task* task);
+	Task* peek();
+private:
+	Task* top = nullptr;
 };

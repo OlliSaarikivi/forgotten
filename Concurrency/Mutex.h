@@ -3,7 +3,7 @@
 #include "Task.h"
 #include "Scheduler.h"
 
-struct TaggedSchedulerThreadIndex {
+struct alignas(4) TaggedSchedulerThreadIndex {
 	SchedulerThreadIndex thread;
 	uint16_t version;
 };
@@ -18,7 +18,7 @@ struct Mutex {
 
 private:
 	ConcurrentTaskStack waiting;
+	std::atomic<TaggedSchedulerThreadIndex> handOff = TaggedSchedulerThreadIndex{ NotASchedulerThread, 0 };
 	using CounterType = int;
 	std::atomic<CounterType> count = 0;
-	std::atomic<TaggedSchedulerThreadIndex> handOff = TaggedSchedulerThreadIndex{ NotASchedulerThread, 0 };
 };

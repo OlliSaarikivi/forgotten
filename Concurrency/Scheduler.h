@@ -2,16 +2,18 @@
 
 #include "Task.h"
 
-using SchedulerThreadIndex = int_fast8_t;
+using SchedulerThreadIndex = uint_fast8_t;
 const SchedulerThreadIndex NotASchedulerThread = std::numeric_limits<SchedulerThreadIndex>::max();
 
 SchedulerThreadIndex currentSchedulerThread();
 
-void startScheduler();
+void startScheduler(void(*mainTask)());
 
 void executeContext(Task* task);
 void enqueueContext(Task* task);
 void enqueueTask(Task* task);
+
+unsigned contextsCreated();
 
 struct SchedulerContinuation {
 	virtual void operator()(Task* currentTask) = 0;
@@ -22,7 +24,7 @@ struct SchedulerContinuationImpl : public SchedulerContinuation {
 	SchedulerContinuationImpl(Function func) : func{ func } {}
 
 	virtual void operator()(Task* currentTask) {
-		func(currentTask);
+		return func(currentTask);
 	}
 private:
 	Function func;
@@ -33,17 +35,20 @@ auto createSchedulerContinuation(Function&& func) {
 	return SchedulerContinuationImpl<Function>{ func };
 }
 
-template<class Function>
-void callFunction(void* funcVoidPtr) {
-	auto funcPtr = static_cast<Function*>(funcVoidPtr);
-	Function func = *funcPtr;
-	delete funcPtr;
-	func();
+template<class T>
+unique_ptr<Task> createTask(void(*func)(void*), const T& data) {
+	static_assert(sizeof(T) <= sizeof(Task::data));
+	auto task = make_unique<Task>(func);
+	new (&task->data) T(data);
+	return task;
 }
 
-template<class Function, class... Args>
-void run(Function&& f, Args&&... args) {
-	auto binder = std::bind(f, args...);
-	auto binderPtr = new decltype(binder)(binder);
-	enqueueTask(make_unique<Task>(&callFunction<decltype(binder)>, static_cast<void*>(binderPtr)));
+template<class Function>
+void callFunctor(void* funcVoidPtr) {
+	(*static_cast<Function*>(funcVoidPtr))();
+}
+
+template<class Function>
+auto createTask(const Function& f) {
+	return createTask(&callFunctor<Function>, f);
 }

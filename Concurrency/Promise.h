@@ -5,15 +5,15 @@
 template<class T>
 struct Promise {
 	template<class U>
-	void fulfill(U&& val) {
-		val = std::forward<U>(val);
+	void fulfill(U&& result) {
+		value = std::forward<U>(result);
 		fulfilled.signal();
 	}
 	const T& wait() {
 		fulfilled.wait();
-		return val;
+		return value;
 	}
 private:
-	T val;
+	T value;
 	Event fulfilled;
 };

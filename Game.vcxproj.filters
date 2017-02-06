@@ -105,6 +105,12 @@
     <ClInclude Include="Concurrency\Promise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Concurrency\DWAtomic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Concurrency\Latch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Concurrency\Scheduler.cpp">
@@ -126,6 +132,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Concurrency\Event.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Concurrency\Latch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

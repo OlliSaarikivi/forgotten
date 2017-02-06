@@ -47,6 +47,7 @@
 #include <windows.h>
 #include <strsafe.h>
 #include <tchar.h>
+#include <intrin.h>
 
 #include <Box2D\Box2D.h>
 
